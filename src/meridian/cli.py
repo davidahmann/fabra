@@ -19,6 +19,9 @@ def start(
     ),
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),
     port: int = typer.Option(8000, help="Port to bind to"),
+    api_key: str = typer.Option(
+        None, envvar="MERIDIAN_API_KEY", help="API Key for security"
+    ),
     reload: bool = typer.Option(False, help="Enable auto-reload"),
 ) -> None:
     """
@@ -75,6 +78,11 @@ def start(
 
         # Start scheduler and server
         store.start()
+
+        # Set API key in env for the server to pick up
+        if api_key:
+            os.environ["MERIDIAN_API_KEY"] = api_key
+
         app = create_app(store)
         uvicorn.run(app, host=host, port=port)
 
