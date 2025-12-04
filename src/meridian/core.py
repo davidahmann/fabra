@@ -1,7 +1,6 @@
-from typing import Any, Callable, Dict, Optional, Type, Union, List
+from typing import Any, Callable, Dict, Optional, Type, Union, List, get_type_hints
 from dataclasses import dataclass
 from datetime import timedelta
-import inspect
 import pandas as pd
 from .store import (
     OfflineStore,
@@ -127,7 +126,7 @@ def entity(
         nonlocal id_column
         if id_column is None:
             # Simple inference: look for the first annotated field
-            annotations = inspect.get_annotations(cls)
+            annotations = get_type_hints(cls)
             if annotations:
                 id_column = next(iter(annotations))
             else:
