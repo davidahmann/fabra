@@ -1,7 +1,7 @@
 # Meridian
 
 <p align="center">
-  <img src="https://via.placeholder.com/150x150?text=Meridian" alt="Meridian Logo" width="150"/>
+
   <br>
   <b>Heroku for ML Features</b>
   <br>
