@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
 dependencies = [
     "duckdb>=0.10.0",
     "apscheduler>=3.10.0",
@@ -37,6 +38,11 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
     "redis>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/davidahmann/meridian"
+Repository = "https://github.com/davidahmann/meridian"
+Documentation = "https://github.com/davidahmann/meridian#readme"
 
 [project.optional-dependencies]
 dev = [
