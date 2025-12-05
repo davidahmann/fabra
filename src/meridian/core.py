@@ -65,6 +65,7 @@ class Feature:
     description: Optional[str] = None
     stale_tolerance: Optional[timedelta] = None
     default_value: Any = None
+    sql: Optional[str] = None
 
 
 class FeatureRegistry:
@@ -170,14 +171,113 @@ class FeatureStore:
                 )
 
     def _materialize_feature(self, feature_name: str) -> None:
-        # TODO: Implement actual materialization logic (query offline -> write online)
-        # For now, just log that it ran.
-        print(f"Materializing feature: {feature_name}")
+        """Sync wrapper for scheduler."""
+        import asyncio
+
+        asyncio.run(self._materialize_feature_async(feature_name))
+
+    async def _materialize_feature_async(self, feature_name: str) -> None:
+        feature_def = self.registry.features.get(feature_name)
+        if not feature_def:
+            logger.error(
+                "materialize_failed", error=f"Feature {feature_name} not found"
+            )
+            return
+
+        if not feature_def.sql:
+            logger.warning(
+                "materialize_skipped",
+                feature=feature_name,
+                reason="No SQL definition. Cannot materialize pure Python feature without batch source.",
+            )
+            return
+
+        logger.info("materialize_start", feature=feature_name)
+        try:
+            # 1. Execute SQL
+            df = self.offline_store.execute_sql(feature_def.sql)
+
+            # 2. Write to Online Store
+            # We assume the SQL returns [entity_id, feature_value] or similar.
+            # We need to know the entity_id column name to map it correctly.
+            entity_def = self.registry.entities.get(feature_def.entity_name)
+            if not entity_def:
+                raise ValueError(f"Entity '{feature_def.entity_name}' not found")
+
+            # 3. Bulk Write
+            await self.online_store.set_online_features_bulk(
+                entity_name=feature_def.entity_name,
+                features_df=df,
+                feature_name=feature_name,
+                entity_id_col=entity_def.id_column,
+            )
+
+            logger.info("materialize_success", feature=feature_name, rows=len(df))
+
+        except Exception as e:
+            logger.error("materialize_failed", feature=feature_name, error=str(e))
 
     async def get_training_data(
         self, entity_df: pd.DataFrame, features: List[str]
     ) -> pd.DataFrame:
-        return await self.offline_store.get_training_data(entity_df, features)
+        # 1. Separate Python vs SQL features
+        python_features = []
+        sql_features = []
+
+        for feature_name in features:
+            feature_def = self.registry.features.get(feature_name)
+            if not feature_def:
+                raise ValueError(f"Feature '{feature_name}' not found in registry.")
+
+            if feature_def.sql:
+                sql_features.append(feature_name)
+            else:
+                python_features.append(feature_name)
+
+        # 2. Process Python Features (Row-by-Row Apply)
+        # Copy df to avoid side effects
+        result_df = entity_df.copy()
+
+        # Ensure ID column is present for lookups if needed, though apply passes the row
+        # We assume the entity_df has the necessary columns for the feature function.
+        # Ideally, feature functions take an entity_id.
+
+        for feature_name in python_features:
+            feature_def = self.registry.features[feature_name]
+            # Assuming feature function takes entity_id as first argument
+            # We need to know which column in entity_df corresponds to the entity_id
+            # The feature definition knows its entity_name, and the registry knows the entity definition
+            entity_def = self.registry.entities.get(feature_def.entity_name)
+            if not entity_def:
+                raise ValueError(
+                    f"Entity '{feature_def.entity_name}' not found for feature '{feature_name}'"
+                )
+
+            id_col = entity_def.id_column
+            if id_col not in result_df.columns:
+                raise ValueError(
+                    f"Entity ID column '{id_col}' missing from input dataframe."
+                )
+
+            # Apply function
+            # Note: This is slow for large dataframes, but correct for MVP "Python" path.
+            result_df[feature_name] = result_df[id_col].apply(feature_def.func)
+
+        # 3. Process SQL Features (Delegate to Offline Store)
+        if sql_features:
+            # Resolve entity_id_col from the first feature
+            # Assuming all features belong to the same entity for this call
+            first_feature = self.registry.features[features[0]]
+            entity_def = self.registry.entities[first_feature.entity_name]
+            entity_id_col = entity_def.id_column
+
+            # Pass the partially enriched dataframe (result_df) to offline store
+            # so it can join SQL features onto it.
+            result_df = await self.offline_store.get_training_data(
+                result_df, sql_features, entity_id_col
+            )
+
+        return result_df
 
     async def get_online_features(
         self, entity_name: str, entity_id: str, features: List[str]
@@ -283,6 +383,7 @@ class FeatureStore:
         description: Optional[str] = None,
         stale_tolerance: Optional[timedelta] = None,
         default_value: Any = None,
+        sql: Optional[str] = None,
     ) -> Feature:
         feature = Feature(
             name=name,
@@ -294,6 +395,7 @@ class FeatureStore:
             description=description,
             stale_tolerance=stale_tolerance,
             default_value=default_value,
+            sql=sql,
         )
         self.registry.register_feature(feature)
         return feature
@@ -331,6 +433,7 @@ def feature(
     materialize: bool = False,
     stale_tolerance: Optional[Union[str, timedelta]] = None,
     default_value: Any = None,
+    sql: Optional[str] = None,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         # If store is not passed, we might need a way to find it.
@@ -368,6 +471,7 @@ def feature(
             description=func.__doc__,
             stale_tolerance=stale_tolerance,  # type: ignore
             default_value=default_value,
+            sql=sql,
         )
         return func
 

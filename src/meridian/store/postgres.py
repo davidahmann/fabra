@@ -9,7 +9,7 @@ class PostgresOfflineStore(OfflineStore):
         self.engine = create_engine(connection_string)
 
     async def get_training_data(
-        self, entity_df: pd.DataFrame, features: List[str]
+        self, entity_df: pd.DataFrame, features: List[str], entity_id_col: str
     ) -> pd.DataFrame:
         # MVP: Similar to DuckDB, we assume features are accessible via SQL.
         # We upload the entity_df to a temporary table and join.
@@ -29,3 +29,7 @@ class PostgresOfflineStore(OfflineStore):
             result = pd.read_sql(query, conn)
 
             return result
+
+    def execute_sql(self, query: str) -> pd.DataFrame:
+        with self.engine.connect() as conn:
+            return pd.read_sql(text(query), conn)

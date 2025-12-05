@@ -19,6 +19,18 @@ class OnlineStore(ABC):
         """
         Writes feature values for a single entity to the online store.
         """
+
+    @abstractmethod
+    async def set_online_features_bulk(
+        self,
+        entity_name: str,
+        features_df: Any,  # pd.DataFrame
+        feature_name: str,
+        entity_id_col: str,
+    ) -> None:
+        """
+        Writes feature values for multiple entities to the online store.
+        """
         pass
 
 
@@ -43,3 +55,19 @@ class InMemoryOnlineStore(OnlineStore):
             self._storage[entity_name][entity_id] = {}
 
         self._storage[entity_name][entity_id].update(features)
+
+    async def set_online_features_bulk(
+        self,
+        entity_name: str,
+        features_df: Any,
+        feature_name: str,
+        entity_id_col: str,
+    ) -> None:
+        # Iterate over dataframe and set features
+        # Note: Inefficient for large dataframes, but fine for in-memory MVP
+        for _, row in features_df.iterrows():
+            entity_id = str(row[entity_id_col])
+            value = row[feature_name]
+            await self.set_online_features(
+                entity_name, entity_id, {feature_name: value}
+            )

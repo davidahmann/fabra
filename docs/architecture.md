@@ -49,4 +49,20 @@ LEFT JOIN features f ON e.user_id = f.user_id
   AND f.valid_to > e.timestamp
 ```
 
+**Solution:** Meridian's `get_training_data()` uses "as-of" joins:
+```sql
+SELECT features.*
+FROM events e
+LEFT JOIN features f ON e.user_id = f.user_id
+  AND f.valid_from <= e.timestamp
+  AND f.valid_to > e.timestamp
+```
+
 Same logic offline (training) and online (serving). Guaranteed consistency.
+
+## Hybrid Retrieval (Python + SQL)
+
+Meridian supports a unique hybrid architecture:
+1.  **Python Features:** Computed on-the-fly (Online) or via `apply()` (Offline).
+2.  **SQL Features:** Computed via SQL queries (Offline) and materialized to Redis (Online).
+3.  **Unified API:** `get_training_data` automatically orchestrates both and joins the results.

@@ -30,7 +30,7 @@ async def test_postgres_offline_store_basic() -> None:
 
         # 3. Get Training Data
         training_df = await store.get_training_data(
-            entity_df, features=["user_transaction_count"]
+            entity_df, features=["user_transaction_count"], entity_id_col="user_id"
         )
 
         # 4. Assertions

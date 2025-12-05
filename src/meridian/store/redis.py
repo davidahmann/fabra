@@ -67,3 +67,26 @@ class RedisOnlineStore(OnlineStore):
 
         # Cast to Any to satisfy mypy's strict check on hset mapping
         await self.client.hset(key, mapping=serialized_features)  # type: ignore
+
+    async def set_online_features_bulk(
+        self,
+        entity_name: str,
+        features_df: Any,
+        feature_name: str,
+        entity_id_col: str,
+    ) -> None:
+        # Use a pipeline for bulk writes
+        async with self.client.pipeline() as pipe:
+            for _, row in features_df.iterrows():
+                entity_id = str(row[entity_id_col])
+                value = row[feature_name]
+                key = f"{entity_name}:{entity_id}"
+
+                # Serialize value
+                serialized_value = json.dumps(value)
+
+                # Add to pipeline
+                pipe.hset(key, feature_name, serialized_value)
+
+            # Execute pipeline
+            await pipe.execute()

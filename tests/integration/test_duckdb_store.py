@@ -17,6 +17,17 @@ async def test_duckdb_offline_store_basic() -> None:
         }
     )
 
+    # Register dummy feature
+    from meridian.core import feature, entity
+
+    @entity(store)
+    class User:
+        user_id: str
+
+    @feature(entity=User)
+    def user_transaction_count(user_id: str) -> int:
+        return 0
+
     # 3. Get Training Data (Mock implementation for now just returns entity_df)
     training_df = await store.get_training_data(
         entity_df, features=["user_transaction_count"]
