@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150" alt="Meridian Logo" width="120"/>
   <h1>Meridian</h1>
   <h3>The Heroku for ML Features</h3>
 
