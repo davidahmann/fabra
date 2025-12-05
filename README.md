@@ -19,7 +19,7 @@ Meridian is a developer-first feature store designed to take you from a Jupyter 
 
 **1. Install**
 ```bash
-pip install meridian
+pip install "meridian-oss[ui]"
 ```
 
 **2. Try the Quickstart Script**
@@ -59,6 +59,16 @@ curl -X POST http://localhost:8000/features \
 # {"user_click_count": 100}
 ```
 
+**6. Visualize**
+Launch the built-in UI to explore your features interactively:
+```bash
+meridian ui examples/basic_features.py
+```
+Or see the rich terminal dashboard:
+```bash
+meridian serve examples/basic_features.py
+```
+
 ---
 
 ## 🚀 Why Meridian?
@@ -71,7 +81,12 @@ We don't use YAML for configuration. Your code is your config.
 - **Explicit Caching:** Use `@feature(materialize=True)` to cache hot features.
 - **Explicit Refresh:** Use `@feature(refresh="5m")` to define freshness.
 
-### 3. Production-Grade Reliability
+### 3. Instant Wow ✨
+- **Meridian UI:** A built-in Streamlit dashboard to explore your data.
+- **Rich Terminal:** Production-grade TUI with live metrics.
+- **Jupyter Integration:** Beautiful HTML representations of your feature store objects.
+
+### 4. Production-Grade Reliability
 - **Redis-Only Caching:** We avoid complex multi-tier caches to guarantee data consistency.
 - **Randomized Locking:** Our distributed scheduler is self-healing and requires no leader election.
 - **Zero-Code Serving:** Auto-generated FastAPI endpoints with built-in metrics and logging.
