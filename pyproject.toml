@@ -86,7 +86,8 @@ module = [
     "apscheduler.*",
     "testcontainers.*",
     "duckdb.*",
-    "prometheus_client.*"
+    "prometheus_client.*",
+    "streamlit.*"
 ]
 ignore_missing_imports = true
 
