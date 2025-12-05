@@ -11,6 +11,10 @@
 
   <p><b>Define features in Python. Get training data and production serving for free.</b></p>
   <p>Stop paying the infrastructure tax. Meridian takes you from Jupyter to Production in 30 seconds.</p>
+
+  <p>
+    <b>📚 <a href="https://davidahmann.github.io/meridian/">Read the Documentation</a></b>
+  </p>
 </div>
 
 ---
