@@ -1,4 +1,5 @@
 import pandas as pd
+import random
 from datetime import timedelta
 from meridian.core import FeatureStore, entity, feature
 from meridian.store import DuckDBOfflineStore, InMemoryOnlineStore
@@ -24,7 +25,7 @@ def user_click_count(user_id: str) -> int:
     """Calculates the total clicks for a user."""
     # In a real scenario, this would query a raw data source.
     # For this example, we return a mock value.
-    return 42
+    return len(user_id) + random.randint(0, 100)  # nosec
 
 
 @feature(entity=User)

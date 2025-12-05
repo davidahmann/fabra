@@ -34,9 +34,9 @@ Feast relies heavily on YAML for feature definitions. Meridian uses Python decor
   ```
 - **Meridian:**
   ```python
-  @feature(entity=User, materialize=True)
-  def user_clicks(user_id: str) -> int:
-      return 42
+  @feature(entity=User)
+    def click_count(user_id: str) -> int:
+        return random.randint(0, 500)
   ```
 
 ### 3. Feature Parity (Now in v1.1.0)

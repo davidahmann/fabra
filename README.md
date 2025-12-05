@@ -49,7 +49,7 @@ class User:
 
 @feature(entity=User, refresh=timedelta(minutes=5), materialize=True)
 def user_click_count(user_id: str) -> int:
-    return 42
+    return len(user_id) + random.randint(0, 100)
 ```
 
 3.  **Serve it immediately:**

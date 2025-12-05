@@ -27,7 +27,7 @@ class User:
 
 @feature(entity=User, refresh=timedelta(minutes=5), materialize=True)
 def user_click_count(user_id: str) -> int:
-    return 42
+    return random.randint(0, 1000)
 ```
 
 **3. Serve & Visualize**
@@ -91,6 +91,7 @@ We don't use YAML for configuration. Your code is your config.
     - [Real-Time Recommendations (Async)](use-cases/real-time-recommendations.md)
 - **[Hybrid Features](hybrid-features.md):** Mixing Python logic and SQL power.
 - **[FAQ](faq.md):** Common questions about production, scaling, and comparisons.
+- **[Troubleshooting](troubleshooting.md):** Common issues and fixes.
 - **[Why We Built Meridian](why-we-built-meridian.md):** The story behind the "Heroku for ML Features".
 
 ---

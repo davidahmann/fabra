@@ -9,4 +9,5 @@ plugins:
 author: David Ahmann
 twitter_username: davidahmann
 github_username: davidahmann
-url: "https://davidahmann.github.io/meridian"
+url: "https://davidahmann.github.io"
+baseurl: "/meridian"
