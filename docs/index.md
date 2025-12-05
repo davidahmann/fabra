@@ -99,3 +99,20 @@ We don't use YAML for configuration. Your code is your config.
 ## 🤝 Contributing
 
 We love contributions! Please read our [CONTRIBUTING.md](https://github.com/davidahmann/meridian/blob/main/CONTRIBUTING.md) to get started.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Meridian",
+  "operatingSystem": "Linux, macOS, Windows",
+  "applicationCategory": "DeveloperApplication",
+  "description": "Heroku for ML Features. Define features in Python. Get training data and production serving for free.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "url": "https://davidahmann.github.io/meridian/"
+}
+</script>

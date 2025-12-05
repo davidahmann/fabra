@@ -39,3 +39,32 @@
 2.  Provide `MERIDIAN_POSTGRES_URL` and `MERIDIAN_REDIS_URL`.
 3.  Deploy.
 See [Local to Production](local-to-production.md) for a guide.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [{
+    "@type": "Question",
+    "name": "Is Meridian production-ready?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Yes. Meridian runs on \"boring technology\" (Postgres + Redis) that powers 90% of the internet. It is designed for high-throughput, low-latency serving in production environments."
+    }
+  }, {
+    "@type": "Question",
+    "name": "Do I need Kubernetes?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "No. You can deploy Meridian on Heroku, Railway, AWS ECS, or even a single EC2 instance using Docker Compose. If you want to use Kubernetes, you can, but it is not a requirement."
+    }
+  }, {
+    "@type": "Question",
+    "name": "How does Meridian compare to Feast?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Meridian is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries."
+    }
+  }]
+}
+</script>

@@ -72,20 +72,4 @@ Meridian supports a unique hybrid architecture:
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-    subgraph Dev [Tier 1: Local Development]
-        A[Laptop] -->|Uses| B(DuckDB)
-        A -->|Uses| C(In-Memory Dict)
-        style Dev fill:#e1f5fe,stroke:#01579b
-    end
-
-    subgraph Prod [Tier 2: Production]
-        D[API Pods] -->|Async| E[(Postgres)]
-        D -->|Async| F[(Redis)]
-        style Prod fill:#fff3e0,stroke:#ff6f00
-    end
-
-    Switch{MERIDIAN_ENV} -->|development| Dev
-    Switch -->|production| Prod
-```
+![Meridian Architecture Diagram](assets/images/architecture.png)
