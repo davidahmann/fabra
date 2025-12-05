@@ -1,0 +1,6 @@
+theme: jekyll-theme-minimal
+title: Meridian Feature Store
+description: Heroku for ML Features. Define features in Python. Get training data and production serving for free.
+logo: https://img.shields.io/pypi/v/meridian-oss?color=blue&label=meridian-oss
+show_downloads: false
+google_analytics:
