@@ -4,6 +4,7 @@ import sys
 import os
 import importlib.util
 from meridian.core import FeatureStore
+from typing import Optional, List
 
 st.set_page_config(page_title="Meridian UI", page_icon="🧭", layout="wide")
 
@@ -29,20 +30,21 @@ def load_feature_store(file_path: str) -> FeatureStore:
     st.stop()
 
 
-async def main() -> None:
+async def main(args: Optional[List[str]] = None) -> None:
     st.title("🧭 Meridian Feature Store")
 
-    # Get file path from command line args (passed via st.session_state or env var if needed,
-    # but for simplicity we'll assume it's passed as a command line arg to the script)
-    # Streamlit args handling is a bit tricky, so we'll look at sys.argv
-    # sys.argv will look like: ['streamlit', 'run', 'src/meridian/ui.py', '--', 'path/to/features.py']
+    if args is None:
+        args = sys.argv
 
-    if len(sys.argv) < 2:
+    # args will look like: ['streamlit', 'run', 'src/meridian/ui.py', '--', 'path/to/features.py']
+    # Or if called directly: ['ui.py', 'features.py']
+
+    if len(args) < 2:
         st.warning("Please provide the path to your feature definition file.")
         st.info("Usage: meridian ui <path_to_features.py>")
         return
 
-    feature_file = sys.argv[1]
+    feature_file = args[1]
 
     if not os.path.exists(feature_file):
         st.error(f"File not found: {feature_file}")
