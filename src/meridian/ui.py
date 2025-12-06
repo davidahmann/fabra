@@ -30,7 +30,7 @@ def load_feature_store(file_path: str) -> FeatureStore:
     st.stop()
 
 
-async def main(args: Optional[List[str]] = None) -> None:
+def main(args: Optional[List[str]] = None) -> None:
     st.title("🧭 Meridian Feature Store")
 
     if args is None:
@@ -83,10 +83,14 @@ async def main(args: Optional[List[str]] = None) -> None:
                 st.warning("No features defined for this entity.")
             else:
                 # Fetch values
-                values = await store.get_online_features(
-                    entity_name=selected_entity_name,
-                    entity_id=entity_id,
-                    features=feature_names,
+                import asyncio
+
+                values = asyncio.run(
+                    store.get_online_features(
+                        entity_name=selected_entity_name,
+                        entity_id=entity_id,
+                        features=feature_names,
+                    )
                 )
 
                 # Display as dataframe
@@ -104,6 +108,4 @@ async def main(args: Optional[List[str]] = None) -> None:
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    main()

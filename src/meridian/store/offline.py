@@ -5,6 +5,11 @@ import pandas as pd
 import asyncio
 
 
+import structlog
+
+logger = structlog.get_logger()
+
+
 class OfflineStore(ABC):
     @abstractmethod
     async def get_training_data(
@@ -50,7 +55,12 @@ class DuckDBOfflineStore(OfflineStore):
         joins = ""
 
         # ... (rest of the query construction logic is fine, preserving context)
+        import re
+
         for feature in features:
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", feature):
+                raise ValueError(f"Invalid feature name: {feature}")
+
             # MVP Assumption: Feature table has columns [entity_id, timestamp, feature_name]
             # We alias the feature table to its name for clarity
 
@@ -76,7 +86,7 @@ class DuckDBOfflineStore(OfflineStore):
             )
         except Exception as e:
             # Fallback for when tables don't exist (e.g. unit tests without setup)
-            print(f"Offline retrieval failed: {e}")
+            logger.warning("offline_retrieval_failed", error=str(e))
             return entity_df
 
     async def execute_sql(self, query: str) -> pd.DataFrame:

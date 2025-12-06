@@ -15,6 +15,10 @@ COPY examples/ examples/
 # Install dependencies and project
 RUN uv pip install --system .[ui]
 
+# Run as non-root user
+RUN useradd -m -s /bin/bash meridian
+USER meridian
+
 # Expose port
 EXPOSE 8000
 

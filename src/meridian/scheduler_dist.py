@@ -10,6 +10,10 @@ from apscheduler.triggers.interval import IntervalTrigger
 logger = structlog.get_logger()
 
 
+MAX_JITTER_SECONDS = 1.0
+LOCK_TTL_MULTIPLIER = 0.9
+
+
 class DistributedScheduler:
     def __init__(self, redis_client: Redis[Any]) -> None:
         self.scheduler = BackgroundScheduler()
@@ -29,11 +33,11 @@ class DistributedScheduler:
         # Wrapper to handle locking
         def locked_job() -> None:
             # Randomized jitter to prevent thundering herd
-            time.sleep(random.uniform(0, 1.0))  # nosec
+            time.sleep(random.uniform(0, MAX_JITTER_SECONDS))  # nosec
 
             lock_key = f"lock:{job_id}"
             # Lock TTL should be slightly less than interval to allow next run
-            lock_ttl = max(1, int(interval_seconds * 0.9))
+            lock_ttl = max(1, int(interval_seconds * LOCK_TTL_MULTIPLIER))
 
             # Try to acquire lock (SETNX)
             acquired = self.redis.set(lock_key, "locked", ex=lock_ttl, nx=True)

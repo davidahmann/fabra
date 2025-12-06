@@ -37,7 +37,9 @@ async def get_api_key(
     if not expected_key:
         return "dev-mode"
 
-    if api_key_header == expected_key:
+    import secrets
+
+    if api_key_header and secrets.compare_digest(api_key_header, expected_key):
         return api_key_header
 
     raise HTTPException(status_code=403, detail="Could not validate credentials")

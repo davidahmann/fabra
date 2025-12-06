@@ -24,6 +24,13 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
 
+    - name: Run Tests
+      run: |
+        uv venv
+        uv pip install -e ".[dev,ui]"
+        source .venv/bin/activate
+        pytest
+
     - name: Build package
       run: uv run --with build python -m build
 

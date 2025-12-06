@@ -24,6 +24,11 @@ FEATURE_LATENCY = Histogram(
     "Latency of feature retrieval",
     ["feature", "step"],
 )
+FEATURE_MATERIALIZE_FAILURES = Counter(
+    "meridian_feature_materialize_failures_total",
+    "Total feature materialization failures",
+    ["feature"],
+)
 
 logger = structlog.get_logger()
 
@@ -82,9 +87,6 @@ class FeatureRegistry:
         return [f for f in self.features.values() if f.entity_name == entity_name]
 
 
-from meridian.config import get_store_factory  # noqa: E402
-
-
 class FeatureStore:
     def __init__(
         self,
@@ -95,6 +97,8 @@ class FeatureStore:
 
         # Auto-configure stores if not provided
         if offline_store is None or online_store is None:
+            from meridian.config import get_store_factory
+
             default_offline, default_online = get_store_factory()
             self.offline_store = offline_store or default_offline
             self.online_store = online_store or default_online
@@ -104,7 +108,6 @@ class FeatureStore:
 
         self.scheduler: Union[Scheduler, DistributedScheduler]
 
-        # Select scheduler based on online store type
         # Select scheduler based on online store type
         if isinstance(self.online_store, RedisOnlineStore):
             self.scheduler = DistributedScheduler(self.online_store.get_sync_client())
@@ -173,8 +176,12 @@ class FeatureStore:
         """
         for name, feature in self.registry.features.items():
             if feature.materialize and feature.refresh:
+
+                def materializer(n: str = name) -> None:
+                    self._materialize_feature(n)
+
                 self.scheduler.schedule_job(
-                    func=lambda: self._materialize_feature(name),
+                    func=materializer,
                     interval_seconds=int(feature.refresh.total_seconds()),
                     job_id=f"materialize_{name}",
                 )
@@ -225,6 +232,7 @@ class FeatureStore:
 
         except Exception as e:
             logger.error("materialize_failed", feature=feature_name, error=str(e))
+            FEATURE_MATERIALIZE_FAILURES.labels(feature=feature_name).inc()
 
     async def get_training_data(
         self, entity_df: pd.DataFrame, features: List[str]

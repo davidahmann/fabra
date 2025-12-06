@@ -73,7 +73,12 @@ class PostgresOfflineStore(OfflineStore):
             query_parts = ["SELECT e.*"]
             joins = ""
 
+            import re
+
             for feature in features:
+                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", feature):
+                    raise ValueError(f"Invalid feature name: {feature}")
+
                 joins += (
                     f" LEFT JOIN LATERAL ("
                     f" SELECT {feature}"

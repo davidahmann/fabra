@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 
 class OnlineStore(ABC):
@@ -14,11 +14,22 @@ class OnlineStore(ABC):
 
     @abstractmethod
     async def set_online_features(
-        self, entity_name: str, entity_id: str, features: Dict[str, Any]
+        self,
+        entity_name: str,
+        entity_id: str,
+        features: Dict[str, Any],
+        ttl: Optional[int] = None,
     ) -> None:
         """
         Writes feature values for a single entity to the online store.
+
+        Args:
+            entity_name: The name of the entity.
+            entity_id: The unique identifier for the entity.
+            features: A dictionary of feature names to values.
+            ttl: Optional time-to-live in seconds.
         """
+        pass
 
     @abstractmethod
     async def set_online_features_bulk(
@@ -27,9 +38,17 @@ class OnlineStore(ABC):
         features_df: Any,  # pd.DataFrame
         feature_name: str,
         entity_id_col: str,
+        ttl: Optional[int] = None,
     ) -> None:
         """
         Writes feature values for multiple entities to the online store.
+
+        Args:
+            entity_name: The name of the entity.
+            features_df: DataFrame containing the feature values.
+            feature_name: The name of the feature to write.
+            entity_id_col: The column name in the DataFrame containing entity IDs.
+            ttl: Optional time-to-live in seconds.
         """
         pass
 
@@ -47,8 +66,13 @@ class InMemoryOnlineStore(OnlineStore):
         return {name: features.get(name) for name in feature_names if name in features}
 
     async def set_online_features(
-        self, entity_name: str, entity_id: str, features: Dict[str, Any]
+        self,
+        entity_name: str,
+        entity_id: str,
+        features: Dict[str, Any],
+        ttl: Optional[int] = None,
     ) -> None:
+        """Writes features to memory. TTL is currently ignored in-memory."""
         if entity_name not in self._storage:
             self._storage[entity_name] = {}
         if entity_id not in self._storage[entity_name]:
@@ -62,6 +86,7 @@ class InMemoryOnlineStore(OnlineStore):
         features_df: Any,
         feature_name: str,
         entity_id_col: str,
+        ttl: Optional[int] = None,
     ) -> None:
         # Iterate over dataframe and set features
         # Note: Inefficient for large dataframes, but fine for in-memory MVP

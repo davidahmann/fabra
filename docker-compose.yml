@@ -4,8 +4,9 @@ services:
     ports:
       - "8005:8000"
     environment:
-      - REDIS_URL=redis://redis:6379
-      - POSTGRES_URL=postgresql://user:password@postgres:5432/meridian
+      - MERIDIAN_REDIS_URL=redis://redis:6379
+      - MERIDIAN_POSTGRES_URL=postgresql://user:password@postgres:5432/meridian
+      - MERIDIAN_ENV=production
     depends_on:
       - redis
       - postgres

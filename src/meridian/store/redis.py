@@ -68,7 +68,11 @@ class RedisOnlineStore(OnlineStore):
         return result
 
     async def set_online_features(
-        self, entity_name: str, entity_id: str, features: Dict[str, Any]
+        self,
+        entity_name: str,
+        entity_id: str,
+        features: Dict[str, Any],
+        ttl: Optional[int] = None,
     ) -> None:
         key = f"{entity_name}:{entity_id}"
 
@@ -80,16 +84,21 @@ class RedisOnlineStore(OnlineStore):
         # Cast to Any to satisfy mypy's strict check on hset mapping
         await self.client.hset(key, mapping=serialized_features)  # type: ignore
 
+        if ttl:
+            await self.client.expire(key, ttl)
+
     async def set_online_features_bulk(
         self,
         entity_name: str,
         features_df: Any,
         feature_name: str,
         entity_id_col: str,
+        ttl: Optional[int] = None,
     ) -> None:
-        # Use a pipeline for bulk writes
+        # Use a pipeline for bulk writes with batching
+        BATCH_SIZE = 1000
         async with self.client.pipeline() as pipe:
-            for _, row in features_df.iterrows():
+            for i, (_, row) in enumerate(features_df.iterrows()):
                 entity_id = str(row[entity_id_col])
                 value = row[feature_name]
                 key = f"{entity_name}:{entity_id}"
@@ -99,6 +108,12 @@ class RedisOnlineStore(OnlineStore):
 
                 # Add to pipeline
                 pipe.hset(key, feature_name, serialized_value)
+                if ttl:
+                    pipe.expire(key, ttl)
 
-            # Execute pipeline
+                # Execute batch
+                if (i + 1) % BATCH_SIZE == 0:
+                    await pipe.execute()
+
+            # Execute remaining
             await pipe.execute()

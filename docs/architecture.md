@@ -72,4 +72,14 @@ Meridian supports a unique hybrid architecture:
 
 ## Architecture Diagram
 
-![Meridian Architecture Diagram](assets/images/architecture.png)
+```mermaid
+graph TD
+    User[User/Data Scientist] -->|Defines| Code[Feature Definitions]
+    Code -->|Registers| Registry[Feature Registry]
+    Registry -->|Configures| Scheduler
+    Scheduler -->|Triggers| Materialization[Materialization Job]
+    Materialization -->|Reads| Offline[Offline Store (DuckDB/Postgres)]
+    Materialization -->|Writes| Online[Online Store (Redis/Memory)]
+    API[FastAPI Server] -->|Reads| Online
+    API -->|Returns| Client[Client App]
+```
