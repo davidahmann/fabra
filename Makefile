@@ -28,6 +28,7 @@ test:
 lint:
 	uv run ruff check .
 	uv run mypy .
+	uv run bandit -c pyproject.toml -r src
 
 format:
 	uv run ruff format .
