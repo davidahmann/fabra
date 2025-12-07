@@ -6,7 +6,9 @@ import time
 import os
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from .core import FeatureStore
+from .models import ContextTrace
 import structlog
+import json
 
 logger = structlog.get_logger()
 
@@ -137,5 +139,37 @@ def create_app(store: FeatureStore) -> FastAPI:
     @app.get("/health")
     async def health() -> Dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/context/{context_id}/explain", response_model=ContextTrace)
+    async def explain_context(
+        context_id: str, api_key: str = Depends(get_api_key)
+    ) -> ContextTrace:
+        """
+        Retrieve the execution trace for a specific context ID.
+        """
+        if not store.online_store:
+            raise HTTPException(status_code=501, detail="Online store not configured")
+
+        try:
+            # Fetch trace from cache
+            trace_key = f"trace:{context_id}"
+            raw_trace = await store.online_store.get(trace_key)
+
+            if not raw_trace:
+                raise HTTPException(status_code=404, detail="Context trace not found")
+
+            # Parse
+            if isinstance(raw_trace, bytes):
+                data = json.loads(raw_trace)
+            else:
+                data = raw_trace
+
+            return ContextTrace(**data)
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("explain_context_failed", error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
 
     return app

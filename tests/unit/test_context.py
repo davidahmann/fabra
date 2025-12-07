@@ -40,6 +40,18 @@ async def test_context_caching() -> None:
     mock_store = AsyncMock()
     mock_store.get.return_value = None  # Cache Miss initially
 
+    # Mock Pipeline
+    mock_pipeline = MagicMock()
+    mock_pipeline.set.return_value = None
+    mock_pipeline.sadd.return_value = None
+    mock_pipeline.expire.return_value = None
+    # execute is async
+    future = AsyncMock(return_value=None)
+    mock_pipeline.execute = future
+
+    # IMPORTANT: pipeline() method must be synchronous (MagicMock), not AsyncMock
+    mock_store.pipeline = MagicMock(return_value=mock_pipeline)
+
     # Define Context with Caching
     @context(name="cached_ctx", cache_ttl=timedelta(minutes=1))
     async def expensive_assembly(arg: str) -> str:
@@ -52,8 +64,15 @@ async def test_context_caching() -> None:
     res1 = await expensive_assembly(arg="test")
     assert res1.content == "Processed test"
 
-    # Verify set was called
-    mock_store.set.assert_called_once()
+    # Verify set was called on pipeline
+    # The pipeline.set call happens once for context, maybe more for trace (if trace uses pipeline? No trace uses backend.set)
+    # Check pipeline.set calls
+    # Args: key, value, ex
+    assert mock_pipeline.set.called
+
+    # Also verify trace was written? Trace uses backend.set (async)
+    # The test doesn't mock trace writing return? AsyncMock returns coroutine.
+    # We should await mock_store.set? No, the code awaits it.
 
     # 2. Setup Cache Hit
     # The stored value is the JSON dump of the context
@@ -104,6 +123,18 @@ async def test_context_budget_error() -> None:
 @pytest.mark.asyncio
 async def test_context_freshness_sla() -> None:
     mock_store = AsyncMock()
+    # Mock pipeline for writes
+    mock_pipeline = MagicMock()
+    mock_pipeline.set.return_value = None
+    mock_pipeline.sadd.return_value = None
+    mock_pipeline.expire.return_value = None
+    mock_pipeline.execute = AsyncMock(return_value=None)
+
+    # Override pipeline method to be sync
+    mock_store.pipeline = MagicMock(return_value=mock_pipeline)
+
+    # Mock set for trace writing (which uses backend.set, async)
+    mock_store.set.return_value = None
 
     # Create an "Old" context
     old_time = datetime.now(timezone.utc) - timedelta(hours=2)

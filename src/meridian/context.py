@@ -8,6 +8,9 @@ import hashlib
 import json
 from datetime import datetime, timezone, timedelta
 from meridian.utils.tokens import TokenCounter, OpenAITokenCounter
+from meridian.models import ContextTrace
+from meridian.observability import ContextMetrics
+import time
 
 logger = structlog.get_logger()
 
@@ -70,6 +73,7 @@ def context(
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Context:
+            metrics = ContextMetrics(context_name)
             # 0. Check Cache (implementation omitted for brevity in this view, assuming previous code remains)
             # ... (Existing cache logic) ...
 
@@ -105,6 +109,7 @@ def context(
 
                         if is_fresh:
                             logger.info("context_cache_hit", name=context_name)
+                            metrics.record_cache_hit()
                             return cached_ctx
                 except Exception as e:
                     logger.warning("context_cache_read_error", error=str(e))
@@ -114,8 +119,10 @@ def context(
             logger.info("context_assembly_start", context_id=ctx_id, name=context_name)
 
             # 2. Execute
+            start_time = time.time()
             try:
-                result = await func(*args, **kwargs)
+                with metrics:
+                    result = await func(*args, **kwargs)
                 counter = token_counter or _default_counter
 
                 final_content = ""
@@ -233,6 +240,33 @@ def context(
 
                     except Exception as e:
                         logger.warning("context_cache_write_error", error=str(e))
+
+                # 6. Observability: Record Trace & Metrics
+                # Recalculate tokens for metric if not done
+                token_usage = 0
+                if counter:
+                    token_usage = counter.count(final_content)
+                    metrics.record_tokens(token_usage)
+
+                trace = ContextTrace(
+                    context_id=ctx_id,
+                    latency_ms=(time.time() - start_time) * 1000,
+                    token_usage=token_usage,
+                    freshness_status=freshness_status,
+                    source_ids=source_ids,  # collected in step 3
+                    stale_sources=stale_sources,
+                    cost_usd=None,
+                    cache_hit=False,
+                )
+
+                if backend:
+                    try:
+                        # Save trace with 24h TTL
+                        await backend.set(
+                            f"trace:{ctx_id}", trace.model_dump_json(), ex=86400
+                        )
+                    except Exception as e:
+                        logger.warning("context_trace_write_error", error=str(e))
 
                 logger.info(
                     "context_assembly_complete",
