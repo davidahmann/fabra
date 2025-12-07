@@ -8,16 +8,39 @@ We love your input! We want to make contributing to Meridian as easy and transpa
 - Proposing new features
 - Becoming a maintainer
 
-## Development Process
+## Development Setup
 
-We use GitHub to host code, to track issues and feature requests, and to accept pull requests.
+Meridian uses `uv` for dependency management and `make` for common tasks.
 
-1.  Fork the repo and create your branch from `main`.
-2.  If you've added code that should be tested, add tests.
-3.  If you've changed APIs, update the documentation.
-4.  Ensure the test suite passes.
-5.  Make sure your code lints.
-6.  Issue that pull request!
+### 1. Prerequisites
+- Python 3.9+
+- [uv](https://github.com/astral-sh/uv) (for fast dependency management)
+
+### 2. Setup
+Fork the repo, then:
+
+```bash
+git clone https://github.com/<your-username>/meridian.git
+cd meridian
+
+# Create virtualenv and install dependencies
+make setup
+```
+
+### 3. Common Commands
+
+We have a comprehensive `Makefile` to make development easy:
+
+- **`make test`**: Run the test suite (pytest).
+- **`make lint`**: Run formatters and linters (ruff, mypy).
+- **`make ui`**: Run the Streamlit UI locally.
+- **`make serve`**: Run the API server with Terminal UI.
+- **`make docker-up`**: Start local Postgres/Redis stack.
+
+### 4. Pull Request Process
+1.  Ensure `make test` and `make lint` pass locally.
+2.  If you added a new feature, add a test case.
+3.  Open a PR against the `main` branch.
 
 ## Any contributions you make will be under the Apache 2.0 Software License
 
