@@ -35,6 +35,7 @@ We have a comprehensive `Makefile` to make development easy:
 - **`make lint`**: Run formatters and linters (ruff, mypy).
 - **`make ui`**: Run the Streamlit UI locally.
 - **`make serve`**: Run the API server with Terminal UI.
+- **`make build`**: Build the Python distribution (wheel/sdist).
 - **`make docker-up`**: Start local Postgres/Redis stack.
 
 ### 4. Pull Request Process

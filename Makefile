@@ -13,6 +13,7 @@ help:
 	@echo "  make docker-up   - Start local production stack"
 	@echo "  make docker-down - Stop local production stack"
 	@echo "  make pre-commit  - Run all pre-commit hooks"
+	@echo "  make build       - Build python distribution"
 
 setup:
 	uv venv
@@ -57,3 +58,6 @@ prod-down:
 
 pre-commit:
 	uv run pre-commit run --all-files
+
+build:
+	uv build

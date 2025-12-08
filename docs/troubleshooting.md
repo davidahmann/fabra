@@ -58,7 +58,15 @@ if __name__ == "__main__":
 
 ### "ConnectionError: Connection refused"
 **Cause:** Redis is not running or the URL is wrong.
-**Fix:** Check `MERIDIAN_REDIS_URL`. Default is `redis://localhost:6379`.
+**Fix:**
+Ensure your `redis` service name in `docker-compose.yml` matches `MERIDIAN_REDIS_URL`. If using the default `redis://localhost:6379`, ensure you mapped ports (`6379:6379`) in Docker.
+
+### "asyncpg.exceptions.DataError: invalid input for query argument"
+**Cause:** Postgres is strict about Timezone Aware (`TIMESTAMPTZ`) vs Naive (`TIMESTAMP`) datetimes. If you pass a Naive datetime (e.g., from `datetime.now()`) to a component expecting an Aware one (or vice versa), `asyncpg` may fail.
+**Fix:**
+Meridian v1.1.8+ handles this automatically for `get_training_data`. However, if you are manually inserting data:
+- Use `TIMESTAMPTZ` for your column definitions: `CREATE TABLE ... timestamp TIMESTAMPTZ`.
+- Ensure your Python datetimes are UTC aware: `datetime.now(timezone.utc)`.
 
 ## Context Store (RAG/Vectors)
 
