@@ -140,6 +140,21 @@ async def chat_context(user_id: str, query: str) -> Context:
 
 [Learn more about Context Assembly →](context-assembly.md)
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Meridian Context Store: RAG Infrastructure for Developers",
+  "description": "Complete guide to the Meridian Context Store. Manage vector embeddings, token budgets, and context assembly for Large Language Models.",
+  "articleSection": "Context Store",
+  "keywords": "context store, rag, vector database, pgvector, llm token management, context assembly",
+  "author": {
+    "@type": "Person",
+    "name": "David Ahmann"
+  }
+}
+</script>
+
 ### 4. Event-Driven Updates
 
 Keep context fresh by triggering updates on events.

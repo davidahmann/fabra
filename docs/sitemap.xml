@@ -2,62 +2,107 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://davidahmann.github.io/meridian/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/quickstart/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/context-store/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/architecture/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/philosophy/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/feast-alternative/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/local-to-production/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/hybrid-features/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/retrievers/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/context-assembly/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/event-driven-features/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/faq/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/troubleshooting/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/unit_testing/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/why-we-built-meridian/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/changelog/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/use-cases/fraud-detection/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/use-cases/churn-prediction/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://davidahmann.github.io/meridian/use-cases/real-time-recommendations/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/use-cases/rag-chatbot/</loc>
+    <lastmod>2025-12-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/meridian/glossary/</loc>
+    <lastmod>2025-12-08</lastmod>
     <priority>0.7</priority>
   </url>
 </urlset>
