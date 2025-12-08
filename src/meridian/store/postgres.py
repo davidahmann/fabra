@@ -43,6 +43,22 @@ class PostgresOfflineStore(OfflineStore):
         # MVP: Similar to DuckDB, we assume features are accessible via SQL.
         # We upload the entity_df to a temporary table and join.
 
+        # Normalize timestamps to UTC-Aware
+        # If naive, assume UTC.
+        # This ensures consistent behavior with asyncpg/Postgres which prefer Aware datetimes.
+        entity_df_norm = entity_df.copy()
+        if timestamp_col in entity_df_norm.columns:
+            ts_series = entity_df_norm[timestamp_col]
+            if (
+                pd.api.types.is_datetime64_ns_dtype(ts_series)
+                and getattr(ts_series.dtype, "tz", None) is None
+            ):
+                entity_df_norm[timestamp_col] = ts_series.dt.tz_localize("UTC")
+            elif pd.api.types.is_datetime64_dtype(ts_series):
+                # Already aware, enable conversion to UTC if mixed?
+                # ideally convert to UTC for consistency
+                entity_df_norm[timestamp_col] = ts_series.dt.tz_convert("UTC")
+
         async with self.engine.connect() as conn:  # type: ignore[no-untyped-call]
             # 1. Upload entity_df to temp table
             # Pandas to_sql is sync, so we can't use it directly with async engine easily
@@ -64,15 +80,13 @@ class PostgresOfflineStore(OfflineStore):
             # This is efficient for moderate sizes but slower than Postgres COPY for massive datasets.
             # Production upgrade: Use asyncpg.copy_records_to_table().
             values = []
-            for _, row in entity_df.iterrows():
+            for _, row in entity_df_norm.iterrows():
+                # Timestamp is now guaranteed Aware UTC by our normalization above
+                ts_val = row[timestamp_col].to_pydatetime()
                 values.append(
                     {
                         "entity_id": str(row[entity_id_col]),
-                        "timestamp": (
-                            row[timestamp_col].to_pydatetime()
-                            if hasattr(row[timestamp_col], "to_pydatetime")
-                            else row[timestamp_col]
-                        ),
+                        "timestamp": ts_val,
                     }
                 )
 
@@ -120,7 +134,11 @@ class PostgresOfflineStore(OfflineStore):
             else:
                 sql_df = pd.DataFrame(columns=list(result.keys()))
 
-            # Merge back to original entity_df to preserve other columns (e.g. Python features)
+            # Ensure sql_df has UTC timezone to match entity_df_norm
+            # asyncpg returns aware datetimes, likely UTC.
+            # We assume sql_df is already aware.
+
+            # Merge back to original entity_df (using the normalized one for keys)
             # We merge on entity_id and timestamp.
             # Note: The temp table used 'entity_id' and 'timestamp' as column names.
             # We need to map them back if the original cols were different, but for now we assume standard names
@@ -140,16 +158,21 @@ class PostgresOfflineStore(OfflineStore):
                 sql_df = sql_df.rename(columns={"timestamp": timestamp_col})
 
             # 2. Merge
-            # We use a left join to keep all rows from entity_df
-            merged_df = pd.merge(
-                entity_df,
+            # We use a left join to keep all rows from entity_df_norm
+            # We use entity_df_norm for the merge to ensure TZs match (both Aware UTC)
+            merged_df_norm = pd.merge(
+                entity_df_norm,
                 sql_df,
                 on=[entity_id_col, timestamp_col],
                 how="left",
                 suffixes=("", "_sql"),
             )
 
-            return merged_df
+            # 3. Restore original non-normalized entity_df structure?
+            # The caller might expect strict preservation of the input dataframe.
+            # But the features are attached. If we return the normalized timestamps (UTC), it's generally cleaner.
+            # Let's return the merged result with normalized UTC timestamps.
+            return merged_df_norm
 
     async def execute_sql(self, query: str) -> pd.DataFrame:
         async with self.engine.connect() as conn:  # type: ignore[no-untyped-call]
