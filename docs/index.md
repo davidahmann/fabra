@@ -23,11 +23,12 @@ Meridian is a developer-first **Context Store + Feature Store** designed to take
 pip install "meridian-oss[ui]"
 ```
 
-**2. Define Features**
+**2. Define Features & Context (`features.py`)**
 ```python
-# features.py
 from meridian.core import FeatureStore, entity, feature
-from datetime import timedelta
+from meridian.context import context, ContextItem
+from meridian.retrieval import retriever
+import random
 
 store = FeatureStore()
 
@@ -35,16 +36,36 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh=timedelta(minutes=5), materialize=True)
-def user_click_count(user_id: str) -> int:
-    return random.randint(0, 1000)
+# 1. THE FEATURE STORE (Structured Data)
+@feature(entity=User, refresh="daily", materialize=True)
+def user_tier(user_id: str) -> str:
+    # Imagine a DB lookup here; we'll simulate it for speed.
+    return "premium" if hash(user_id) % 2 == 0 else "free"
+
+# 2. THE CONTEXT STORE (Unstructured Data)
+@retriever(store)
+async def find_docs(query: str):
+    # In production, this uses pgvector.
+    # Here we simulate a semantic search result.
+    return [{"content": "Meridian bridges the gap between ML features and RAG.", "score": 0.9}]
+
+# 3. THE UNIFICATION (Context Assembly)
+@context(store)
+async def build_prompt(user_id: str, query: str):
+    # Fetch feature and docs in parallel
+    tier = await store.get_feature("user_tier", user_id)
+    docs = await find_docs(query)
+
+    return [
+        ContextItem(f"User is {tier}. Adjust tone accordingly.", priority=0),
+        ContextItem(str(docs), priority=1)
+    ]
 ```
 
-**3. Serve & Visualize**
+**3. Serve (Optional)**
 ```bash
 meridian serve features.py
-# OR
-meridian ui features.py
+# 🚀 Server running on http://localhost:8000
 ```
 
 [Get Started Now →](quickstart.md)

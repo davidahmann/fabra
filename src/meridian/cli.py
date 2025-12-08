@@ -206,7 +206,10 @@ COHERE_API_KEY=...
     else:
         with open(env_path, "w") as f:
             f.write(env_example.strip())
-        console.print("Created [bold].env.production[/bold]")
+        os.chmod(env_path, 0o600)
+        console.print(
+            "Created [bold].env.production[/bold] (permissions restricted to 0600)"
+        )
 
     console.print("\n[green]Setup Complete![/green]")
     console.print("To start infrastructure, run:")
@@ -262,9 +265,13 @@ __pycache__/
         f.write(gitignore.strip())
 
     if api_key_lines:
-        with open(os.path.join(name, ".env"), "w") as f:
+        env_path = os.path.join(name, ".env")
+        with open(env_path, "w") as f:
             f.write("\n".join(api_key_lines) + "\n")
-        console.print("Created [bold].env[/bold] with API key.")
+        os.chmod(env_path, 0o600)
+        console.print(
+            "Created [bold].env[/bold] with API key (permissions restricted to 0600)."
+        )
 
     if demo:
         # Create features.py

@@ -23,8 +23,8 @@ Most teams cobble together Pinecone + LangChain + custom glue code. Meridian pro
 
 ```python
 from meridian.core import FeatureStore
-from meridian.retrieval import retriever
 from meridian.context import context, Context, ContextItem
+from meridian.retrieval import retriever
 
 store = FeatureStore()
 
