@@ -77,10 +77,12 @@ async def test_cache_invalidation(mock_store: MagicMock) -> None:
     client = TestClient(app)
 
     # Mock delete
-    mock_store.online_store.client.delete = AsyncMock()
+    # Mock delete directly on the online_store, not client
+    # because server logic checks hasattr(store.online_store, "delete")
+    mock_store.online_store.delete = AsyncMock()
 
     res = client.delete("/cache/User/u1")
     assert res.status_code == 200
     assert res.json()["status"] == "invalidated"
 
-    mock_store.online_store.client.delete.assert_called_with("User:u1")
+    mock_store.online_store.delete.assert_called_with("User:u1")

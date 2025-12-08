@@ -29,7 +29,8 @@ async def test_vector_search_e2e() -> None:
         async def fake_embed(texts: list[str], model: str = "") -> list[list[float]]:
             return [[1.0] * 1536 for _ in texts]  # Simple dummy vector
 
-        mock_embedder.embed.side_effect = fake_embed
+        mock_embedder.embed_documents.side_effect = fake_embed
+        mock_embedder.embed_query.side_effect = lambda t: [1.0] * 1536
 
         # 3. Create Index
         index_name = "e2e_test_index"
