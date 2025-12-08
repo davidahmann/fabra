@@ -145,6 +145,7 @@ async def chat_context(user_id: str, query: str):
 - **[Use Case: RAG Chatbot](use-cases/rag-chatbot.md):** Build a production RAG application.
 
 ### Reference
+- **[Glossary](glossary.md):** Definitions of key terms (Context Store, Feature, Entity).
 - **[FAQ](faq.md):** Common questions about production, scaling, and comparisons.
 - **[Troubleshooting](troubleshooting.md):** Common issues and fixes.
 - **[Why We Built Meridian](why-we-built-meridian.md):** The story behind the "Heroku for ML Features".
