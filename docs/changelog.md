@@ -1,12 +1,61 @@
 ---
 title: "Meridian Changelog: Release Notes and History"
-description: "Stay up to date with Meridian releases. See what's new in v1.1.0, including Hybrid Features and Point-in-Time Correctness."
-keywords: meridian changelog, release notes, feature store updates, software version history
+description: "Stay up to date with Meridian releases. See what's new in v1.2.0 with Context Store for LLMs, and v1.1.0 with Hybrid Features and Point-in-Time Correctness."
+keywords: meridian changelog, release notes, feature store updates, context store, rag updates, software version history
 ---
 
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [v1.2.0] - 2025-12-07
+
+### 🚀 Major Features: Context Store for LLMs
+
+*   **Context Store:** Full RAG infrastructure for LLM applications.
+    *   `@retriever` decorator for semantic search with automatic caching.
+    *   `@context` decorator for composing context with token budgets.
+    *   Priority-based truncation with `ContextItem(priority=N, required=True/False)`.
+*   **Vector Search:**
+    *   pgvector integration for Postgres with cosine similarity.
+    *   Automatic document chunking via tiktoken.
+    *   Multiple embedding providers (OpenAI, Cohere).
+*   **Event-Driven Architecture:**
+    *   `AxiomEvent` model for structured events.
+    *   `RedisEventBus` for publishing to Redis Streams.
+    *   `AxiomWorker` for consuming events and triggering feature updates.
+    *   Trigger-based features with `@feature(trigger="event_name")`.
+*   **DAG Resolution:**
+    *   Implicit wiring via `{feature_name}` template syntax.
+    *   `DependencyResolver` for automatic dependency graph construction.
+*   **Observability:**
+    *   `ContextTrace` model for debugging context assembly.
+    *   `/context/{id}/explain` API endpoint.
+    *   `ContextMetrics` for Prometheus integration.
+*   **Time Travel:**
+    *   `get_historical_features()` for point-in-time queries.
+    *   Debug production issues by querying past state.
+*   **Diagnostics:**
+    *   `meridian doctor` CLI command for environment diagnostics.
+    *   Checks Redis, Postgres, and environment variable configuration.
+
+### 🐛 Bug Fixes
+
+*   Fixed timing-safe API key comparison (now uses `secrets.compare_digest`).
+*   Fixed Docker container running as root (now uses non-root user).
+*   Fixed environment variable mismatch in docker-compose.yml.
+*   Added HEALTHCHECK to Dockerfile.
+
+### 📚 Documentation
+
+*   Added [Context Store Overview](context-store.md) page.
+*   Added [Retrievers](retrievers.md) page.
+*   Added [Context Assembly](context-assembly.md) page.
+*   Added [Event-Driven Features](event-driven-features.md) page.
+*   Added [RAG Chatbot Use Case](use-cases/rag-chatbot.md).
+*   Updated Architecture page with Context Store diagrams.
+
+---
 
 ## [v1.1.0] - 2025-12-05
 

@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Meridian</h1>
-  <h3>The Heroku for ML Features</h3>
+  <h3>The Heroku for ML Features & LLM Context</h3>
 
   <p>
     <a href="https://pypi.org/project/meridian-oss/"><img src="https://img.shields.io/pypi/v/meridian-oss?color=blue&label=pypi" alt="PyPI version" /></a>
@@ -9,12 +9,15 @@
     <a href="#"><img src="https://img.shields.io/badge/No-YAML-red.svg" alt="No YAML" /></a>
   </p>
 
-  <p><b>Define features in Python. Get training data and production serving for free.</b></p>
+  <p><b>Define features in Python. Get training data, production serving, and LLM context for free.</b></p>
   <p>Stop paying the infrastructure tax. Meridian takes you from Jupyter to Production in 30 seconds.</p>
 
+  <p><b>🆕 v1.2.0:</b> Context Store for LLMs with RAG, vector search (pgvector), and token budgets.</p>
+
   <p>
-    <b>📚 <a href="https://davidahmann.github.io/meridian/">Read the Documentation</a></b> |
-    <b>🛠️ <a href="docs/unit_testing.md">Unit Testing Guide</a></b>
+    <b>📚 <a href="https://davidahmann.github.io/meridian/">Documentation</a></b> |
+    <b>🤖 <a href="https://davidahmann.github.io/meridian/context-store">Context Store</a></b> |
+    <b>🛠️ <a href="docs/unit_testing.md">Testing Guide</a></b>
   </p>
 </div>
 
@@ -93,6 +96,7 @@ Meridian is built for the rest of us.
 * **Hybrid Features (v1.1.0):** Mix Python logic (for complex math) and SQL (for heavy joins) in the same API.
 * **Point-in-Time Correctness (v1.1.0):** Zero data leakage using `ASOF JOIN` (DuckDB) and `LATERAL JOIN` (Postgres).
 * **Write Once, Run Anywhere (v1.1.0):** Switch from Dev to Prod just by setting `MERIDIAN_ENV=production`. No code changes.
+* **Context Store for LLMs (v1.2.0):** Full RAG infrastructure with vector search (pgvector), token budgets, and priority-based context assembly.
 
 ---
 
@@ -128,14 +132,110 @@ graph TD
 * *Robust, scalable, and boring.*
 * **Offline Store:** Postgres / Snowflake / BigQuery
 * **Online Store:** Redis
-* **Infra:** 1x Postgres, 1x Redis, Nx API Pods
+* **Vector Store:** pgvector (Postgres extension)
+* **Infra:** 1x Postgres (with pgvector), 1x Redis, Nx API Pods
+
+### 🔧 Configuration
+
+Meridian uses 12-factor app configuration via Environment Variables.
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `MERIDIAN_ENV` | Environment mode (`development` or `production`) | `development` |
+| `MERIDIAN_REDIS_URL` | Redis Connection String | `redis://localhost:6379/0` |
+| `MERIDIAN_POSTGRES_URL` | Postgres Connection String | `postgresql+asyncpg://...` |
+| `MERIDIAN_API_KEY` | Master API Key for Server Authentication | `None` (Public in Dev) |
+| `OPENAI_API_KEY` | Required for Vector Embeddings & Context Assembly | `None` |
+| `COHERE_API_KEY` | Alternative embedding provider (Cohere) | `None` |
+| `MERIDIAN_EMBEDDING_MODEL` | Embedding model for vector search | `text-embedding-3-small` |
+
+---
+
+### 📚 Advanced Usage
+
+#### 1. Context Store & RAG (v1.2.0)
+Meridian isn't just for numbers. It's a full **Context Infrastructure** for LLMs.
+
+```python
+from meridian.retrieval import retriever
+from meridian.context import context, Context, ContextItem
+
+# Index documents (auto-chunks and embeds)
+await store.index(index_name="docs", entity_id="doc_1", text="Meridian is awesome...")
+
+# Define retriever for semantic search
+@retriever(store, index="docs", top_k=3)
+async def search_docs(query: str) -> list[str]:
+    pass  # Meridian handles vector search via pgvector
+
+# Assemble context with token budget
+@context(store, max_tokens=4000)
+async def chat_context(user_id: str, query: str) -> Context:
+    docs = await search_docs(query)
+    user_prefs = await store.get_feature("user_preferences", user_id)
+    return Context(items=[
+        ContextItem("You are a helpful assistant.", priority=0, required=True),
+        ContextItem(docs, priority=1, required=True),
+        ContextItem(f"User prefs: {user_prefs}", priority=2),  # Truncated first
+    ])
+```
+
+[📖 Full Context Store Documentation →](https://davidahmann.github.io/meridian/context-store)
+
+#### 2. Time Travel
+Debug production issues by querying the state of the world *as it was* yesterday.
+
+```python
+# Create a context that travels back in time
+with time_travel(datetime.now() - timedelta(days=1)):
+    # All feature queries in this block return historical values from Postgres
+    print(user_click_count("u1"))
+```
+
+#### 3. Event-Driven Updates
+Meridian listens to your event bus (Redis Streams) to push fresh features instantly.
+
+```python
+@feature(entity=User, trigger="transaction_event")
+def last_transaction_amount(user_id: str, event: AxiomEvent) -> float:
+    return event.payload["amount"]
+```
+
+---
+
+### 🔍 Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    participant G as Resolver
+    participant O as Online (Redis)
+    participant D as Offline (Postgres)
+
+    C->>S: POST /ingest/event
+    S->>O: Publish Event
+    Note over O: Async Worker picks up Event
+
+    C->>S: GET /features
+    S->>G: Resolve Dependencies
+    G->>O: Get Cached Values
+    alt Cache Miss
+        G->>D: Get Historical Data (if needed)
+        G->>G: Compute Derived Features
+        G->>O: Update Cache
+    end
+    G-->>S: Return Features
+    S-->>C: JSON Response
+```
 
 ---
 
 ### 🗺️ Roadmap
 
-* ✅ **Phase 1 (Now):** Core API, DuckDB/Postgres support, Redis caching, FastAPI serving, PIT Correctness, Async I/O.
-* 🚧 **Phase 2:** Drift detection, RBAC, and multi-region support.
+* ✅ **Phase 1:** Core API, DuckDB/Postgres support, Redis caching, FastAPI serving, PIT Correctness, Async I/O.
+* ✅ **Phase 2 (v1.2.0):** Context Store, RAG infrastructure, pgvector, Event-Driven features, Time Travel.
+* 🚧 **Phase 3:** Drift detection, RBAC, and multi-region support.
 
 ### 🤝 Contributing
 

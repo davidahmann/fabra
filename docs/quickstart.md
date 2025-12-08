@@ -1,12 +1,12 @@
 ---
-title: "How to Build a Feature Store in 30 Seconds | Meridian Quickstart"
-description: "Step-by-step guide to installing Meridian and serving ML features from Python in under 30 seconds. No Docker or Kubernetes required."
-keywords: meridian quickstart, feature store tutorial, python feature store, local feature store
+title: "How to Build a Feature Store & Context Store in 30 Seconds | Meridian Quickstart"
+description: "Step-by-step guide to installing Meridian and serving ML features and LLM context from Python in under 30 seconds. No Docker or Kubernetes required."
+keywords: meridian quickstart, feature store tutorial, context store tutorial, python feature store, local feature store, rag quickstart
 ---
 
-# Feature Store That Actually Works Locally: 30-Second Setup
+# Feature Store & Context Store That Actually Work Locally: 30-Second Setup
 
-> **TL;DR:** Install with `pip install "meridian-oss[ui]"`. Define features in a Python file using `@feature`. Run `meridian serve`. No Docker or YAML required.
+> **TL;DR:** Install with `pip install "meridian-oss[ui]"`. Define features with `@feature` and context with `@retriever`. Run `meridian serve`. No Docker or YAML required.
 
 ## The Problem With Every Other Feature Store
 
@@ -26,6 +26,37 @@ meridian serve examples/basic_features.py
 
 Done. No Docker. No Kubernetes. No YAML.
 
+## Context Store in 60 Seconds
+
+Building a RAG app? Add context retrieval:
+
+```python
+from meridian.core import FeatureStore
+from meridian.retrieval import retriever
+from meridian.context import context, Context, ContextItem
+
+store = FeatureStore()
+
+# Index documents
+await store.index("docs", "doc_1", "Meridian is a feature store...")
+
+# Define retriever
+@retriever(store, index="docs", top_k=3)
+async def search_docs(query: str) -> list[str]:
+    pass
+
+# Assemble context with token budget
+@context(store, max_tokens=4000)
+async def chat_context(query: str) -> Context:
+    docs = await search_docs(query)
+    return Context(items=[
+        ContextItem("You are helpful.", priority=0, required=True),
+        ContextItem(docs, priority=1),
+    ])
+```
+
+[Learn more about Context Store →](context-store.md)
+
 ## FAQ
 
 **Q: How do I run a feature store locally without Docker?**
@@ -41,13 +72,15 @@ A: Meridian eliminates YAML configuration. Define features in Python with `@feat
 
 - [Compare vs Feast](feast-alternative.md)
 - [Deploy to Production](local-to-production.md)
+- [Context Store](context-store.md) - RAG infrastructure for LLMs
+- [RAG Chatbot Tutorial](use-cases/rag-chatbot.md) - Full example
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": "How to Build a Feature Store in 30 Seconds",
-  "description": "Install Meridian and serve ML features from Python in under 30 seconds.",
+  "name": "How to Build a Feature Store & Context Store in 30 Seconds",
+  "description": "Install Meridian and serve ML features and LLM context from Python in under 30 seconds.",
   "totalTime": "PT30S",
   "tool": [{
     "@type": "HowToTool",
@@ -61,6 +94,10 @@ A: Meridian eliminates YAML configuration. Define features in Python with `@feat
     "@type": "HowToStep",
     "name": "Define Features",
     "text": "Create a python file with @feature decorators to define your feature logic."
+  }, {
+    "@type": "HowToStep",
+    "name": "Define Context (Optional)",
+    "text": "Use @retriever and @context decorators for RAG applications."
   }, {
     "@type": "HowToStep",
     "name": "Serve",

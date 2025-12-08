@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ContextTrace(BaseModel):
@@ -13,7 +13,8 @@ class ContextTrace(BaseModel):
         ..., description="The unique UUIDv7 of the context assembly"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Creation timestamp",
     )
     latency_ms: float = Field(..., description="Total assembly time in milliseconds")
 

@@ -1,6 +1,6 @@
 theme: jekyll-theme-minimal
-title: Meridian Feature Store
-description: Heroku for ML Features. Define features in Python. Get training data and production serving for free.
+title: Meridian Feature Store & Context Store
+description: Heroku for ML Features & LLM Context. Define features and RAG context in Python. Get training data, production serving, and intelligent context assembly for free.
 logo: https://img.shields.io/pypi/v/meridian-oss?color=blue&label=meridian-oss
 show_downloads: true
 google_analytics:

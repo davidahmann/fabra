@@ -1,12 +1,12 @@
 ---
-title: "Meridian Architecture: Local-First Feature Store Design | DuckDB + Redis"
-description: "Deep dive into Meridian's architecture. Learn how it uses DuckDB for local development and scales to Postgres and Redis for production."
-keywords: feature store architecture, duckdb feature store, feature store design, postgres redis mlops
+title: "Meridian Architecture: Local-First Feature Store & Context Store Design | DuckDB + Redis + pgvector"
+description: "Deep dive into Meridian's architecture. Learn how it uses DuckDB for local development and scales to Postgres, Redis, and pgvector for production ML features and LLM context."
+keywords: feature store architecture, context store architecture, duckdb feature store, feature store design, postgres redis mlops, pgvector vector search, rag architecture, llm context assembly
 ---
 
 # Meridian Architecture: Boring Technology, Properly Applied
 
-> **TL;DR:** Meridian uses DuckDB and in-memory dicts for local development (no deps) and standard Postgres + Redis for production. It guarantees point-in-time correctness without Kubernetes.
+> **TL;DR:** Meridian uses DuckDB and in-memory dicts for local development (no deps) and standard Postgres + Redis + pgvector for production. It guarantees point-in-time correctness for ML features and intelligent context assembly for LLMs—all without Kubernetes.
 
 ## Design Philosophy
 
@@ -39,8 +39,9 @@ keywords: feature store architecture, duckdb feature store, feature store design
 **Production Mode:**
 - **Offline:** Postgres 13+ (Async with `asyncpg`)
 - **Online:** Redis 6+ (standalone or cluster)
+- **Vector:** pgvector extension for embeddings
 - **Scheduler:** Distributed Workers with Redis Locks
-- **Infrastructure:** 1x Postgres, 1x Redis, Nx API Pods
+- **Infrastructure:** 1x Postgres (with pgvector), 1x Redis, Nx API Pods
 
 ## Point-in-Time Correctness
 
@@ -78,7 +79,7 @@ Meridian supports a unique hybrid architecture:
 2.  **SQL Features:** Computed via SQL queries (Offline) and materialized to Redis (Online).
 3.  **Unified API:** `get_training_data` automatically orchestrates both and joins the results.
 
-## Architecture Diagram
+## Feature Store Architecture
 
 ```mermaid
 graph TD
@@ -90,17 +91,91 @@ graph TD
     Materialization -->|Writes| Online[Online Store (Redis/Memory)]
     API[FastAPI Server] -->|Reads| Online
     API -->|Returns| Client[Client App]
-    API -->|Returns| Client[Client App]
 ```
+
+## Context Store Architecture (New in v1.2.0)
+
+The Context Store extends Meridian to support LLM applications with RAG, vector search, and intelligent context assembly.
+
+### Components
+
+1. **Index Registry:** Manages document collections with automatic chunking (tiktoken) and embedding (OpenAI/Cohere).
+2. **Vector Store:** pgvector extension in Postgres for semantic similarity search.
+3. **Retrievers:** `@retriever` decorated functions that perform vector search with result caching.
+4. **Context Assembly:** `@context` decorated functions that compose retrievers with token budgets.
+5. **Event Bus:** Redis Streams for real-time document ingestion and trigger-based updates.
+
+### Context Store Diagram
+
+```mermaid
+graph TD
+    subgraph Ingestion
+        Doc[Document] -->|POST /ingest| API[FastAPI]
+        API -->|Chunk + Embed| Embed[Embedding Provider]
+        Embed -->|Store| PGV[(Postgres + pgvector)]
+    end
+
+    subgraph Retrieval
+        Query[User Query] -->|POST /context| CTX[Context Resolver]
+        CTX -->|Vector Search| PGV
+        CTX -->|Get Features| Redis[(Redis Cache)]
+        CTX -->|Token Budget| Assembler[Context Assembler]
+        Assembler -->|Truncate by Priority| Response[Context Response]
+    end
+
+    subgraph Events
+        Event[AxiomEvent] -->|Redis Streams| Worker[AxiomWorker]
+        Worker -->|Trigger| Feature[Feature Update]
+        Worker -->|Re-index| PGV
+    end
+```
+
+### Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    participant R as Retriever
+    participant V as Vector Store
+    participant A as Assembler
+
+    C->>S: POST /context
+    S->>R: Resolve retrievers
+    R->>V: Vector similarity search
+    V-->>R: Top-K documents
+    R->>A: Collect ContextItems
+    A->>A: Sort by priority
+    A->>A: Truncate to token budget
+    A-->>S: Assembled context
+    S-->>C: JSON Response
+```
+
+### Token Budget Management
+
+Context assembly uses priority-based truncation to fit within LLM token limits:
+
+```python
+@context(store, max_tokens=4000)
+async def chat_context(user_id: str, query: str):
+    return Context(items=[
+        ContextItem(system_prompt, priority=0, required=True),  # Never truncated
+        ContextItem(relevant_docs, priority=1, required=True), # Required, high priority
+        ContextItem(user_history, priority=2),                 # Optional, medium priority
+        ContextItem(suggestions, priority=3),                  # Optional, low priority (truncated first)
+    ])
+```
+
+Items are sorted by priority (lowest first), and lower-priority items are truncated when the budget is exceeded. Items marked `required=True` raise `ContextBudgetError` if they cannot fit.
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Meridian Architecture: Local-First Feature Store Design",
-  "description": "Technical deep-dive into Meridian's architecture, explaining the use of DuckDB for local development and Postgres/Redis for production without Kubernetes.",
+  "headline": "Meridian Architecture: Local-First Feature Store & Context Store Design",
+  "description": "Technical deep-dive into Meridian's architecture, explaining the use of DuckDB for local development and Postgres/Redis/pgvector for production ML features and LLM context without Kubernetes.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
-  "keywords": "feature store architecture, duckdb, redis, mlops",
+  "keywords": "feature store architecture, context store, duckdb, redis, pgvector, mlops, rag",
   "articleSection": "Software Architecture"
 }
 </script>

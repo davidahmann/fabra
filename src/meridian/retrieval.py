@@ -201,10 +201,7 @@ def retriever(
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
             # Sync cannot await DAG resolution simply.
-            # We skip DAG resolution for Sync functions for now, OR run loop?
-            # Running loop in sync wrapper is dangerous (nesting).
             # Limitation: DAG Wiring only supported for Async Retrievers in V1.
-            # Log warning if template found?
 
             has_template = any(isinstance(v, str) and "{" in v for v in kwargs.values())
             if has_template:
@@ -213,11 +210,18 @@ def retriever(
                     reason="DAG resolution requires async retriever",
                 )
 
-            # Check for injected cache backend
-            # ... (Existing Sync Cache Logic skipped for brevity as logic duplication is high and Sync Cache was weak)
-            # Actually, let's keep the existing sync logic structure but simplified
+            result = func(*args, **kwargs)
 
-            return cast(List[Dict[str, Any]], list(func(*args, **kwargs)))
+            import inspect
+
+            if inspect.isawaitable(result):
+                # Safety check: if user wrapped an async func but it wasn't detected as coroutinefunction
+                # (e.g. partial or other callable), we can't await it here.
+                raise RuntimeError(
+                    "Sync retriever returned awaitable. Use async def for async retrievers."
+                )
+
+            return cast(List[Dict[str, Any]], list(result))
 
         return sync_wrapper
 

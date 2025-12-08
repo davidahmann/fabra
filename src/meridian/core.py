@@ -1,3 +1,4 @@
+import functools
 from typing import (
     Any,
     Callable,
@@ -30,8 +31,6 @@ from .store import (
 from .retrieval import RetrieverRegistry
 from .index import Index, IndexRegistry
 from .embeddings import OpenAIEmbedding
-
-# Metrics
 
 import contextvars
 from contextlib import contextmanager
@@ -243,12 +242,8 @@ class FeatureStore:
         """
         for name, feature in self.registry.features.items():
             if feature.materialize and feature.refresh:
-
-                def materializer(n: str = name) -> None:
-                    self._materialize_feature(n)
-
                 self.scheduler.schedule_job(
-                    func=materializer,
+                    func=functools.partial(self._materialize_feature, name),
                     interval_seconds=int(feature.refresh.total_seconds()),
                     job_id=f"materialize_{name}",
                 )

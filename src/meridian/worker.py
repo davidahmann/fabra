@@ -1,11 +1,11 @@
 import asyncio
-import logging
+import structlog
 from typing import Optional, Dict, Any
 from redis.asyncio import Redis
 from meridian.events import AxiomEvent
 from meridian.core import FeatureStore
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 class AxiomWorker:
@@ -14,7 +14,6 @@ class AxiomWorker:
     ):
         self.store: Optional[FeatureStore] = None
         if store:
-            self.store = store
             # Prefer store's redis if available
             if hasattr(store.online_store, "client"):
                 self.redis = store.online_store.client
@@ -159,11 +158,29 @@ class AxiomWorker:
 
         except Exception as e:
             logger.error(f"Failed to process message {msg_id}: {e}")
+            try:
+                # Dead Letter Queue Logic
+                dlq_stream = f"meridian:dlq:{stream}"
+                dlq_payload = fields.copy()
+                dlq_payload["error"] = str(e)
+                dlq_payload["original_stream"] = stream
+
+                await self.redis.xadd(dlq_stream, dlq_payload)
+                logger.warning(f"Moved message {msg_id} to DLQ {dlq_stream}")
+
+                # Acknowledge original message so we don't loop forever
+                await self.ack(stream, msg_id)
+            except Exception as dlq_error:
+                logger.critical(f"Failed to move message {msg_id} to DLQ: {dlq_error}")
             pass
 
     async def ack(self, stream: str, msg_id: str) -> None:
         await self.redis.xack(stream, self.group_name, msg_id)
 
-    def stop(self) -> None:
-        # Since run() loop checks cancelled error, we rely on task cancellation
+    async def stop(self) -> None:
+        """Gracefully stop the worker."""
+        logger.info("Worker received stop signal")
+        # In a real loop, we might set a flag self.running = False
+        # converting run loop to check self.running
+        # For now, we rely on the task cancellation caught in run()
         pass

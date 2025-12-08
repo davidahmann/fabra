@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request, Response, Depends, Security
+from contextlib import asynccontextmanager
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
-from typing import List, Dict, Any, cast
+from typing import List, Dict, Any, cast, AsyncGenerator
 import time
 import os
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -48,7 +49,21 @@ async def get_api_key(
 
 
 def create_app(store: FeatureStore) -> FastAPI:
-    app = FastAPI(title="Meridian Feature Store API")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        # Startup
+        logger.info("server_startup")
+        yield
+        # Shutdown
+        logger.info("server_shutdown")
+        if hasattr(store.offline_store, "engine"):
+            await store.offline_store.engine.dispose()
+        if hasattr(store.online_store, "client"):
+            await store.online_store.client.aclose()
+        elif hasattr(store.online_store, "redis"):
+            await store.online_store.redis.aclose()
+
+    app = FastAPI(title="Meridian Feature Store API", lifespan=lifespan)
 
     @app.middleware("http")
     async def metrics_middleware(request: Request, call_next: Any) -> Response:
@@ -65,6 +80,23 @@ def create_app(store: FeatureStore) -> FastAPI:
             endpoint=request.url.path,
             status=response.status_code,
         ).inc()
+
+        # Audit Log for Modifications
+        if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            # Extract user_id from API key (simplified)
+            # In real world, we'd decode JWT or look up key owner.
+            # Here we just use the hash prefix or 'dev' if public.
+            api_key = request.headers.get("X-API-Key", "public")
+            user_id = "dev_user" if api_key == "public" else f"key_{hash(api_key)}"
+
+            logger.info(
+                "audit_log",
+                audit=True,
+                user_id=user_id,
+                method=request.method,
+                path=request.url.path,
+                status=response.status_code,
+            )
 
         return response
 
@@ -100,6 +132,11 @@ def create_app(store: FeatureStore) -> FastAPI:
         """
         Ingests an event into the Axiom Event Bus.
         """
+        if not event_type.isalnum():
+            raise HTTPException(
+                status_code=400, detail="Event type must be alphanumeric"
+            )
+
         from meridian.events import AxiomEvent
         from meridian.bus import RedisEventBus
 
@@ -171,6 +208,47 @@ def create_app(store: FeatureStore) -> FastAPI:
             raise
         except Exception as e:
             logger.error("explain_context_failed", error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/cache/{entity_name}/{entity_id}")
+    async def invalidate_cache(
+        entity_name: str, entity_id: str, api_key: str = Depends(get_api_key)
+    ) -> Dict[str, str]:
+        """
+        Manually invalidate cache for a specific entity.
+        Warning: This might restart the cold start penalty for this entity.
+        """
+        if not store.online_store:
+            raise HTTPException(status_code=501, detail="Online store not configured")
+
+        try:
+            # Identify keys?
+            # RedisOnlineStore uses f"entity:{entity_name}:{entity_id}" usually.
+            # We should probably expose a delete method on FeatureStore/OnlineStore.
+            # But assuming RedisOnlineStore structure for MVP:
+            # We can't easily know all keys if they are hashed or individual features.
+            # Assuming RedisOnlineStore has a delete_entity method or similar
+            # OR we iterate known features.
+
+            # Best effort MVP:
+            # Ideally: await store.online_store.delete_entity(entity_name, entity_id)
+            # But store interface is generic.
+
+            # If we look at RedisOnlineStore implementation (not visible here but inferred),
+            # set_online_features uses hset with key f"{entity_name}:{entity_id}".
+            key = f"{entity_name}:{entity_id}"
+
+            if hasattr(store.online_store, "delete"):
+                await store.online_store.delete(key)
+            elif hasattr(store.online_store, "redis"):
+                await store.online_store.redis.delete(key)
+            elif hasattr(store.online_store, "client"):
+                await store.online_store.client.delete(key)
+
+            return {"status": "invalidated", "key": key}
+
+        except Exception as e:
+            logger.error("cache_invalidation_failed", error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
     return app

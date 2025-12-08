@@ -44,4 +44,53 @@ jobs:
     - name: Run Tests
       run: |
         source .venv/bin/activate
-        make test
+        # Run unit tests
+        pytest tests/unit tests/e2e
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: false
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password # pragma: allowlist secret
+          POSTGRES_DB: meridian
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+
+    - name: Set up Python 3.11
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: |
+        uv venv
+        uv pip install -e ".[dev,ui]"
+        # Install asyncpg/redis explicitly if needed, but dev requirements should cover it
+
+    - name: Run Integration Tests
+      env:
+        MERIDIAN_REDIS_URL: redis://localhost:6379
+        MERIDIAN_POSTGRES_URL: postgresql+asyncpg://postgres:password@localhost:5432/meridian # pragma: allowlist secret
+      run: |
+        source .venv/bin/activate
+        pytest tests/integration

@@ -51,17 +51,20 @@ class AnthropicTokenCounter(TokenCounter):
         if not self.client:
             return len(text) // 4
 
-        return self._cached_count(text)
+        return _get_anthropic_token_count(self.model, text)
 
-    @functools.lru_cache(maxsize=1024)
-    def _cached_count(self, text: str) -> int:
-        if not self.client:
-            return len(text) // 4
-        try:
-            response = self.client.beta.messages.count_tokens(
-                model=self.model, messages=[{"role": "user", "content": text}]
-            )
-            return response.input_tokens
-        except Exception as e:
-            logger.error(f"Anthropic token count error: {e}")
-            return len(text) // 4
+
+@functools.lru_cache(maxsize=1024)
+def _get_anthropic_token_count(model: str, text: str) -> int:
+    try:
+        # We instantiate client here (stateless mostly) to avoid passing 'self'
+        from anthropic import Anthropic
+
+        client = Anthropic()
+        response = client.beta.messages.count_tokens(
+            model=model, messages=[{"role": "user", "content": text}]
+        )
+        return response.input_tokens
+    except Exception as e:
+        logger.error(f"Anthropic token count error: {e}")
+        return len(text) // 4

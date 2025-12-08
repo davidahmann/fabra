@@ -76,7 +76,7 @@ class DependencyResolver:
             for feat_name in deps:
                 feat_def = self.store.registry.features.get(feat_name)
                 if not feat_def:
-                    logger.warning(f"Feature {feat_name} not found in registry")
+                    logger.warning("feature_not_found_in_registry", feature=feat_name)
                     continue
 
                 e_name = feat_def.entity_name

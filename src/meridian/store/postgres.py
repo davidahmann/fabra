@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
+import re
 from typing import List, Optional, Dict, Any
 import json
+import hashlib
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
@@ -249,8 +251,8 @@ class PostgresOfflineStore(OfflineStore):
         Inserts documents into the index.
         Computes content_hash and adds mandatory metadata.
         """
-        import hashlib
-        import datetime
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", index_name):
+            raise ValueError(f"Invalid index name {index_name}. Must be alphanumeric.")
 
         table_name = f"meridian_index_{index_name}"
 
@@ -262,7 +264,7 @@ class PostgresOfflineStore(OfflineStore):
             content_hash = hashlib.sha256(chunk.encode("utf-8")).hexdigest()
 
             # Add Mandatory Metadata
-            meta["ingestion_timestamp"] = datetime.datetime.utcnow().isoformat()
+            meta["ingestion_timestamp"] = datetime.now(timezone.utc).isoformat()
             meta["content_hash"] = content_hash
             meta["indexer_version"] = "meridian-v1"
 
@@ -303,6 +305,9 @@ class PostgresOfflineStore(OfflineStore):
         Performs vector similarity search (Cosine Distance via <=> operator).
         Returns list of dicts with content and metadata.
         """
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", index_name):
+            raise ValueError(f"Invalid index name {index_name}. Must be alphanumeric.")
+
         table_name = f"meridian_index_{index_name}"
         vec_str = str(query_embedding)
 

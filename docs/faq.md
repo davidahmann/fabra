@@ -1,7 +1,7 @@
 ---
-title: "Meridian FAQ: Production, Comparisons, and Technical details"
-description: "Frequently Asked Questions about Meridian. Learn about production readiness, Kubernetes requirement (none!), and how it compares to Feast."
-keywords: meridian faq, feature store questions, feast vs meridian, production feature store
+title: "Meridian FAQ: Production, Context Store, Comparisons, and Technical details"
+description: "Frequently Asked Questions about Meridian. Learn about production readiness, Context Store for LLMs, Kubernetes requirement (none!), and how it compares to Feast."
+keywords: meridian faq, feature store questions, context store questions, feast vs meridian, production feature store, rag faq, llm context faq
 ---
 
 # Frequently Asked Questions
@@ -16,6 +16,23 @@ keywords: meridian faq, feature store questions, feast vs meridian, production f
 
 ### Q: How does Meridian compare to Feast?
 **A:** Meridian is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries. See [Meridian vs Feast](feast-alternative.md) for a detailed comparison.
+
+## Context Store (New in v1.2.0)
+
+### Q: What is the Context Store?
+**A:** The Context Store is RAG infrastructure for LLM applications. It provides vector search (pgvector), document indexing, and intelligent context assembly with token budgets. It shares infrastructure with the Feature Store (same Postgres, Redis).
+
+### Q: Do I need the Context Store for traditional ML?
+**A:** No. The Context Store is optional and designed for LLM/RAG applications. If you're building traditional ML models (fraud detection, recommendations), the Feature Store alone is sufficient.
+
+### Q: How does Meridian compare to LangChain?
+**A:** LangChain is a framework for building LLM applications. Meridian is infrastructure. You can use Meridian's Context Store as the retrieval layer in a LangChain application, or use it standalone. Meridian provides: vector storage (pgvector), token budget management, and unified feature+context in one system.
+
+### Q: What embedding providers are supported?
+**A:** OpenAI (text-embedding-3-small, ada-002) and Cohere (embed-english-v3.0). Set `OPENAI_API_KEY` or `COHERE_API_KEY` environment variable.
+
+### Q: How does token budgeting work?
+**A:** Use `@context(store, max_tokens=4000)` to set a budget. Each `ContextItem` has a priority (0=highest). Lower-priority items are truncated first when over budget. Items with `required=True` raise an error if they can't fit.
 
 ## Technical
 
@@ -70,6 +87,20 @@ See [Local to Production](local-to-production.md) for a guide.
     "acceptedAnswer": {
       "@type": "Answer",
       "text": "Meridian is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries."
+    }
+  }, {
+    "@type": "Question",
+    "name": "What is the Context Store?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "The Context Store is RAG infrastructure for LLM applications. It provides vector search (pgvector), document indexing, and intelligent context assembly with token budgets."
+    }
+  }, {
+    "@type": "Question",
+    "name": "How does token budgeting work?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Use @context(store, max_tokens=4000) to set a budget. Each ContextItem has a priority (0=highest). Lower-priority items are truncated first when over budget."
     }
   }]
 }

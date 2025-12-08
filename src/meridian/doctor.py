@@ -1,5 +1,6 @@
 import os
 import sys
+import types
 import platform
 import structlog
 from typing import Optional, Dict, Any, List
@@ -143,7 +144,7 @@ def run_doctor() -> None:
         print("\nDependencies:")
 
     try:
-        toml_loader: Any = None
+        toml_loader: Optional[types.ModuleType] = None
         if sys.version_info >= (3, 11):
             import tomllib
 

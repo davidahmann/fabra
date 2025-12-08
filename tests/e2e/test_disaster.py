@@ -18,7 +18,6 @@ async def test_disaster_recovery_redis() -> None:
 
         # Connect
         store = RedisOnlineStore(f"redis://{host}:{port}")
-        store = RedisOnlineStore(f"redis://{host}:{port}")
 
         # 1. Success
         await store.set("test:key", "val")

@@ -1,7 +1,7 @@
 ---
-title: "Meridian Philosophy: The 95% Rule and Local-First Design"
-description: "Why we built Meridian. The 'Heroku for ML Features' philosophy: prioritizing developer experience and simple infrastructure over Google-scale complexity."
-keywords: meridian philosophy, feature store design, mlops philosophy, local-first software
+title: "Meridian Philosophy: The 95% Rule, Local-First Design, and Unified Context"
+description: "Why we built Meridian. The 'Heroku for ML Features' philosophy: prioritizing developer experience, simple infrastructure, and unified feature+context over Google-scale complexity."
+keywords: meridian philosophy, feature store design, context store design, mlops philosophy, local-first software, rag philosophy
 ---
 
 # Philosophy & Trade-offs
@@ -40,6 +40,25 @@ dbt is fantastic for batch transformations. We love dbt. But dbt stops at the da
 *   **Meridian** serves **rows** (e.g., `user_id: 123`).
 
 If you only need features refreshed once a day, dbt is enough. But if you need to serve those features to a live API with <10ms latency, you need a serving layer. Meridian bridges that gap.
+
+## Why Context Store?
+
+With the rise of LLMs, we saw teams building parallel infrastructure:
+
+1. **Feature Store** for ML models (fraud, recommendations)
+2. **Vector Database** for RAG (Pinecone, Weaviate)
+3. **Glue Code** to combine them (LangChain chains)
+
+This is the same complexity trap. Three systems to maintain, three sets of credentials, three failure modes.
+
+**Meridian's Context Store** unifies this:
+
+*   **Same Postgres:** Features in tables, embeddings in pgvector.
+*   **Same Redis:** Feature cache and retriever cache.
+*   **Same API:** `/features` and `/context` from one server.
+*   **Same Decorators:** `@feature`, `@retriever`, `@context`.
+
+If you're building an LLM app that needs user personalization (features) + document retrieval (context), you don't need two systems. You need Meridian.
 
 ## The "Confession"
 
