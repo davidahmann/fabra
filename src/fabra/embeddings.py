@@ -35,7 +35,7 @@ class OpenAIEmbedding(EmbeddingProvider):
 
         # Concurrency Control (Rate Limiting)
         # Default to 10 concurrent requests to avoid 429s on standard tier
-        concurrency = int(os.getenv("MERIDIAN_EMBEDDING_CONCURRENCY", "10"))
+        concurrency = int(os.getenv("FABRA_EMBEDDING_CONCURRENCY", "10"))
         self._semaphore = asyncio.Semaphore(concurrency)
 
     async def embed_documents(self, texts: List[str]) -> List[List[float]]:

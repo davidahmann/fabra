@@ -25,33 +25,33 @@ def test_default_config() -> None:
 
 def test_dev_config_explicit() -> None:
     """Test explicit development environment."""
-    with patch.dict(os.environ, {"MERIDIAN_ENV": "development"}, clear=True):
+    with patch.dict(os.environ, {"FABRA_ENV": "development"}, clear=True):
         config = get_config()
         assert isinstance(config, DevConfig)
 
 
 def test_prod_config_missing_vars() -> None:
     """Test production config raises error if vars missing."""
-    with patch.dict(os.environ, {"MERIDIAN_ENV": "production"}, clear=True):
+    with patch.dict(os.environ, {"FABRA_ENV": "production"}, clear=True):
         config = get_config()
         assert isinstance(config, ProdConfig)
 
-        # Should raise ValueError because MERIDIAN_POSTGRES_URL is missing
-        with pytest.raises(ValueError, match="MERIDIAN_POSTGRES_URL"):
+        # Should raise ValueError because FABRA_POSTGRES_URL is missing
+        with pytest.raises(ValueError, match="FABRA_POSTGRES_URL"):
             config.get_offline_store()
 
         # Mock offline store success to test online store failure
         with patch.object(ProdConfig, "get_offline_store"):
-            with pytest.raises(ValueError, match="MERIDIAN_REDIS_URL"):
+            with pytest.raises(ValueError, match="FABRA_REDIS_URL"):
                 config.get_online_store()
 
 
 def test_prod_config_success() -> None:
     """Test production config with valid vars."""
     env_vars = {
-        "MERIDIAN_ENV": "production",
-        "MERIDIAN_POSTGRES_URL": "postgresql+asyncpg://user:pass@localhost:5432/db",
-        "MERIDIAN_REDIS_URL": "redis://localhost:6379/0",
+        "FABRA_ENV": "production",
+        "FABRA_POSTGRES_URL": "postgresql+asyncpg://user:pass@localhost:5432/db",
+        "FABRA_REDIS_URL": "redis://localhost:6379/0",
     }
     with patch.dict(os.environ, env_vars, clear=True):
         config = get_config()

@@ -1,7 +1,7 @@
 """
 Recommendation Engine - Main Application
 
-Demonstrates a recommendation API that uses Meridian features
+Demonstrates a recommendation API that uses Fabra features
 to personalize product recommendations for users.
 """
 
@@ -99,7 +99,7 @@ def compute_recommendation_score(user_features: dict, product_features: dict) ->
 
 async def main() -> None:
     print("=" * 60)
-    print("Meridian Recommendation Engine Demo")
+    print("Fabra Recommendation Engine Demo")
     print("=" * 60)
 
     # First, load demo data

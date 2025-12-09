@@ -125,10 +125,10 @@ Other tools make you choose: LangChain for RAG, Feast for features, separate vec
 
 ```bash
 # Development (default): DuckDB + In-Memory
-MERIDIAN_ENV=development
+FABRA_ENV=development
 
 # Production: Postgres + Redis + pgvector
-MERIDIAN_ENV=production
+FABRA_ENV=production
 ```
 
 Same code. Zero changes. Just flip an environment variable.
@@ -191,7 +191,7 @@ graph TD
         D -->|Async| F[(Redis)]
     end
 
-    Switch{MERIDIAN_ENV} -->|development| Dev
+    Switch{FABRA_ENV} -->|development| Dev
     Switch -->|production| Prod
 ```
 
@@ -201,9 +201,9 @@ graph TD
 
 ```bash
 # Set environment variables
-export MERIDIAN_ENV=production
-export MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
-export MERIDIAN_REDIS_URL=redis://...
+export FABRA_ENV=production
+export FABRA_POSTGRES_URL=postgresql+asyncpg://...
+export FABRA_REDIS_URL=redis://...
 
 # Deploy
 fabra deploy fly --name my-app

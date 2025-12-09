@@ -7,16 +7,16 @@ import tempfile
 
 # 1. Define the content for the temporary feature file
 FEATURE_FILE_CONTENT = """
-from meridian.core import entity, feature, FeatureStore
+from fabra.core import entity, feature, FeatureStore
 from datetime import timedelta
 
 # We need a store instance for the decorators to work if not using global context
-# effectively. But the CLI `meridian serve` initializes the app.
+# effectively. But the CLI `fabra serve` initializes the app.
 # The `basic_features.py` example suggests we just define classes.
 # Let's follow the `examples/basic_features.py` pattern if I could see it,
 # but based on my code reading of `core.py`:
 # The decorators @entity and @feature register themselves to a VALID store.
-# `meridian serve` likely loads the module.
+# `fabra serve` likely loads the module.
 # Wait, `core.py` decorators require a `store` argument or the entity to have one.
 # CLI usage usually implies a global or module-level store that is passed to `create_app`.
 
@@ -37,7 +37,7 @@ def name_length(user_id: str) -> int:
 
 
 def run_test() -> None:
-    print("🚀 Starting Meridian UAT Smoke Test...")
+    print("🚀 Starting Fabra UAT Smoke Test...")
 
     # 2. Create Temporary File
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
@@ -48,12 +48,12 @@ def run_test() -> None:
 
     proc = None
     try:
-        # 3. Start Meridian Server
-        # Assumptions: 'meridian' is in the PATH or accessible via 'python -m meridian'
+        # 3. Start Fabra Server
+        # Assumptions: 'fabra' is in the PATH or accessible via 'python -m fabra'
         cmd = [
             sys.executable,
             "-m",
-            "meridian.cli",
+            "fabra.cli",
             "serve",
             tmp_path,
             "--port",
@@ -94,8 +94,8 @@ def run_test() -> None:
             "features": ["user_name_upper", "name_length"],
         }
 
-        # NOTE: `meridian serve` usually expects API key or dev mode.
-        # server.py says if MERIDIAN_API_KEY is unset, it returns "dev-mode" and allows usage.
+        # NOTE: `fabra serve` usually expects API key or dev mode.
+        # server.py says if FABRA_API_KEY is unset, it returns "dev-mode" and allows usage.
         resp = requests.post("http://localhost:8008/features", json=payload, timeout=2)
 
         if resp.status_code != 200:

@@ -1,6 +1,6 @@
 # Fraud Detection Example
 
-This example demonstrates how to build a simple fraud detection system using Meridian.
+This example demonstrates how to build a simple fraud detection system using Fabra.
 It defines features for both `User` and `Merchant` entities and combines them to calculate a transaction risk score.
 
 ## Files

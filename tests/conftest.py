@@ -38,9 +38,9 @@ def infrastructure() -> Generator[Dict[str, Any], None, None]:
         )
 
         # 2. Override Config via Environment Variables
-        os.environ["MERIDIAN_ENV"] = "production"
-        os.environ["MERIDIAN_REDIS_URL"] = redis_url
-        os.environ["MERIDIAN_POSTGRES_URL"] = postgres_url
+        os.environ["FABRA_ENV"] = "production"
+        os.environ["FABRA_REDIS_URL"] = redis_url
+        os.environ["FABRA_POSTGRES_URL"] = postgres_url
 
         yield {"redis_url": redis_url, "postgres_url": postgres_url}
 

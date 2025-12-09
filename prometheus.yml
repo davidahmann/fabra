@@ -2,6 +2,6 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
-  - job_name: 'meridian'
+  - job_name: 'fabra'
     static_configs:
-      - targets: ['meridian:8000']
+      - targets: ['fabra:8000']

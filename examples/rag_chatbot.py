@@ -39,7 +39,7 @@ async def search_docs(query: str, top_k: int = 3) -> list[str]:
     # In reality: return await store.vector_search("docs", query, top_k)
     print(f"    [Retriever] Searching for: '{query}'")
     return [
-        "Meridian allows defining token budgets for context.",
+        "Fabra allows defining token budgets for context.",
         "Use @retriever to define vector search pipelines.",
         "Features can be cached in Redis for low latency.",
     ][:top_k]

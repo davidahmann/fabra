@@ -33,7 +33,7 @@ except ImportError:
 
 def get_redis_url() -> str:
     """Returns the configured Redis URL or a sensible default for local dev."""
-    return os.environ.get("MERIDIAN_REDIS_URL", "redis://localhost:6379")
+    return os.environ.get("FABRA_REDIS_URL", "redis://localhost:6379")
 
 
 class BaseConfig(ABC):
@@ -52,7 +52,7 @@ class DevConfig(BaseConfig):
 
     def get_online_store(self) -> OnlineStore:
         # Auto-detect Redis
-        redis_url = os.environ.get("MERIDIAN_REDIS_URL") or os.environ.get("REDIS_URL")
+        redis_url = os.environ.get("FABRA_REDIS_URL") or os.environ.get("REDIS_URL")
 
         if redis_url and RedisOnlineStore is not None:
             return RedisOnlineStore(redis_url=redis_url)
@@ -67,10 +67,10 @@ class ProdConfig(BaseConfig):
                 "PostgresOfflineStore not available. Install 'asyncpg' and 'sqlalchemy'."
             )
 
-        url = os.environ.get("MERIDIAN_POSTGRES_URL")
+        url = os.environ.get("FABRA_POSTGRES_URL")
         if not url:
             raise ValueError(
-                "MERIDIAN_POSTGRES_URL environment variable is required for production."
+                "FABRA_POSTGRES_URL environment variable is required for production."
             )
         return PostgresOfflineStore(connection_string=url)
 
@@ -78,16 +78,16 @@ class ProdConfig(BaseConfig):
         if RedisOnlineStore is None:
             raise ImportError("RedisOnlineStore not available. Install 'redis'.")
 
-        url = os.environ.get("MERIDIAN_REDIS_URL")
+        url = os.environ.get("FABRA_REDIS_URL")
         if not url:
             raise ValueError(
-                "MERIDIAN_REDIS_URL environment variable is required for production."
+                "FABRA_REDIS_URL environment variable is required for production."
             )
         return RedisOnlineStore(redis_url=url)
 
 
 def get_config() -> BaseConfig:
-    env = os.environ.get("MERIDIAN_ENV", "development").lower()
+    env = os.environ.get("FABRA_ENV", "development").lower()
     if env == "production":
         return ProdConfig()
     return DevConfig()

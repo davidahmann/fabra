@@ -747,8 +747,8 @@ wheels = [
 ]
 
 [[package]]
-name = "fabra"
-version = "2.0.0"
+name = "fabra-ai"
+version = "2.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

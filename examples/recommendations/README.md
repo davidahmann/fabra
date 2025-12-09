@@ -1,6 +1,6 @@
 # Product Recommendations Example
 
-This example demonstrates building a **personalized recommendation engine** using Meridian's feature store.
+This example demonstrates building a **personalized recommendation engine** using Fabra's feature store.
 
 ## Use Case
 
@@ -83,7 +83,7 @@ curl "http://localhost:8000/features/Product/prod_100?features=product_popularit
 1. **Candidate Generation**: Use pgvector to find semantically similar products before scoring
 2. **Feature Freshness**: Tune `refresh` intervals based on business needs
 3. **Caching**: Enable `materialize=True` for all frequently-accessed features
-4. **Monitoring**: Track feature latency and freshness via Meridian metrics
+4. **Monitoring**: Track feature latency and freshness via Fabra metrics
 
 ## Next Steps
 

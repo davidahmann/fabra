@@ -11,7 +11,7 @@ We support the latest release of Fabra.
 
 ## Reporting a Vulnerability
 
-We take the security of Meridian seriously. If you discover a security vulnerability, please do not report it as a public issue on GitHub.
+We take the security of Fabra seriously. If you discover a security vulnerability, please do not report it as a public issue on GitHub.
 
 Instead, please report it by emailing **dahmann@lumyn.cc**.
 
@@ -20,4 +20,4 @@ We will:
 2.  Investigate the issue and update you on our findings.
 3.  Release a fix if necessary and credit you for the discovery (unless you prefer to remain anonymous).
 
-Thank you for helping keep Meridian secure!
+Thank you for helping keep Fabra secure!

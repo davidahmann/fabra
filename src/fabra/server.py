@@ -64,7 +64,7 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 async def get_api_key(
     api_key_header: str = Security(api_key_header),
 ) -> str:
-    expected_key = os.getenv("MERIDIAN_API_KEY")
+    expected_key = os.getenv("FABRA_API_KEY")
     # If no key is configured, allow all (dev mode)
     if not expected_key:
         return "dev-mode"

@@ -20,9 +20,9 @@ except ImportError:
 def check_env_vars() -> List[Dict[str, Any]]:
     # Check essential env vars
     vars_to_check = [
-        "MERIDIAN_ENV",
-        "MERIDIAN_REDIS_URL",
-        "MERIDIAN_POSTGRES_URL",
+        "FABRA_ENV",
+        "FABRA_REDIS_URL",
+        "FABRA_POSTGRES_URL",
     ]
     results = []
     for v in vars_to_check:
@@ -123,8 +123,8 @@ def run_doctor() -> None:
             print(f"{res['name']}: {res['status']} ({res['value']})")
 
     # 2. Connectivity
-    redis_url = os.environ.get("MERIDIAN_REDIS_URL") or os.environ.get("REDIS_URL")
-    pg_url = os.environ.get("MERIDIAN_POSTGRES_URL") or os.environ.get("POSTGRES_URL")
+    redis_url = os.environ.get("FABRA_REDIS_URL") or os.environ.get("REDIS_URL")
+    pg_url = os.environ.get("FABRA_POSTGRES_URL") or os.environ.get("POSTGRES_URL")
 
     conn_results = [check_redis(redis_url), check_postgres(pg_url)]
 

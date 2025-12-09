@@ -89,7 +89,7 @@ jobs:
 
     - name: Run Integration Tests
       env:
-        MERIDIAN_REDIS_URL: redis://localhost:6379
+        FABRA_REDIS_URL: redis://localhost:6379
         FABRA_POSTGRES_URL: postgresql+asyncpg://postgres:password@localhost:5432/fabra # pragma: allowlist secret
       run: |
         source .venv/bin/activate

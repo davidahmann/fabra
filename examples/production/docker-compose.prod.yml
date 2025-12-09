@@ -6,13 +6,13 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: meridian_prod
+      POSTGRES_DB: fabra_prod
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d meridian_prod" ]
+      test: [ "CMD-SHELL", "pg_isready -U user -d fabra_prod" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -36,7 +36,7 @@ services:
     command: python examples/production/prod_app.py
     environment:
       - FABRA_ENV=production
-      - FABRA_POSTGRES_URL=postgresql+asyncpg://user:password@postgres:5432/meridian_prod
+      - FABRA_POSTGRES_URL=postgresql+asyncpg://user:password@postgres:5432/fabra_prod
       - FABRA_REDIS_URL=redis://redis:6379/0
     depends_on:
       postgres:

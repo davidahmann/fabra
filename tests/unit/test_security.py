@@ -6,7 +6,7 @@ from fabra.core import FeatureStore
 
 def test_api_key_enforcement() -> None:
     # Set API Key
-    os.environ["MERIDIAN_API_KEY"] = "secret-key"
+    os.environ["FABRA_API_KEY"] = "secret-key"
 
     store = FeatureStore()
     app = create_app(store)
@@ -40,13 +40,13 @@ def test_api_key_enforcement() -> None:
     assert response.status_code != 403
 
     # Cleanup
-    del os.environ["MERIDIAN_API_KEY"]
+    del os.environ["FABRA_API_KEY"]
 
 
 def test_dev_mode_no_key() -> None:
     # Ensure no key is set
-    if "MERIDIAN_API_KEY" in os.environ:
-        del os.environ["MERIDIAN_API_KEY"]
+    if "FABRA_API_KEY" in os.environ:
+        del os.environ["FABRA_API_KEY"]
 
     store = FeatureStore()
     app = create_app(store)

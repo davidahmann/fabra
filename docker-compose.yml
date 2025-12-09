@@ -1,16 +1,16 @@
 services:
-  meridian:
+  fabra:
     build: .
     ports:
       - "8005:8000"
     environment:
-      - MERIDIAN_REDIS_URL=redis://redis:6379
-      - MERIDIAN_POSTGRES_URL=postgresql://user:password@postgres:5432/meridian
-      - MERIDIAN_ENV=production
+      - FABRA_REDIS_URL=redis://redis:6379
+      - FABRA_POSTGRES_URL=postgresql://user:password@postgres:5432/fabra
+      - FABRA_ENV=production
     depends_on:
       - redis
       - postgres
-    command: meridian serve examples/basic_features.py --host 0.0.0.0 --port 8000
+    command: fabra serve examples/basic_features.py --host 0.0.0.0 --port 8000
 
   redis:
     image: redis:7
@@ -22,7 +22,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: meridian
+      POSTGRES_DB: fabra
     ports:
       - "5433:5432"
 

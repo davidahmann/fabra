@@ -19,7 +19,7 @@ def test_dev_config_auto_redis() -> None:
 
     # Assuming we have redis installed in dev env.
     if RedisOnlineStore is not None:
-        with patch.dict(os.environ, {"MERIDIAN_REDIS_URL": "redis://localhost:6379"}):
+        with patch.dict(os.environ, {"FABRA_REDIS_URL": "redis://localhost:6379"}):
             store = config.get_online_store()
             assert isinstance(store, RedisOnlineStore)
             assert store.connection_kwargs["url"] == "redis://localhost:6379"

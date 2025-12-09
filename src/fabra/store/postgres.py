@@ -24,8 +24,8 @@ class PostgresOfflineStore(OfflineStore):
                 )
 
         # Pool Configuration
-        pool_size = int(os.getenv("MERIDIAN_PG_POOL_SIZE", "5"))
-        max_overflow = int(os.getenv("MERIDIAN_PG_MAX_OVERFLOW", "10"))
+        pool_size = int(os.getenv("FABRA_PG_POOL_SIZE", "5"))
+        max_overflow = int(os.getenv("FABRA_PG_MAX_OVERFLOW", "10"))
 
         self.engine: AsyncEngine = create_async_engine(
             connection_string,

@@ -2,7 +2,7 @@
 Recommendation Engine Features
 
 This example demonstrates how to build a product recommendation system
-using Meridian's feature store. Features include:
+using Fabra's feature store. Features include:
 - User behavioral features (browsing patterns, purchase history)
 - Product features (popularity, category embeddings)
 - Cross-entity features (user-product affinity scores)
