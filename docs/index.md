@@ -176,6 +176,19 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - [Troubleshooting](troubleshooting.md) — Common issues and fixes
 - [Changelog](changelog.md) — Version history
 
+### Blog
+
+- [Why We Built a Feast Alternative](blog/feast-alternative.md)
+- [Running a Feature Store Locally Without Docker](blog/local-feature-store.md)
+- [RAG Without LangChain](blog/rag-without-langchain.md)
+- [The Feature Store for Startups](blog/feature-store-for-startups.md)
+- [Context Assembly: Fitting LLM Prompts in Token Budgets](blog/context-assembly.md)
+- [Point-in-Time Features: Preventing ML Data Leakage](blog/point-in-time-features.md)
+- [pgvector vs Pinecone: When to Self-Host Vector Search](blog/pgvector-vs-pinecone.md)
+- [Token Budget Management for Production RAG](blog/token-budget-management.md)
+- [Python Decorators for ML Feature Engineering](blog/python-decorators-ml.md)
+- [Deploy ML Features Without Kubernetes](blog/deploy-without-kubernetes.md)
+
 ---
 
 ## Contributing
