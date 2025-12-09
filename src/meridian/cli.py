@@ -685,6 +685,37 @@ def ui(
         console.print(f"[bold red]Error:[/bold red] File '{file}' not found.")
         raise typer.Exit(code=1)
 
+    # Validate FeatureStore exists before starting servers
+    sys.path.append(os.getcwd())
+    try:
+        module_name = os.path.splitext(os.path.basename(file))[0]
+        spec = importlib.util.spec_from_file_location(module_name, file)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load spec for {file}")
+
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        store = None
+        for attr_name in dir(module):
+            attr = getattr(module, attr_name)
+            if isinstance(attr, FeatureStore):
+                store = attr
+                break
+
+        if not store:
+            console.print(
+                "[bold red]Error:[/bold red] No FeatureStore instance found "
+                "in the provided file."
+            )
+            raise typer.Exit(code=1)
+    except Exception as e:
+        if "No FeatureStore" in str(e):
+            raise
+        console.print(f"[bold red]Error:[/bold red] Failed to load module: {e}")
+        raise typer.Exit(code=1)
+
     # Next.js UI with FastAPI backend
     import subprocess  # nosec B404
     import threading

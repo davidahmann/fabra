@@ -1,6 +1,5 @@
 from typer.testing import CliRunner
 from meridian.cli import app
-from unittest.mock import patch
 import os
 
 from pathlib import Path
@@ -56,20 +55,22 @@ def user_click_count(user_id: str) -> int:
         mock_run.assert_called_once()
 
 
-def test_ui_command(tmp_path: Path) -> None:
+def test_ui_command_file_not_found() -> None:
+    """Test that ui command fails gracefully for non-existent file."""
+    result = runner.invoke(app, ["ui", "non_existent_file.py"])
+    assert result.exit_code == 1
+    assert "not found" in result.stdout
+
+
+def test_ui_command_no_feature_store(tmp_path: Path) -> None:
+    """Test that ui command fails gracefully for file without FeatureStore."""
     d = tmp_path / "features.py"
     d.write_text("pass")
 
-    # Mock sys.exit to prevent crashing the test runner, and stcli.main
-    with patch("streamlit.web.cli.main") as mock_st_main:
-        with patch("sys.exit"):
-            result = runner.invoke(app, ["ui", str(d)])
-            assert result.exit_code == 0
-            # Relax assertion to handle wrapping
-            assert "Launching Meridian UI" in result.stdout
-            assert str(d.name) in result.stdout
-            assert str(d.name) in result.stdout
-            mock_st_main.assert_called_once()
+    result = runner.invoke(app, ["ui", str(d)])
+    # Should fail because file has no FeatureStore
+    assert result.exit_code == 1
+    assert "No FeatureStore instance found" in result.stdout
 
 
 def test_init_dry_run(tmp_path: Path) -> None:
