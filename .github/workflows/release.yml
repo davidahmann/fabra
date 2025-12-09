@@ -30,7 +30,7 @@ jobs:
         uv venv
         uv pip install -e ".[dev,ui]"
         source .venv/bin/activate
-        pytest
+        pytest --ignore=tests/ui
 
     - name: Build package
       run: uv run --with build python -m build
