@@ -89,7 +89,7 @@ async def test_high_risk_scenario(store):
 
 1.  **Speed**: Tests run in milliseconds.
 2.  **Isolation**: No network calls to external DBs.
-3.  **Portability**: Runs in any CI environment (GitHub Actions) with just `pip install fabra`.
+3.  **Portability**: Runs in any CI environment (GitHub Actions) with just `pip install fabra-ai`.
 
 Start small by using Fabra to organize your test data. When you're ready, the exact same code deploys to production with Redis.
 

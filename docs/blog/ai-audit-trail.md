@@ -284,7 +284,7 @@ When you can answer "what did the AI know?" definitively:
 ## Getting Started
 
 ```bash
-pip install --upgrade "fabra[ui]"
+pip install --upgrade "fabra-ai[ui]"
 ```
 
 Context Accountability is enabled by default. Your contexts are already being tracked.

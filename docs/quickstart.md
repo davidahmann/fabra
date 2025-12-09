@@ -6,7 +6,7 @@ keywords: fabra quickstart, feature store tutorial, context store tutorial, pyth
 
 # Feature Store & Context Store That Actually Work Locally: 30-Second Setup
 
-> **TL;DR:** Install with `pip install "fabra[ui]"`. Define features with `@feature`. Run `fabra serve`.
+> **TL;DR:** Install with `pip install "fabra-ai[ui]"`. Define features with `@feature`. Run `fabra serve`.
 
 > [!IMPORTANT]
 > **Prerequisites for RAG/Context Store:**
@@ -27,7 +27,7 @@ You want to serve ML features. Feast documentation says:
 ## Fabra in 30 Seconds
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 fabra serve examples/basic_features.py
 ```
 
@@ -67,7 +67,7 @@ async def chat_context(query: str) -> list[ContextItem]:
 ## FAQ
 
 **Q: How do I run a feature store locally without Docker?**
-A: Fabra uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install "fabra[ui]"`, define features in Python, run `fabra serve`. Zero infrastructure required.
+A: Fabra uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install "fabra-ai[ui]"`, define features in Python, run `fabra serve`. Zero infrastructure required.
 
 **Q: What's the simplest feature store for small ML teams?**
 A: Fabra targets "Tier 2" companies (Series B-D, 10-500 engineers) who need real-time ML but can't afford Kubernetes ops. Uses Postgres + Redis in production - boring, reliable technology.
@@ -96,7 +96,7 @@ A: Fabra eliminates YAML configuration. Define features in Python with `@feature
   "step": [{
     "@type": "HowToStep",
     "name": "Install Fabra",
-    "text": "Run pip install \"fabra[ui]\" to install the library."
+    "text": "Run pip install \"fabra-ai[ui]\" to install the library."
   }, {
     "@type": "HowToStep",
     "name": "Define Features",

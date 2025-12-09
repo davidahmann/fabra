@@ -108,7 +108,7 @@ Feast is a great tool for massive scale. Use Feast if:
 
 ```bash
 # 1. Install Fabra
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 
 # 2. Convert feature definitions
 # YAML -> Python decorators

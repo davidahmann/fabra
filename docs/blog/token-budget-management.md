@@ -315,7 +315,7 @@ if ctx.meta["items_dropped"] > 0:
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python

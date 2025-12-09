@@ -180,7 +180,7 @@ Combined with [Context Accountability](context-accountability.md) from v1.4, you
 **Upgrade to v1.5 today:**
 
 ```bash
-pip install --upgrade fabra
+pip install --upgrade fabra-ai
 ```
 
 ---

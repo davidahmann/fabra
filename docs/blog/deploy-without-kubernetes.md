@@ -366,7 +366,7 @@ Connect to:
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 
 # Create features
 cat > features.py << 'EOF'

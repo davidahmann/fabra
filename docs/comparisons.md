@@ -148,7 +148,7 @@ async def build_prompt(user_id: str, query: str):
 
 ```bash
 # 1. Install
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 
 # 2. Convert YAML to Python decorators
 # 3. Run: fabra serve features.py

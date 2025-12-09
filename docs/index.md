@@ -17,7 +17,7 @@ From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No
 | | |
 |:---|:---|
 | **What** | Unified Feature Store + Context Store for AI applications |
-| **Install** | `pip install "fabra[ui]"` |
+| **Install** | `pip install "fabra-ai[ui]"` |
 | **Features** | `@feature` decorator for ML features |
 | **RAG** | `@retriever` + `@context` for LLM context assembly |
 | **Vector DB** | pgvector (Postgres extension) |
@@ -45,7 +45,7 @@ Today, this means stitching together LangChain, Pinecone, a feature store, Redis
 ## The 30-Second Quickstart
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python

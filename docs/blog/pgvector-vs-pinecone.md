@@ -243,7 +243,7 @@ Fabra will support Pinecone as an alternative backend if demand exists.
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python

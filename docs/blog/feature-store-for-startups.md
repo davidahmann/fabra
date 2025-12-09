@@ -61,7 +61,7 @@ Not YAML. Not a separate DSL. Just Python functions.
 Your ML engineers need to test features locally before deploying. They shouldn't need Docker running 6 containers.
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 fabra serve features.py
 # Running on localhost:8000
 ```
@@ -189,7 +189,7 @@ Supported platforms: Fly.io, Google Cloud Run, AWS ECS, Render, Railway.
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 fabra serve examples/basic_features.py
 ```
 

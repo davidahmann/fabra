@@ -168,7 +168,7 @@ Set retention policies per environment. Keep 7 days in dev, 90 days in productio
 Upgrade to Fabra v1.4:
 
 ```bash
-pip install --upgrade "fabra[ui]"
+pip install --upgrade "fabra-ai[ui]"
 ```
 
 Context replay is enabled by default. No configuration required.

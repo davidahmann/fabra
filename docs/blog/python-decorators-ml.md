@@ -315,7 +315,7 @@ def transaction_count(user_id: str) -> int:
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python

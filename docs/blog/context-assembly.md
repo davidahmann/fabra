@@ -224,7 +224,7 @@ async def build(query: str):
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python

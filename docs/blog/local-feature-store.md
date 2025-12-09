@@ -61,7 +61,7 @@ def user_tier(user_id: str) -> str:
 ```
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 fabra serve features.py
 # Server running on http://localhost:8000
 ```
@@ -150,7 +150,7 @@ No code changes. The same `@feature` decorators work with Postgres and Redis.
 ## Try It Now
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 
 # Create a features file
 cat > features.py << 'EOF'

@@ -127,7 +127,7 @@ Be honest with yourself:
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 fabra serve examples/basic_features.py
 ```
 

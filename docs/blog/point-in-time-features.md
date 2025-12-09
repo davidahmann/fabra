@@ -210,7 +210,7 @@ A fraud model we worked with went from 62% production accuracy to 78% after impl
 ## Try It
 
 ```bash
-pip install "fabra[ui]"
+pip install "fabra-ai[ui]"
 ```
 
 ```python
