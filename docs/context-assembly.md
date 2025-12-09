@@ -8,6 +8,17 @@ keywords: context assembly, token budget, llm context, priority truncation, cont
 
 > **TL;DR:** Use `@context` to compose context from multiple sources. Set token budgets, assign priorities, and let Meridian handle truncation automatically.
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **Decorator** | `@context(store, max_tokens=4000)` |
+| **Token Counting** | tiktoken (GPT-4, Claude-3 supported) |
+| **Priority** | 0 = highest (kept first), 3+ = lowest (dropped first) |
+| **Required Flag** | `required=True` raises error if can't fit |
+| **Debug** | `store.explain_context()` or `GET /context/{id}/explain` |
+| **Freshness** | `freshness_sla="5m"` ensures data age (v1.5+) |
+
 ## What is Context Assembly?
 
 LLM prompts have token limits. You need to fit:
@@ -276,6 +287,28 @@ async def critical_context(...):
 ```
 
 See [Freshness SLAs](freshness-sla.md) for the full guide.
+
+## FAQ
+
+**Q: How do I set a token budget for LLM context?**
+A: Use the `@context` decorator with `max_tokens` parameter: `@context(store, max_tokens=4000)`. Meridian automatically truncates lower-priority items when the budget is exceeded.
+
+**Q: What happens when context exceeds token limit?**
+A: Items are dropped by priority (highest number first). Items with `required=True` raise `ContextBudgetError` if they can't fit. Items without `required` are silently dropped.
+
+**Q: How do I prioritize content in LLM context?**
+A: Set `priority` on `ContextItem`: `priority=0` (critical, kept first), `priority=1` (high), `priority=2+` (lower, dropped first). System prompts should always be priority 0.
+
+**Q: Does Meridian support token counting for Claude and GPT-4?**
+A: Yes. Meridian uses tiktoken for accurate counting. Specify model: `@context(store, max_tokens=4000, model="gpt-4")`. Claude-3 uses approximation.
+
+**Q: How do I debug context assembly?**
+A: Use the explain API: `await store.explain_context("context_name", ...)` or HTTP endpoint `GET /context/{id}/explain`. Returns which items were included, truncated, or dropped.
+
+**Q: Can I dynamically change the token budget?**
+A: Yes. Return a `Context` object with `max_tokens` set: `return Context(items=[...], max_tokens=budget)` to override the decorator's default.
+
+---
 
 ## Next Steps
 

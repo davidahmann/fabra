@@ -8,6 +8,17 @@ keywords: retriever, semantic search, vector search, pgvector, embedding, rag re
 
 > **TL;DR:** Use `@retriever` to define semantic search functions. Meridian handles embedding, vector search, and caching automatically.
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **Decorator** | `@retriever(index="docs", top_k=5)` |
+| **Vector DB** | pgvector (Postgres extension) |
+| **Embedding** | OpenAI, Cohere, Anthropic |
+| **Caching** | `cache_ttl=timedelta(seconds=300)` stores in Redis |
+| **Magic Wiring** | Empty function body auto-searches the index |
+| **DAG Integration** | Use `{retriever_name}` in feature templates |
+
 ## What is a Retriever?
 
 A **Retriever** is a function that searches an index and returns relevant documents. The `@retriever` decorator transforms a simple function into a full vector search pipeline.
@@ -195,6 +206,28 @@ sequenceDiagram
     end
     Retriever-->>App: Results
 ```
+
+## FAQ
+
+**Q: How do I implement semantic search in Python?**
+A: Use Meridian's `@retriever` decorator: `@retriever(index="docs", top_k=5)`. Define an async function with a query parameter. Meridian handles embedding and pgvector search automatically.
+
+**Q: What vector database does Meridian use?**
+A: Meridian uses **pgvector** (Postgres extension) for vector search. No separate vector database required—your vectors live alongside your relational data.
+
+**Q: How do I cache retriever results?**
+A: Add `cache_ttl` to the decorator: `@retriever(index="docs", top_k=5, cache_ttl=timedelta(seconds=300))`. Results are cached in Redis using a hash of the query.
+
+**Q: Can I use multiple vector indexes?**
+A: Yes. Define separate retrievers for each index: `@retriever(index="product_docs")` and `@retriever(index="support_tickets")`. Combine results in context assembly.
+
+**Q: What embedding providers are supported?**
+A: OpenAI (default), Cohere, and Anthropic. Configure via `MERIDIAN_EMBEDDING_PROVIDER` environment variable or API key detection.
+
+**Q: How do I filter retriever results by metadata?**
+A: Add filter parameters to your retriever function: `async def search(query: str, version: str = None)`. Filters are applied automatically during vector search.
+
+---
 
 ## Next Steps
 

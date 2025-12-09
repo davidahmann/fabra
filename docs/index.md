@@ -12,6 +12,19 @@ From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No
 
 [Get Started →](quickstart.md) | [Try in Browser →](https://meridianoss.vercel.app)
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **What** | Unified Feature Store + Context Store for AI applications |
+| **Install** | `pip install "meridian-oss[ui]"` |
+| **Features** | `@feature` decorator for ML features |
+| **RAG** | `@retriever` + `@context` for LLM context assembly |
+| **Vector DB** | pgvector (Postgres extension) |
+| **Local** | DuckDB + in-memory (zero setup) |
+| **Production** | Postgres + Redis (one env var) |
+| **Deploy** | `meridian deploy fly\|cloudrun\|ecs\|railway\|render` |
+
 ---
 
 ## The Problem
@@ -201,6 +214,25 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 
 ---
 
+## Quick FAQ
+
+**Q: What is Meridian?**
+A: Meridian is a unified Context Store (for LLMs) and Feature Store (for ML) that lets you define features and RAG pipelines with Python decorators. Zero infrastructure to start.
+
+**Q: Do I need Kubernetes or Docker?**
+A: No. Meridian runs locally with DuckDB and in-memory cache. For production, set `MERIDIAN_ENV=production` with Postgres and Redis.
+
+**Q: How is Meridian different from Feast?**
+A: Meridian is a lightweight alternative with Python decorators instead of YAML, plus built-in RAG/LLM support (vector search, token budgeting) that Feast doesn't have.
+
+**Q: How is Meridian different from LangChain?**
+A: LangChain is a framework for building LLM apps. Meridian is infrastructure—it provides vector storage, token budgets, and ML features that LangChain apps can use.
+
+**Q: What vector database does Meridian use?**
+A: pgvector (Postgres extension). Your vectors live alongside your relational data—no separate vector database required.
+
+---
+
 ## Contributing
 
 We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/meridian/blob/main/CONTRIBUTING.md) to get started.
@@ -224,7 +256,11 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/meri
     "Vector Search with pgvector",
     "Token Budget Management",
     "Point-in-Time Correctness",
-    "One-Command Cloud Deploy"
-  ]
+    "One-Command Cloud Deploy",
+    "Context Accountability (v1.4)",
+    "Freshness SLAs (v1.5)"
+  ],
+  "softwareVersion": "1.5.0",
+  "license": "https://opensource.org/licenses/Apache-2.0"
 }
 </script>

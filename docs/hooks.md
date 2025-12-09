@@ -6,6 +6,15 @@ keywords: hooks, webhooks, plugins, extensibility, events, validation
 
 # Hooks & Extensibility
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **Base Class** | `meridian.hooks.Hook` |
+| **Register** | `FeatureStore(hooks=[YourHook()])` |
+| **Events** | `before_feature_retrieval`, `after_feature_retrieval`, `after_ingest` |
+| **Built-in** | `WebhookHook(url="...", headers={...})` |
+
 Meridian provides a powerful **Hook System** that allows you to intercept key lifecycle events in the Feature Store. This is useful for:
 
 *   **Validation**: Check feature values before returning them.
@@ -93,6 +102,22 @@ curl -X POST http://localhost:8000/v1/ingest/document_updated \
 ```
 
 The external URL will receive a POST request with the event payload.
+
+## FAQ
+
+**Q: How do I add custom hooks to Meridian?**
+A: Subclass `meridian.hooks.Hook` and implement the lifecycle methods (`before_feature_retrieval`, `after_feature_retrieval`, `after_ingest`). Register via `FeatureStore(hooks=[YourHook()])`.
+
+**Q: Can I add validation to feature retrieval?**
+A: Yes. Implement `before_feature_retrieval` to validate inputs or `after_feature_retrieval` to validate/transform outputs. Raise exceptions to block invalid data.
+
+**Q: How do I send webhooks when data is ingested?**
+A: Use the built-in `WebhookHook`: `WebhookHook(url="https://...", headers={"Authorization": "..."})`. Triggers automatically on ingest API calls.
+
+**Q: What lifecycle events can I hook into?**
+A: Three events: `before_feature_retrieval` (before fetch), `after_feature_retrieval` (after fetch with values), `after_ingest` (after data written).
+
+---
 
 <script type="application/ld+json">
 {

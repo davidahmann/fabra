@@ -63,6 +63,34 @@ keywords: meridian faq, feature store questions, context store questions, feast 
 3.  Deploy.
 See [Local to Production](local-to-production.md) for a guide.
 
+## Context Accountability (v1.4+)
+
+### Q: How do I track what data my AI used?
+
+**A:** Meridian automatically tracks lineage for every context assembly. Access via `ctx.lineage` after calling your `@context` function, or query historical contexts with `store.get_context_at(context_id)`.
+
+### Q: Can I replay an AI decision for debugging?
+
+**A:** Yes. Every context gets a UUIDv7 ID. Use `store.get_context_at(id)` to retrieve the exact content, features, and retriever results that were assembled.
+
+### Q: Where is context lineage stored?
+
+**A:** In the `context_log` table in your offline store (DuckDB or Postgres). You can query it directly with SQL or use the CLI: `meridian context list`.
+
+## Freshness SLAs (v1.5+)
+
+### Q: How do I ensure my AI context uses fresh data?
+
+**A:** Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Meridian tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
+
+### Q: What happens when features are stale?
+
+**A:** By default (degraded mode), context assembly succeeds but `freshness_status` becomes "degraded". Use `freshness_strict=True` to raise `FreshnessSLAError` instead.
+
+### Q: How do I monitor freshness SLA violations?
+
+**A:** Meridian exposes Prometheus metrics: `meridian_context_freshness_status_total` (guaranteed/degraded counts), `meridian_context_freshness_violations_total` (per-feature violations).
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -101,6 +129,34 @@ See [Local to Production](local-to-production.md) for a guide.
     "acceptedAnswer": {
       "@type": "Answer",
       "text": "Use @context(store, max_tokens=4000) to set a budget. Each ContextItem has a priority (0=highest). Lower-priority items are truncated first when over budget."
+    }
+  }, {
+    "@type": "Question",
+    "name": "How do I track what data my AI used?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Meridian automatically tracks lineage for every context assembly. Access via ctx.lineage after calling your @context function, or query historical contexts with store.get_context_at(context_id)."
+    }
+  }, {
+    "@type": "Question",
+    "name": "Can I replay an AI decision for debugging?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Yes. Every context gets a UUIDv7 ID. Use store.get_context_at(id) to retrieve the exact content, features, and retriever results that were assembled."
+    }
+  }, {
+    "@type": "Question",
+    "name": "How do I ensure my AI context uses fresh data?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Add freshness_sla to your @context decorator: @context(store, freshness_sla=\"5m\"). Meridian tracks feature ages and reports violations via ctx.meta[\"freshness_violations\"]."
+    }
+  }, {
+    "@type": "Question",
+    "name": "What happens when features are stale?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "By default (degraded mode), context assembly succeeds but freshness_status becomes \"degraded\". Use freshness_strict=True to raise FreshnessSLAError instead."
     }
   }]
 }

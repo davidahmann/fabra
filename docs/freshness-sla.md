@@ -2,6 +2,17 @@
 
 **New in v1.5** | Track and enforce data freshness guarantees for your AI contexts.
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **Parameter** | `@context(store, freshness_sla="5m")` |
+| **Formats** | `500ms`, `30s`, `5m`, `1h`, `1d` |
+| **Default Mode** | Degraded (assembly succeeds, flags violations) |
+| **Strict Mode** | `freshness_strict=True` (raises `FreshnessSLAError`) |
+| **Check Status** | `ctx.is_fresh` or `ctx.meta["freshness_status"]` |
+| **Metrics** | `meridian_context_freshness_violations_total` |
+
 ---
 
 ## Overview
@@ -298,8 +309,42 @@ meridian serve features.py  # Exposes /metrics endpoint
 
 ---
 
+## FAQ
+
+**Q: How do I ensure my AI context uses fresh data?**
+A: Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Meridian tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
+
+**Q: What happens when features are stale?**
+A: By default (degraded mode), context assembly succeeds but `freshness_status` becomes "degraded". Use `freshness_strict=True` to raise `FreshnessSLAError` instead.
+
+**Q: How do I monitor freshness SLA violations?**
+A: Meridian exposes Prometheus metrics: `meridian_context_freshness_status_total` (guaranteed/degraded counts), `meridian_context_freshness_violations_total` (per-feature violations).
+
+**Q: What SLA format does Meridian support?**
+A: Human-readable durations: `500ms`, `30s`, `5m`, `1h`, `1d`. Decimals supported: `1.5h` = 90 minutes.
+
+**Q: Should I use strict mode or degraded mode?**
+A: Start with degraded mode to monitor your baseline. Switch to strict mode for critical contexts after validating your feature refresh rates meet the SLA.
+
+**Q: How do I handle strict mode failures?**
+A: Catch `FreshnessSLAError` and fall back to a simpler context or cached response. Log violations for debugging.
+
+---
+
 ## Related
 
 - [Context Assembly Guide](context-assembly.md)
 - [Observability](observability.md)
 - [Context Accountability (v1.4)](context-accountability.md)
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Freshness SLAs: Data Freshness Guarantees for AI Context",
+  "description": "Track and enforce data freshness guarantees for your AI contexts. Degraded mode, strict mode, and Prometheus metrics.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "freshness sla, data freshness, stale data, ai context, feature freshness",
+  "articleSection": "Documentation"
+}
+</script>

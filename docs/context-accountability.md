@@ -2,6 +2,17 @@
 
 **v1.4+** - Track exactly what data was used when your AI made a decision.
 
+## At a Glance
+
+| | |
+|:---|:---|
+| **Context ID** | UUIDv7 (time-sortable, unique) |
+| **Replay API** | `store.get_context_at(context_id)` |
+| **List API** | `store.list_contexts(start, end, limit)` |
+| **CLI** | `meridian context show <id>`, `meridian context list` |
+| **Storage** | `context_log` table in DuckDB/Postgres |
+| **Lineage** | Features used, retrievers called, items dropped |
+
 ## The Problem
 
 When an LLM makes a decision based on context you assembled, you need to answer:
@@ -330,3 +341,37 @@ LIMIT 100;
 3. **Set appropriate max_tokens** - Token budgeting helps track what got dropped
 4. **Review stale features** - Monitor `stalest_feature_ms` to catch freshness issues
 5. **Archive old contexts** - Set up retention policies for the `context_log` table
+
+## FAQ
+
+**Q: How do I track what data my LLM used?**
+A: Meridian automatically tracks lineage for every context assembly. Access via `ctx.lineage` after calling your `@context` function, or query historical contexts with `store.get_context_at(context_id)`.
+
+**Q: Can I replay an AI decision for debugging?**
+A: Yes. Every context gets a UUIDv7 ID. Use `store.get_context_at(id)` to retrieve the exact content, features, and retriever results that were assembled.
+
+**Q: What is UUIDv7 and why use it for context IDs?**
+A: UUIDv7 encodes a timestamp in the first 48 bits, making IDs time-sortable. This enables efficient range queries (`WHERE id > X`) and chronological ordering without a separate timestamp column.
+
+**Q: How do I audit AI decisions for compliance?**
+A: Use `meridian context export <id> --format json` to export full context with lineage. For bulk export, use `meridian context list` to get IDs in a time range.
+
+**Q: What happens if lineage logging fails?**
+A: Context assembly succeeds anyway. Meridian uses graceful degradation—logging errors are recorded but don't block the response.
+
+**Q: Where is context lineage stored?**
+A: In the `context_log` table in your offline store (DuckDB or Postgres). You can query it directly with SQL.
+
+---
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Context Accountability: AI Decision Audit Trail",
+  "description": "Track exactly what data was used when your AI made a decision. Full lineage tracking, context replay, and compliance audit support.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "ai audit, context lineage, llm debugging, ai compliance, context replay",
+  "articleSection": "Documentation"
+}
+</script>

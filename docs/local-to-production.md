@@ -6,6 +6,15 @@ keywords: deploy feature store, meridian production, postgres redis feature stor
 
 # From Laptop to Production in 3 Steps
 
+## At a Glance
+
+| Environment | Offline Store | Online Cache | Deploy Command |
+|:---|:---|:---|:---|
+| Development | DuckDB (embedded) | In-memory | `meridian serve` |
+| Production | Postgres | Redis | `MERIDIAN_ENV=production` |
+| Local Prod | Postgres (Docker) | Redis (Docker) | `meridian setup && docker compose up` |
+| Cloud | Postgres (managed) | Redis (managed) | `meridian deploy fly\|cloudrun\|ecs` |
+
 ## Step 1: Local Development (Day 1)
 
 Your laptop is your feature store:
@@ -136,6 +145,28 @@ Use `--dry-run` to see what would be generated without writing files:
 ```bash
 meridian deploy fly --name my-app --dry-run
 ```
+
+## FAQ
+
+**Q: How do I deploy Meridian to production?**
+A: Set `MERIDIAN_ENV=production` and configure `MERIDIAN_POSTGRES_URL` and `MERIDIAN_REDIS_URL`. Same code works locally and in production—zero changes required.
+
+**Q: What infrastructure do I need for production?**
+A: Postgres (for offline store), Redis (for online cache), and any app host. Total cost starts at ~$100/month on managed services.
+
+**Q: How do I deploy to Fly.io?**
+A: Run `meridian deploy fly --name my-app`. This generates Dockerfile and fly.toml, then run `fly deploy`.
+
+**Q: Can I run a production stack locally?**
+A: Yes. Run `meridian setup` to generate docker-compose.yml with Postgres (pgvector) and Redis. Then `docker compose up -d`.
+
+**Q: What's the difference between development and production mode?**
+A: Development uses DuckDB (file-based) and in-memory cache. Production uses Postgres and Redis for durability and horizontal scale.
+
+**Q: How do I scale horizontally?**
+A: Deploy multiple API pods behind a load balancer. No code changes needed—Postgres and Redis handle shared state.
+
+---
 
 <script type="application/ld+json">
 {
