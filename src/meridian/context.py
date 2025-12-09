@@ -60,20 +60,21 @@ class Context(BaseModel):
         content_html = content_preview.replace("\n", "<br>")
 
         return f"""
-        <div style="font-family: -apple-system, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="font-family: -apple-system, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); background-color: var(--background-color, white); color: var(--text-color, #333);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: #202124;">Context Assembly</h3>
+                <h3 style="margin: 0; color: var(--text-color, #202124);">Context Assembly</h3>
                 <span style="background-color: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">{status_text}</span>
+                {'<span style="background-color: #673ab7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">⚡ CACHED</span>' if self.meta.get('is_cached_response') else ''}
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: #5f6368; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: var(--text-color, #5f6368); margin-bottom: 15px; background: var(--secondary-background-color, #f8f9fa); padding: 10px; border-radius: 6px;">
                 <div><strong>ID:</strong> <code>{self.id}</code></div>
                 <div><strong>Timestamp:</strong> {self.meta.get('timestamp', 'N/A')}</div>
                 <div><strong>Dropped Items:</strong> {self.meta.get('dropped_items', 0)}</div>
                 <div><strong>Sources:</strong> {len(self.meta.get('source_ids', []))}</div>
             </div>
 
-            <div style="background-color: #f1f3f4; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; color: #333; max-height: 300px; overflow-y: auto;">
+            <div style="background-color: var(--secondary-background-color, #f1f3f4); padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; color: var(--text-color, #333); max-height: 300px; overflow-y: auto; border: 1px solid var(--text-color-20, transparent);">
                 {content_html}
             </div>
         </div>
@@ -152,6 +153,7 @@ def context(
                                     is_fresh = False
 
                         if is_fresh:
+                            cached_ctx.meta["is_cached_response"] = True
                             logger.info("context_cache_hit", name=context_name)
                             metrics.record_cache_hit()
                             return cached_ctx

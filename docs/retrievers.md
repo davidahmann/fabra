@@ -15,11 +15,10 @@ A **Retriever** is a function that searches an index and returns relevant docume
 ```python
 from meridian.retrieval import retriever
 
-@retriever(name="docs_search", cache_ttl=300)
-async def search_docs(query: str) -> list[str]:
-    # ... search logic ...
+@retriever(index="knowledge_base", top_k=5)
+async def search_docs(query: str):
+    # Magic Wiring: Automatically searches `knowledge_base` index.
     pass
-# You implement: Embedding + Vector Search
 ```
 
 ## Basic Usage
@@ -32,9 +31,9 @@ from meridian.retrieval import retriever
 
 store = FeatureStore()
 
-@retriever(name="knowledge_base")
-async def search_knowledge(query: str) -> list[str]:
-    # Implement search logic
+@retriever(index="knowledge_base", top_k=5)
+async def search_knowledge(query: str):
+    # Pass 'query' argument automatically to vector search
     pass
 ```
 
@@ -51,6 +50,8 @@ results = await search_knowledge("How do I configure Redis?")
 | Parameter | Type | Description | Default |
 | :--- | :--- | :--- | :--- |
 | `name` | `str` | Name of the retriever (defaults to function name) | Optional |
+| `index` | `str` | Name of vector index to search (activates Magic Wiring) | Optional |
+| `top_k` | `int` | Number of results to return (used with `index`) | `5` |
 | `backend` | `str` | Backend type ("custom" or "postgres") | "custom" |
 | `cache_ttl` | `int` | Seconds to cache results in Redis | `0` (no cache) |
 

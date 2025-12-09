@@ -74,11 +74,12 @@ def user_tier(user_id: str) -> str:
     return "premium" if hash(user_id) % 2 == 0 else "free"
 
 # 2. THE CONTEXT STORE (Unstructured Data)
-@retriever(name="find_docs")
+# 2. THE CONTEXT STORE (Unstructured Data)
+@retriever(index="docs", top_k=3)
 async def find_docs(query: str):
-    # In production, this uses pgvector.
-    # Here we simulate a semantic search result.
-    return [{"content": "Meridian bridges the gap between ML features and RAG.", "score": 0.9}]
+    # Magic Wiring: This automatically runs vector search against 'docs' index
+    # No manual implementation required!
+    pass
 
 # 3. THE UNIFICATION (Context Assembly)
 @context(store, max_tokens=4000)
@@ -115,6 +116,13 @@ Expose features via HTTP for non-Python apps:
 ```bash
 meridian serve features.py
 # 🚀 Server running on http://localhost:8000
+```
+
+**5. Visualize (Optional)**
+Launch the UI to explore features and debug context assembly:
+```bash
+meridian ui features.py
+# 🧭 UI running on http://localhost:8501
 ```
 
 ---

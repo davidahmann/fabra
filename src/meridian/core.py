@@ -9,6 +9,7 @@ from typing import (
     List,
     get_type_hints,
     Generator,
+    cast,
 )
 from dataclasses import dataclass
 from datetime import timedelta, datetime
@@ -651,6 +652,45 @@ class FeatureStore:
             )
         else:
             logger.warning("Offline store does not support vector indexing.")
+
+    async def search(
+        self,
+        index_name: str,
+        query: str,
+        top_k: int = 5,
+        filter_timestamp: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Performs semantic search on the specified index.
+        1. Embed query.
+        2. Search Offline Store.
+        """
+        if not hasattr(self, "embedding_provider"):
+            from meridian.embeddings import OpenAIEmbedding
+
+            self.embedding_provider = OpenAIEmbedding()
+
+        # 1. Embed
+        # Embed single query
+        # Since embed_documents takes list, we wrap it.
+        # But maybe provider has embed_query?
+        # Assuming embed_documents for now as generic interface.
+        embeddings = await self.embedding_provider.embed_documents([query])
+        query_vec = embeddings[0]
+
+        # 2. Search
+        if not hasattr(self.offline_store, "search"):
+            raise NotImplementedError(
+                "Configured offline store does not support search."
+            )
+
+        results = await self.offline_store.search(
+            index_name=index_name,
+            query_embedding=query_vec,
+            top_k=top_k,
+            filter_timestamp=filter_timestamp,
+        )
+        return cast(List[Dict[str, Any]], results)
 
     def register_context(self, context_func: Any) -> None:
         """

@@ -1,19 +1,19 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from meridian.ui import load_feature_store
+from meridian.ui import load_module_contents
 
 
-def test_load_feature_store_fail() -> None:
+def test_load_module_contents_fail() -> None:
     with patch("streamlit.error") as mock_err, patch(
         "streamlit.stop", side_effect=Exception("Stopped")
     ) as mock_stop, patch("importlib.util.spec_from_file_location", return_value=None):
         with pytest.raises(Exception, match="Stopped"):
-            load_feature_store("non_existent_file.py")
+            load_module_contents("non_existent_file.py")
         mock_err.assert_called()
         mock_stop.assert_called()
 
 
-def test_load_feature_store_success() -> None:
+def test_load_module_contents_success() -> None:
     # We mock module loading to return a module with a store
     with patch("importlib.util.spec_from_file_location") as mock_spec:
         mock_mod = MagicMock()
@@ -35,6 +35,6 @@ def test_load_feature_store_success() -> None:
                 # dir(module)
                 mock_mod.__dir__ = MagicMock(return_value=["store"])  # type: ignore
 
-                store = load_feature_store("features.py")
+                store, _, _ = load_module_contents("features.py")
                 # Fix Mypy overlap error
                 assert cast(Any, store) is mock_store_instance

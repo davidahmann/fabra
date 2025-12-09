@@ -38,6 +38,8 @@ def retriever(
     backend: str = "custom",
     cache_ttl: Optional[Union[str, timedelta]] = None,
     name: Optional[str] = None,
+    index: Optional[str] = None,
+    top_k: int = 5,
 ) -> Any:
     """
     Decorator to register a function as a Retriever.
@@ -46,6 +48,11 @@ def retriever(
         backend: "custom" (Python) or "postgres" (SQL).
         cache_ttl: Optional TTL for caching results.
         name: Optional override for retriever name.
+        index: (Optional) Index name to automatically search. If set, function body is ignored (or run as pre-process?).
+               For MVP: If index is set, we use auto-wiring and ignore function body unless it returns specific query override?
+               Simpler: Auto-wiring completely replaces body logic if body is empty?
+               Let's assume auto-wiring overrides execution but uses args as query.
+        top_k: Number of results to return for auto-wiring.
     """
 
     def decorator(
@@ -77,6 +84,10 @@ def retriever(
             # Check for injected cache backend
             store_backend = getattr(ret_obj, "_cache_backend", None)
 
+            # Note: Sync wrapper cannot easily support Auto-Wiring because Store.search is async.
+            # If user uses index=..., they SHOULD use async def.
+            # We will handle this limitation in validation or runtime error.
+
             # If caching is enabled and backend is available
             if ret_obj.cache_ttl and store_backend:
                 try:
@@ -91,23 +102,8 @@ def retriever(
                     key_hash = hashlib.sha256(key_str.encode("utf-8")).hexdigest()
                     _cache_key = f"meridian:retriever:{r_name}:{key_hash}"
 
-                    # Try get
-                    # We assume store_backend is standard Redis client or similar interface
-                    # Since wrapper is sync, but Redis is async... this is tricky.
-                    # Retrievers might be async or sync.
-                    # If func is async, wrapper should be async.
-                    # For now, let's assume async if we want real async redis.
-                    # For Phase 2, let's assume Retrievers are generic.
-                    # If the user defined an async function, wrapper should be async.
+                    # ... Sync wrapper cache logic omitted for brevity as we prioritize Async ...
 
-                    # Handling Sync/Async wrapper transparency is complex.
-                    # For Phase 2 MVP: Let's assume user calls `await func(...)` if it's async.
-                    # If `func` is sync, we can't easily wait for async redis.
-
-                    # DECISION: Retrievers should be ASYNC for optimal IO.
-                    # "Story 2.1.2": Cache expensive vector search.
-                    # Vector search is usually IO bound.
-                    # Use `import inspect` to detect async.
                 except Exception as e:
                     logger.warning(f"Cache key generation failed: {e}")
 
@@ -122,12 +118,8 @@ def retriever(
                 return args, kwargs
 
             # Need entity_id to resolve
-            # Convention: entity_id in kwargs or first arg?
-            # Let's check kwargs first
             entity_id = kwargs.get("entity_id")
             if not entity_id:
-                # Weak heuristic: check if first arg looks like entity_id? No, too risky.
-                # If no entity_id, we can't resolve features.
                 return args, kwargs
 
             from meridian.graph import DependencyResolver
@@ -148,9 +140,6 @@ def retriever(
                             f"DAG resolution failed for kwarg {k}", error=str(e)
                         )
 
-            # Resolve Args (skip for now to avoid positional confusion, or iterate)
-            # Users defined @retriever usually use kwargs for clear query inputs like `query="..."`
-
             return tuple(new_args), new_kwargs
 
         # Async Wrapper Support
@@ -164,6 +153,9 @@ def retriever(
                 args, kwargs = await _resolve_args(args, kwargs)
 
                 store_backend = getattr(ret_obj, "_cache_backend", None)
+
+                # Check Cache
+                cache_key = None
                 if ret_obj.cache_ttl and store_backend:
                     try:
                         import json
@@ -179,27 +171,68 @@ def retriever(
                         if cached:
                             logger.info(f"Retriever Cache Hit: {r_name}")
                             return cast(List[Dict[str, Any]], json.loads(cached))
-
-                        # Miss -> Call
-                        result = await func(*args, **kwargs)
-
-                        # Store
-                        ttl_sec = int(ret_obj.cache_ttl.total_seconds())
-                        await store_backend.set(
-                            cache_key, json.dumps(result), ex=ttl_sec
-                        )
-                        return cast(List[Dict[str, Any]], result)
-
                     except Exception as e:
                         logger.warning(f"Retriever Caching Error: {e}")
 
-                return cast(List[Dict[str, Any]], await func(*args, **kwargs))
+                # Execute Logic
+                result: List[Dict[str, Any]] = []
+
+                # AUTO-WIRING LOGIC
+                if index is not None:
+                    # We need the store reference
+                    store_ref = getattr(ret_obj, "_meridian_store_ref", None)
+                    if store_ref:
+                        # Assumption: First arg is query string
+                        query = args[0] if args else kwargs.get("query")
+                        if not isinstance(query, str):
+                            logger.warning(
+                                "Auto-wiring requires string query as first arg or 'query' kwarg."
+                            )
+                            # Fallback to function execution?
+                            result = await func(*args, **kwargs)
+                        else:
+                            # Execute Search on Store
+                            try:
+                                result = await store_ref.search(index, query, top_k)
+                            except NotImplementedError:
+                                logger.error(
+                                    "Store search not implemented or available."
+                                )
+                                result = []
+
+                            # Allow function to post-process?
+                            # For now, completely replace.
+                    else:
+                        logger.warning(
+                            "Retriever has 'index' but no store reference. Skipping auto-wiring."
+                        )
+                        result = await func(*args, **kwargs)
+                else:
+                    # Normal Execution
+                    result = await func(*args, **kwargs)
+
+                # Store in Cache
+                if cache_key and store_backend:
+                    try:
+                        ttl_sec = int(ret_obj.cache_ttl.total_seconds())  # type: ignore
+                        await store_backend.set(
+                            cache_key, json.dumps(result), ex=ttl_sec
+                        )
+                    except Exception as e:
+                        logger.warning(f"Retriever Cache Write Error: {e}")
+
+                return result
 
             return async_wrapper  # type: ignore[return-value]
 
         # Sync Wrapper
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
+            if index:
+                raise RuntimeError(
+                    "Auto-wiring with 'index' requires 'async def' retriever."
+                )
+
             # Sync cannot await DAG resolution simply.
             # Limitation: DAG Wiring only supported for Async Retrievers in V1.
 

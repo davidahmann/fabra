@@ -29,11 +29,12 @@ from meridian.retrieval import retriever
 store = FeatureStore()
 
 # 1. Define a retriever for semantic search
-@retriever(name="docs_search", backend="postgres")
-async def search_docs(query: str) -> list[str]:
-    # Logic to search your index (e.g. using a pgvector client)
-    # The @retriever decorator handles caching and DAG resolution.
-    return [] # Implement actual search here
+# 1. Define a retriever for semantic search
+@retriever(index="knowledge_base", top_k=5)
+async def search_docs(query: str):
+    # Magic: Automatically searches "knowledge_base" index using
+    # the configured offline store (Postgres + pgvector).
+    pass
 
 # 2. Define context assembly with token budget
 @context(store, max_tokens=4000)
@@ -99,13 +100,11 @@ A **Retriever** performs vector search and returns relevant documents.
 ```python
 from meridian.retrieval import retriever
 
-@retriever(name="knowledge_base", cache_ttl=300)
-async def search_docs(query: str) -> list[str]:
-    # The decorator handles:
-    # 1. Caching results in Redis for cache_ttl seconds
-    # 2. DAG resolution if used in templates
-    # You implement the actual search logic here.
-    return []
+@retriever(index="knowledge_base", cache_ttl=300)
+async def search_docs(query: str):
+    # "Magic Wiring": Setting `index` connects this function directly
+    # to the vector store. No body implementation needed!
+    pass
 ```
 
 **Parameters:**

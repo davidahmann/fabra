@@ -2,14 +2,18 @@ import streamlit as st
 import sys
 import os
 import importlib.util
+import inspect
+import asyncio
+from typing import Optional, List, Dict, Any
 from meridian.core import FeatureStore
-from typing import Optional, List
 
 st.set_page_config(page_title="Meridian UI", page_icon="🧭", layout="wide")
 
 
-def load_feature_store(file_path: str) -> FeatureStore:
-    """Load the FeatureStore from the given file path."""
+def load_module_contents(
+    file_path: str
+) -> tuple[Optional[FeatureStore], Dict[str, Any], Dict[str, Any]]:
+    """Load the module and find FeatureStore, Contexts, and Retrievers."""
     spec = importlib.util.spec_from_file_location("features", file_path)
     if not spec or not spec.loader:
         st.error(f"Could not load file: {file_path}")
@@ -17,16 +21,135 @@ def load_feature_store(file_path: str) -> FeatureStore:
 
     module = importlib.util.module_from_spec(spec)
     sys.modules["features"] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as e:
+        st.error(f"Error loading module: {e}")
+        return None, {}, {}
 
-    # Find the FeatureStore instance
+    store = None
+    contexts = {}
+    retrievers = {}
+
+    # Inspect module
     for attr_name in dir(module):
         attr = getattr(module, attr_name)
-        if isinstance(attr, FeatureStore):
-            return attr
 
-    st.error("No FeatureStore instance found in the provided file.")
-    st.stop()
+        # Find Store
+        if isinstance(attr, FeatureStore):
+            store = attr
+
+        # Find Contexts (decorated functions)
+        if hasattr(attr, "_is_context") and attr._is_context:
+            contexts[attr_name] = attr
+
+        # Find Retrievers (decorated functions wrap Retriever logic)
+        if hasattr(attr, "_meridian_retriever"):
+            retrievers[attr_name] = getattr(attr, "_meridian_retriever")
+
+    if not store:
+        st.error("No FeatureStore instance found in the provided file.")
+        st.stop()
+
+    return store, contexts, retrievers
+
+
+def render_context_tab(store: FeatureStore, contexts: Dict[str, Any]) -> None:
+    st.header("Context Assembly")
+
+    if not contexts:
+        st.info("No @context functions found in this file.")
+        return
+
+    selected_ctx_name = st.selectbox("Select Context Definition", list(contexts.keys()))
+    ctx_func = contexts[selected_ctx_name]
+
+    st.markdown(f"**Function:** `{selected_ctx_name}`")
+    if ctx_func.__doc__:
+        st.caption(ctx_func.__doc__)
+
+    # Dynamic Form based on Signature
+    sig = inspect.signature(ctx_func)
+    params = {}
+
+    with st.form(key=f"ctx_form_{selected_ctx_name}"):
+        st.subheader("Inputs")
+        cols = st.columns(2)
+
+        i = 0
+        for name, param in sig.parameters.items():
+            # Skip self/cls if any (shouldn't be for valid context func usually)
+            if name in ["self", "cls"]:
+                continue
+
+            col = cols[i % 2]
+            i += 1
+
+            # Simple type inference for UI
+            default = param.default if param.default != inspect.Parameter.empty else ""
+
+            # Label with type hint if available
+            label = f"{name}"
+            if param.annotation != inspect.Parameter.empty:
+                try:
+                    label += f" ({param.annotation.__name__})"
+                except Exception:
+                    label += f" ({str(param.annotation)})"
+
+            val = col.text_input(label, value=str(default) if default != "" else "")
+            params[name] = val
+
+        submitted = st.form_submit_button("Assemble Context", type="primary")
+
+    if submitted:
+        # Convert params and execute
+        try:
+            # Basic type coercion could go here, for now passing strings
+            # (Meridian Pydantic models usually handle parsing if typed properly,
+            # but function args might need manual conversion if int/bool expected)
+
+            with st.spinner("Assembling Context..."):
+                # Inject store backend if not present (UI harness magic)
+                # The @context wrapper handles finding store if passed, but here we invoke directly.
+                # Inspect func to see if it needs store passed explicitly?
+                # Usually @context(store=...) handles it.
+
+                # Check for async
+                if inspect.iscoroutinefunction(ctx_func):
+                    result = asyncio.run(ctx_func(**params))
+                else:
+                    # Wrapped context should be async usually, but if wrapper handles sync?
+                    # The wrapper in context.py is async `async def wrapper`
+                    # So we must await it.
+                    result = asyncio.run(ctx_func(**params))
+
+            # Render Result
+            st.success(f"Context Assembled: {result.id}")
+
+            # Metrics
+            m_cols = st.columns(4)
+            m_cols[0].metric(
+                "Token Usage",
+                result.meta.get("token_usage", result.meta.get("usage", "N/A")),
+            )
+            m_cols[1].metric("Cost (USD)", f"${result.meta.get('cost_usd', 0):.6f}")
+            m_cols[2].metric(
+                "Latency",
+                f"{result.meta.get('latency_ms', 0):.2f}ms"
+                if "latency_ms" in result.meta
+                else "N/A",
+            )
+            m_cols[3].metric("Freshness", result.meta.get("freshness_status", "N/A"))
+
+            # HTML Repr
+            st.markdown(result._repr_html_(), unsafe_allow_html=True)
+
+            # Json Dump for debug
+            with st.expander("Raw JSON"):
+                st.json(result.model_dump())
+
+        except Exception as e:
+            st.error(f"Assembly Failed: {str(e)}")
 
 
 def main(args: Optional[List[str]] = None) -> None:
@@ -34,9 +157,6 @@ def main(args: Optional[List[str]] = None) -> None:
 
     if args is None:
         args = sys.argv
-
-    # args will look like: ['streamlit', 'run', 'src/meridian/ui.py', '--', 'path/to/features.py']
-    # Or if called directly: ['ui.py', 'features.py']
 
     if len(args) < 2:
         st.warning("Please provide the path to your feature definition file.")
@@ -49,12 +169,33 @@ def main(args: Optional[List[str]] = None) -> None:
         st.error(f"File not found: {feature_file}")
         return
 
-    store = load_feature_store(feature_file)
+    store, contexts, retrievers = load_module_contents(feature_file)
+    if store is None:
+        return
 
     # Sidebar
     st.sidebar.header("Configuration")
     st.sidebar.text(f"Loaded: {os.path.basename(feature_file)}")
 
+    # Retrievers List in Sidebar
+    if retrievers:
+        st.sidebar.subheader("Retrievers")
+        for r_name, r_obj in retrievers.items():
+            st.sidebar.markdown(
+                f"- **{r_name}**: `{r_obj.backend}` (TTL: {r_obj.cache_ttl})"
+            )
+
+    # Tabs
+    tab1, tab2 = st.tabs(["Store & Features", "Context Assembly"])
+
+    with tab1:
+        render_feature_tab(store)
+
+    with tab2:
+        render_context_tab(store, contexts)
+
+
+def render_feature_tab(store: FeatureStore) -> None:
     entities = list(store.registry.entities.keys())
     if not entities:
         st.warning("No entities found in the Feature Store.")
@@ -113,11 +254,11 @@ def main(args: Optional[List[str]] = None) -> None:
         """
         components.html(html, height=300, scrolling=True)
 
-    selected_entity_name = st.sidebar.selectbox("Select Entity", entities)
+    selected_entity_name = st.selectbox("Select Entity", entities)
     entity = store.registry.entities[selected_entity_name]
 
     # Main Content
-    st.header(f"Entity: {selected_entity_name}")
+    st.subheader(f"Entity: {selected_entity_name}")
     st.markdown(f"**ID Column:** `{entity.id_column}`")
     if entity.description:
         st.markdown(f"_{entity.description}_")
@@ -130,14 +271,15 @@ def main(args: Optional[List[str]] = None) -> None:
         """
         <style>
         div[data-testid="metric-container"] {
-            background-color: #f0f2f6;
-            border: 1px solid #e0e0e0;
+            background-color: var(--secondary-background-color, #f0f2f6);
+            border: 1px solid var(--text-color-20, #e0e0e0);
             padding: 15px;
             border-radius: 10px;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
         }
         div[data-testid="metric-container"] label {
             font-weight: bold;
+            color: var(--text-color, #333);
         }
         </style>
     """,
@@ -154,8 +296,6 @@ def main(args: Optional[List[str]] = None) -> None:
                 st.warning("No features defined for this entity.")
             else:
                 # Fetch values
-                import asyncio
-
                 values = asyncio.run(
                     store.get_online_features(
                         entity_name=selected_entity_name,
