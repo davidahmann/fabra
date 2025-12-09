@@ -5,6 +5,7 @@
   <p>
     <a href="https://pypi.org/project/meridian-oss/"><img src="https://img.shields.io/pypi/v/meridian-oss?color=blue&label=pypi" alt="PyPI version" /></a>
     <a href="https://github.com/davidahmann/meridian/actions/workflows/ci.yml"><img src="https://github.com/davidahmann/meridian/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+    <a href="https://github.com/davidahmann/meridian/security"><img src="https://img.shields.io/badge/security-enabled-brightgreen" alt="Security" /></a>
     <a href="https://github.com/davidahmann/meridian/blob/main/LICENSE"><img src="https://img.shields.io/github/license/davidahmann/meridian?color=green" alt="License" /></a>
     <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python Version" />
   </p>
