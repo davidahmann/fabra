@@ -15,13 +15,11 @@ A **Retriever** is a function that searches an index and returns relevant docume
 ```python
 from meridian.retrieval import retriever
 
-@retriever(store, index="docs", top_k=5)
+@retriever(name="docs_search", cache_ttl=300)
 async def search_docs(query: str) -> list[str]:
-    # Meridian handles everything:
-    # 1. Embed the query using configured provider
-    # 2. Search pgvector for similar documents
-    # 3. Return top_k results
+    # ... search logic ...
     pass
+# You implement: Embedding + Vector Search
 ```
 
 ## Basic Usage
@@ -34,8 +32,9 @@ from meridian.retrieval import retriever
 
 store = FeatureStore()
 
-@retriever(store, index="knowledge_base", top_k=3)
+@retriever(name="knowledge_base")
 async def search_knowledge(query: str) -> list[str]:
+    # Implement search logic
     pass
 ```
 
@@ -51,11 +50,9 @@ results = await search_knowledge("How do I configure Redis?")
 
 | Parameter | Type | Description | Default |
 | :--- | :--- | :--- | :--- |
-| `store` | `FeatureStore` | The feature store instance | Required |
-| `index` | `str` | Name of the index to search | Required |
-| `top_k` | `int` | Number of results to return | `5` |
+| `name` | `str` | Name of the retriever (defaults to function name) | Optional |
+| `backend` | `str` | Backend type ("custom" or "postgres") | "custom" |
 | `cache_ttl` | `int` | Seconds to cache results in Redis | `0` (no cache) |
-| `threshold` | `float` | Minimum similarity score (0-1) | `0.0` |
 
 ## Caching
 

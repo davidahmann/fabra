@@ -74,14 +74,14 @@ def user_tier(user_id: str) -> str:
     return "premium" if hash(user_id) % 2 == 0 else "free"
 
 # 2. THE CONTEXT STORE (Unstructured Data)
-@retriever(store)
+@retriever(name="find_docs")
 async def find_docs(query: str):
     # In production, this uses pgvector.
     # Here we simulate a semantic search result.
     return [{"content": "Meridian bridges the gap between ML features and RAG.", "score": 0.9}]
 
 # 3. THE UNIFICATION (Context Assembly)
-@context(store)
+@context(max_tokens=4000)
 async def build_prompt(user_id: str, query: str):
     # Fetch feature and docs in parallel
     tier = await store.get_feature("user_tier", user_id)

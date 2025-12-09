@@ -49,19 +49,19 @@ class Document:
 
 # User features for personalization
 @feature(entity=User, materialize=True, refresh=timedelta(hours=1))
-async def user_tier(user_id: str) -> str:
+def user_tier(user_id: str) -> str:
     # From your database
-    return await db.get_user_tier(user_id)
+    # return db.get_user_tier(user_id)
+    return "premium"
 
 @feature(entity=User, materialize=True)
-async def support_history(user_id: str) -> list[str]:
+def support_history(user_id: str) -> list[str]:
     # Last 5 support tickets
-    return await db.get_recent_tickets(user_id, limit=5)
+    return ["Ticket #101", "Ticket #102"]
 
 @feature(entity=User, trigger="message_sent")
-async def message_count(user_id: str, event) -> int:
-    current = await store.get_feature("message_count", user_id) or 0
-    return current + 1
+def message_count(user_id: str, event) -> int:
+    return 1 # Simplified for example
 ```
 
 ## Step 2: Index Your Knowledge Base
@@ -73,9 +73,7 @@ from chatbot import store
 
 async def index_knowledge_base():
     docs = [
-        {"id": "doc_1", "text": "To reset your password, go to Settings > Security...", "category": "account"},
-        {"id": "doc_2", "text": "Billing is processed on the 1st of each month...", "category": "billing"},
-        {"id": "doc_3", "text": "Premium users get priority support and...", "category": "plans"},
+        {"id": "doc_1", "text": "To reset your password...", "category": "account"},
     ]
 
     for doc in docs:
@@ -85,10 +83,10 @@ async def index_knowledge_base():
             text=doc["text"],
             metadata={"category": doc["category"]}
         )
-
     print(f"Indexed {len(docs)} documents")
 
-asyncio.run(index_knowledge_base())
+if __name__ == "__main__":
+    asyncio.run(index_knowledge_base())
 ```
 
 ## Step 3: Define Retrievers
@@ -97,15 +95,11 @@ asyncio.run(index_knowledge_base())
 # chatbot.py (continued)
 from meridian.retrieval import retriever
 
-@retriever(store, index="knowledge_base", top_k=3, cache_ttl=300)
+@retriever(name="knowledge_base", cache_ttl=300)
 async def search_docs(query: str) -> list[str]:
-    # Automatic vector search via pgvector
-    pass
-
-@retriever(store, index="knowledge_base", top_k=1)
-async def search_billing_docs(query: str) -> list[str]:
-    # Filtered to billing category (via metadata)
-    pass
+    # Logic to search pgvector
+    # return await store.vector_search("knowledge_base", query)
+    return ["Meridian simplifies RAG.", "Context Store manages tokens."]
 ```
 
 ## Step 4: Assemble Context
@@ -114,46 +108,37 @@ async def search_billing_docs(query: str) -> list[str]:
 # chatbot.py (continued)
 from meridian.context import context, Context, ContextItem
 
-SYSTEM_PROMPT = """You are a helpful customer support agent for Acme Corp.
-Be concise, friendly, and helpful. If you don't know something, say so."""
-
-@context(store, max_tokens=4000)
+@context(max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
     # Fetch all components
     docs = await search_docs(query)
-    tier = await store.get_feature("user_tier", user_id)
-    history = await store.get_feature("support_history", user_id)
+    # Get features (returns dict)
+    user_features = await store.get_online_features("User", user_id, ["user_tier", "support_history"])
+    tier = user_features.get("user_tier")
+    history = user_features.get("support_history", [])
 
-    # Build context with priorities
     items = [
-        ContextItem(SYSTEM_PROMPT, priority=0, required=True),
-        ContextItem(
-            f"User tier: {tier}. Adjust tone accordingly.",
-            priority=1,
-            required=True
-        ),
-        ContextItem(
-            "Relevant documentation:\n" + "\n---\n".join(docs),
-            priority=2,
-            required=True
-        ),
+        ContextItem(content="You are a helpful assistant.", priority=0, required=True),
+        ContextItem(content=f"User tier: {tier}", priority=1, required=True),
+        ContextItem(content="Docs:\n" + "\n".join(docs), priority=2, required=True),
     ]
 
-    # Add history for premium users (truncated first if over budget)
+    # Add history for premium users
     if tier == "premium" and history:
         items.append(ContextItem(
-            f"Previous tickets:\n" + "\n".join(history),
-            priority=3  # Lowest priority, truncated first
+            content=f"History:\n" + "\n".join(history),
+            priority=3,
+            required=False # Drop if budget exceeded
         ))
 
-    return Context(items=items)
+    return items # Returned list is automatically wrapped in Context
 ```
 
 ## Step 5: Create the API
 
 ```python
 # chatbot.py (continued)
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import openai
 
@@ -165,7 +150,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    context_tokens: int
+    context_used: str
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -173,17 +158,20 @@ async def chat(request: ChatRequest):
     ctx = await chat_context(request.user_id, request.message)
 
     # Call LLM
-    response = await openai.ChatCompletion.acreate(
+    from openai import AsyncOpenAI
+    client = AsyncOpenAI()
+
+    response = await client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": ctx.to_string()},
+            {"role": "system", "content": ctx.content}, # Access final string content
             {"role": "user", "content": request.message}
         ]
     )
 
     return ChatResponse(
         response=response.choices[0].message.content,
-        context_tokens=ctx.total_tokens
+        context_used=ctx.content
     )
 ```
 

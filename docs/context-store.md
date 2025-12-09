@@ -29,20 +29,22 @@ from meridian.retrieval import retriever
 store = FeatureStore()
 
 # 1. Define a retriever for semantic search
-@retriever(store, index="knowledge_base", top_k=5)
+@retriever(name="docs_search", backend="postgres")
 async def search_docs(query: str) -> list[str]:
-    # Meridian handles vector search automatically
-    pass
+    # Logic to search your index (e.g. using a pgvector client)
+    # The @retriever decorator handles caching and DAG resolution.
+    return [] # Implement actual search here
 
 # 2. Define context assembly with token budget
-@context(store, max_tokens=4000)
+@context(max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
     docs = await search_docs(query)
+    # Access store instance via global or closure if needed
     user_prefs = await store.get_feature("user_preferences", user_id)
 
     return Context(items=[
         ContextItem("You are a helpful assistant.", priority=0, required=True),
-        ContextItem(docs, priority=1, required=True),
+        ContextItem(str(docs), priority=1, required=True),
         ContextItem(f"User preferences: {user_prefs}", priority=2),
     ])
 ```
@@ -97,18 +99,16 @@ A **Retriever** performs vector search and returns relevant documents.
 ```python
 from meridian.retrieval import retriever
 
-@retriever(store, index="knowledge_base", top_k=5, cache_ttl=300)
+@retriever(name="knowledge_base", cache_ttl=300)
 async def search_docs(query: str) -> list[str]:
     # The decorator handles:
-    # 1. Embedding the query
-    # 2. Vector similarity search via pgvector
-    # 3. Caching results in Redis for cache_ttl seconds
-    pass
+    # 1. Caching results in Redis for cache_ttl seconds
+    # 2. DAG resolution if used in templates
+    # You implement the actual search logic here.
+    return []
 ```
 
 **Parameters:**
-- `index`: Name of the index to search.
-- `top_k`: Number of results to return.
 - `cache_ttl`: Seconds to cache results (default: 0, no caching).
 
 [Learn more about Retrievers →](retrievers.md)
@@ -120,7 +120,7 @@ A **Context** combines multiple sources under a token budget.
 ```python
 from meridian.context import context, Context, ContextItem
 
-@context(store, max_tokens=4000)
+@context(max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
     # Fetch from multiple sources
     docs = await search_docs(query)
@@ -128,8 +128,32 @@ async def chat_context(user_id: str, query: str) -> Context:
 
     return Context(items=[
         ContextItem(system_prompt, priority=0, required=True),
-        ContextItem(docs, priority=1, required=True),
+        ContextItem(str(docs), priority=1, required=True),
         ContextItem(history, priority=2),  # Truncated first if over budget
+    ])
+```
+
+**Example: Multiple Retrievers**
+
+```python
+@retriever(name="products_search")
+async def search_products(query: str) -> list[str]:
+    # Implement product search logic here
+    return []
+
+@retriever(name="tickets_search")
+async def search_tickets(query: str) -> list[str]:
+    # Implement ticket search logic here
+    return []
+
+# Combine in context assembly
+@context(max_tokens=4000)
+async def support_context(query: str) -> Context:
+    products = await search_products(query)
+    tickets = await search_tickets(query)
+    return Context(items=[
+        ContextItem(str(products), priority=1),
+        ContextItem(str(tickets), priority=2),
     ])
 ```
 

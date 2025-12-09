@@ -52,3 +52,43 @@ async def test_api_health() -> None:
         response = await client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_api_visualize_context() -> None:
+    # 1. Setup Store with trace data
+    store = FeatureStore(online_store=InMemoryOnlineStore())
+
+    # Manually seed a trace
+    from meridian.models import ContextTrace
+
+    trace = ContextTrace(
+        context_id="test_ctx_123",
+        latency_ms=150,
+        token_usage=500,
+        freshness_status="guaranteed",
+        source_ids=["src1", "src2"],
+        stale_sources=[],
+        cost_usd=0.002,
+        cache_hit=False,
+    )
+
+    # Store directly in online store
+    # Note: InMemory uses cache_storage for get()
+    # Pydantic dump_json -> string, store expects bytes or string depending on impl
+    # InMemoryOnlineStore.set takes bytes? Let's check impl. Core.py sets bytes.
+    await store.online_store.set("trace:test_ctx_123", trace.model_dump_json().encode())
+
+    # 2. Create App & Client
+    app = create_app(store)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 3. Request Visualization
+        response = await client.get("/context/test_ctx_123/visualize")
+
+    # 4. Assertions
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "<!DOCTYPE html>" in response.text
+    assert "test_ctx_123" in response.text
+    assert "500" in response.text  # token usage

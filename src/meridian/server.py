@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Response, Depends, Security
+from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
@@ -250,5 +251,96 @@ def create_app(store: FeatureStore) -> FastAPI:
         except Exception as e:
             logger.error("cache_invalidation_failed", error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/context/{context_id}/visualize", response_class=HTMLResponse)
+    async def visualize_context(
+        context_id: str, api_key: str = Depends(get_api_key)
+    ) -> HTMLResponse:
+        """
+        Returns a visual HTML representation of the context trace.
+        """
+        # Reuse logic from explain_context to get data
+        trace = await explain_context(context_id, api_key)
+
+        # Determine status color
+        fresh_color = "#1e8e3e" if trace.freshness_status == "guaranteed" else "#d93025"
+
+        # Build Source Pills
+        sources_html = ""
+        for src in trace.source_ids:
+            is_stale = src in (trace.stale_sources or [])
+            bg = "#fce8e6" if is_stale else "#e6f4ea"
+            color = "#c5221f" if is_stale else "#137333"
+            icon = "⚠️" if is_stale else "✅"
+            sources_html += f'<span style="background: {bg}; color: {color}; padding: 4px 8px; border-radius: 12px; font-size: 12px; margin-right: 5px; display: inline-block;">{icon} {src}</span>'
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Context Trace: {context_id}</title>
+            <style>
+                body {{ font-family: -apple-system, system-ui, sans-serif; background: #f8f9fa; padding: 40px; margin: 0; }}
+                .card {{ background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 24px; max-width: 800px; margin: 0 auto; }}
+                .header {{ border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }}
+                .title {{ font-size: 20px; font-weight: 600; color: #202124; margin: 0 0 5px 0; }}
+                .subtitle {{ color: #5f6368; font-family: monospace; font-size: 14px; }}
+                .badge {{ display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; color: white; vertical-align: middle; margin-left: 10px; }}
+                .metrics {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }}
+                .metric-box {{ background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }}
+                .metric-val {{ font-size: 24px; font-weight: bold; color: #202124; }}
+                .metric-label {{ font-size: 12px; color: #5f6368; text-transform: uppercase; margin-top: 5px; }}
+                .section-title {{ font-size: 14px; font-weight: 600; color: #202124; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }}
+                .sources {{ margin-bottom: 20px; }}
+                .footer {{ margin-top: 30px; text-align: center; color: #9aa0a6; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="header">
+                    <div>
+                        <span class="title">Context Assembly Trace</span>
+                        <span class="badge" style="background-color: {fresh_color}">{trace.freshness_status.upper()}</span>
+                    </div>
+                    <div class="subtitle">{context_id}</div>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric-box">
+                        <div class="metric-val">{int(trace.latency_ms)}ms</div>
+                        <div class="metric-label">Latency</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-val">{trace.token_usage}</div>
+                        <div class="metric-label">Tokens</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-val">{len(trace.source_ids)}</div>
+                        <div class="metric-label">Sources</div>
+                    </div>
+                </div>
+
+                <div class="sources">
+                    <div class="section-title">Included Sources</div>
+                    <div>{sources_html if sources_html else "<span style='color:#999'>No sources recorded</span>"}</div>
+                </div>
+
+                <div class="sources">
+                    <div class="section-title">Details</div>
+                     <div style="background: #202124; color: #e8eaed; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; overflow-x: auto;">
+                        Cache Hit: {trace.cache_hit}<br>
+                        Stale Sources: {trace.stale_sources or "None"}<br>
+                        Cost: {trace.cost_usd if trace.cost_usd else "N/A"}
+                    </div>
+                </div>
+
+                <div class="footer">
+                    Generated by Meridian Feature Store
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
     return app

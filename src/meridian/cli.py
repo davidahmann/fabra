@@ -474,35 +474,76 @@ def serve(
         # Create Rich Layout
         layout = Layout()
         layout.split(
-            Layout(name="header", size=3),
+            Layout(name="header", size=10),
             Layout(name="main", ratio=1),
             Layout(name="footer", size=3),
         )
 
+        ascii_banner = """
+███╗   ███╗███████╗██████╗ ██╗██████╗ ██╗ █████╗ ███╗   ██╗
+████╗ ████║██╔════╝██╔══██╗██║██╔══██╗██║██╔══██╗████╗  ██║
+██╔████╔██║█████╗  ██████╔╝██║██║  ██║██║███████║██╔██╗ ██║
+██║╚██╔╝██║██╔══╝  ██╔══██╗██║██║  ██║██║██╔══██║██║╚██╗██║
+██║ ╚═╝ ██║███████╗██║  ██║██║██████╔╝██║██║  ██║██║ ╚████║
+╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚═╝╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
+"""
         layout["header"].update(
             Panel(
-                f"Meridian Feature Store | Serving {file} on http://{host}:{port}",
-                style="bold white on blue",
+                f"[bold blue]{ascii_banner}[/bold blue]\n[center]Feature Store & Context Engine | Serving [bold cyan]{file}[/bold cyan][/center]",
+                style="white",
+                border_style="blue",
             )
         )
 
-        # Create a table for metrics
         def generate_metrics_table() -> Panel:
-            table = Table(title="Live Metrics")
+            table = Table(title="Live Metrics", expand=True)
             table.add_column("Metric", style="cyan")
             table.add_column("Value", style="magenta")
 
-            # Display basic static metrics (Real-time dashboard requires Epic 4.2)
-            # In a real implementation, we'd read from a shared metrics buffer
+            # Display basic static metrics
             table.add_row("Status", "Running 🟢")
             table.add_row("Uptime", datetime.now().strftime("%H:%M:%S"))
             table.add_row("Entities", str(len(store.registry.entities)))
             table.add_row("Features", str(len(store.registry.features)))
+            # Count contexts
+            ctx_len = len(
+                [
+                    f
+                    for f in store.registry.features.values()
+                    if getattr(f, "is_context", False)
+                ]
+            )
+            table.add_row("Contexts", str(ctx_len))
+
+            # Add demo curl command
+            table.add_section()
+
+            # Find a context feature to use for demo
+            demo_ctx = next(
+                (
+                    n
+                    for n, f in store.registry.features.items()
+                    if getattr(f, "is_context", False)
+                ),
+                None,
+            )
+
+            if demo_ctx:
+                curl_cmd = f'curl -X POST http://{host}:{port}/context/{demo_ctx} -d \'{{"entity_id": "test_user", "query": "Hello"}}\''
+                table.add_row("Demo API", f"[dim]{curl_cmd}[/dim]")
+            else:
+                table.add_row("Demo API", f"curl http://{host}:{port}/health")
+
             return Panel(table, title="System Status", border_style="green")
 
         layout["main"].update(generate_metrics_table())
 
-        layout["footer"].update(Panel("Press Ctrl+C to stop", style="dim"))
+        layout["footer"].update(
+            Panel(
+                f"Dashboard available at: [bold underline]http://{host}:{port}/dashboard[/bold underline] | Press [bold red]Ctrl+C[/bold red] to stop",
+                style="dim",
+            )
+        )
 
         console.print(f"[green]Successfully loaded features from {file}[/green]")
         console.print(

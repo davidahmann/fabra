@@ -19,7 +19,7 @@ from .store import (
 )
 from .scheduler import Scheduler
 from .scheduler_dist import DistributedScheduler
-import pybreaker
+
 import structlog
 from prometheus_client import Counter, Histogram
 import time
@@ -91,15 +91,6 @@ async def get_context(
             return await func(**kwargs)
     else:
         return await func(**kwargs)
-
-
-async def async_breaker_call(
-    breaker: pybreaker.CircuitBreaker,
-    func: Callable[..., Any],
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    return await breaker.call_async(func, *args, **kwargs)  # type: ignore[no-untyped-call]
 
 
 @dataclass
@@ -180,12 +171,6 @@ class FeatureStore:
         else:
             self.scheduler = Scheduler()
 
-        # Circuit breaker for online store
-        # Fail fast after 5 failures, try again after 60 seconds
-        self.online_store_breaker = pybreaker.CircuitBreaker(
-            fail_max=5, reset_timeout=60
-        )
-
     def _repr_html_(self) -> str:
         # Count entities and features
         n_entities = len(self.registry.entities)
@@ -194,45 +179,68 @@ class FeatureStore:
         # Build Entity Table
         entity_rows = ""
         for name, ent in self.registry.entities.items():
-            entity_rows += f"<tr><td>{name}</td><td>{ent.id_column}</td><td>{ent.description or ''}</td></tr>"
+            entity_rows += f"<tr><td style='padding: 8px; border-bottom: 1px solid #eee;'>{name}</td><td style='padding: 8px; border-bottom: 1px solid #eee;'><code>{ent.id_column}</code></td><td style='padding: 8px; border-bottom: 1px solid #eee;'>{ent.description or ''}</td></tr>"
 
         # Build Feature Table (Top 5)
         feature_rows = ""
         for i, (name, feat) in enumerate(self.registry.features.items()):
             if i >= 5:
-                feature_rows += f"<tr><td colspan='4'><em>... and {n_features - 5} more</em></td></tr>"
+                feature_rows += f"<tr><td colspan='4' style='padding: 8px; text-align: center; color: #666;'><em>... and {n_features - 5} more</em></td></tr>"
                 break
-            feature_rows += f"<tr><td>{name}</td><td>{feat.entity_name}</td><td>{feat.refresh}</td><td>{feat.materialize}</td></tr>"
+            feature_rows += f"<tr><td style='padding: 8px; border-bottom: 1px solid #eee;'>{name}</td><td style='padding: 8px; border-bottom: 1px solid #eee;'>{feat.entity_name}</td><td style='padding: 8px; border-bottom: 1px solid #eee;'><code>{feat.refresh}</code></td><td style='padding: 8px; border-bottom: 1px solid #eee;'>{feat.materialize}</td></tr>"
 
         return f"""
-        <div style="font-family: sans-serif; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px;">
-            <h2 style="margin-top: 0; color: #1f77b4;">🧭 Meridian Feature Store</h2>
-            <div style="display: flex; gap: 20px; margin-bottom: 10px;">
-                <div><strong>Entities:</strong> {n_entities}</div>
-                <div><strong>Features:</strong> {n_features}</div>
-                <div><strong>Offline:</strong> {self.offline_store.__class__.__name__}</div>
-                <div><strong>Online:</strong> {self.online_store.__class__.__name__}</div>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                <div style="font-size: 24px; margin-right: 10px;">🧭</div>
+                <div>
+                    <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">Meridian Feature Store</h2>
+                    <div style="color: #666; font-size: 13px;">Version: 1.2.5</div>
+                </div>
             </div>
 
-            <h4>Entities</h4>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
-                <thead style="background-color: #f8f9fa;">
-                    <tr><th style="text-align: left; padding: 5px;">Name</th><th style="text-align: left; padding: 5px;">ID Column</th><th style="text-align: left; padding: 5px;">Description</th></tr>
-                </thead>
-                <tbody>
-                    {entity_rows}
-                </tbody>
-            </table>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #333;">{n_entities}</div>
+                    <div style="color: #666; font-size: 12px; text-transform: uppercase;">Entities</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #333;">{n_features}</div>
+                    <div style="color: #666; font-size: 12px; text-transform: uppercase;">Features</div>
+                </div>
+                <div style="background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center;">
+                    <div style="font-weight: bold; color: #1a73e8; font-size: 14px; margin-bottom: 4px;">{self.offline_store.__class__.__name__}</div>
+                    <div style="color: #1a73e8; font-size: 10px; text-transform: uppercase;">Offline</div>
+                </div>
+                <div style="background: #e6f4ea; padding: 10px; border-radius: 6px; text-align: center;">
+                    <div style="font-weight: bold; color: #1e8e3e; font-size: 14px; margin-bottom: 4px;">{self.online_store.__class__.__name__}</div>
+                    <div style="color: #1e8e3e; font-size: 10px; text-transform: uppercase;">Online</div>
+                </div>
+            </div>
 
-            <h4>Features</h4>
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead style="background-color: #f8f9fa;">
-                    <tr><th style="text-align: left; padding: 5px;">Name</th><th style="text-align: left; padding: 5px;">Entity</th><th style="text-align: left; padding: 5px;">Refresh</th><th style="text-align: left; padding: 5px;">Materialize</th></tr>
-                </thead>
-                <tbody>
-                    {feature_rows}
-                </tbody>
-            </table>
+            <h4 style="margin: 0 0 10px 0; color: #333;">Entities</h4>
+            <div style="overflow-x: auto; margin-bottom: 20px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead style="background-color: #f1f3f4; color: #5f6368;">
+                        <tr><th style="text-align: left; padding: 8px; border-radius: 4px 0 0 4px;">Name</th><th style="text-align: left; padding: 8px;">ID Column</th><th style="text-align: left; padding: 8px; border-radius: 0 4px 4px 0;">Description</th></tr>
+                    </thead>
+                    <tbody>
+                        {entity_rows}
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 style="margin: 0 0 10px 0; color: #333;">Features</h4>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead style="background-color: #f1f3f4; color: #5f6368;">
+                        <tr><th style="text-align: left; padding: 8px; border-radius: 4px 0 0 4px;">Name</th><th style="text-align: left; padding: 8px;">Entity</th><th style="text-align: left; padding: 8px;">Refresh</th><th style="text-align: left; padding: 8px; border-radius: 0 4px 4px 0;">Materialize</th></tr>
+                    </thead>
+                    <tbody>
+                        {feature_rows}
+                    </tbody>
+                </table>
+            </div>
         </div>
         """
 
@@ -400,15 +408,13 @@ class FeatureStore:
         # 1. Try Cache (Online Store)
         try:
             with FEATURE_LATENCY.labels(feature="all", step="cache").time():
-                results = await async_breaker_call(
-                    self.online_store_breaker,
-                    self.online_store.get_online_features,
+                results = await self.online_store.get_online_features(
                     entity_name,
                     entity_id,
                     features,
                 )
         except Exception as e:
-            # If online store fails completely (e.g. Redis down) or BreakerOpen, treat all as missing
+            # If online store fails completely (e.g. Redis down), treat all as missing
             log.warning("online_store_failed", error=str(e))
             results = {}
 

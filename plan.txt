@@ -1,0 +1,140 @@
+Meridian Codebase Analysis: Findings & Work Plan
+Executive Summary
+The codebase is architecturally sound but has critical documentation-to-code mismatches that block new users from the Context Store features. The "wow factor" opportunities are significant but underutilized.
+
+CRITICAL FINDINGS
+1. Documentation API Mismatch (BLOCKER)
+The docs show an API that doesn't exist:
+
+What Docs Show	What Code Actually Does
+@context(store, max_tokens=4000)	@context(name="x", max_tokens=4000) - no store param
+@retriever(store, index="docs", top_k=3)	@retriever(name="x") - no store, index, top_k params
+ctx.items, ctx.to_string(), ctx.total_tokens	ctx.content, ctx.meta, ctx.id only
+Impact: Anyone copying the README or RAG chatbot example gets immediate TypeError.
+
+2. No Working Context Store Examples
+/examples/ has Feature Store examples only
+docs/use-cases/rag-chatbot.md is 330 lines of non-functional code
+Time to first success for RAG: Currently impossible
+3. Underutilized "Wow Factor"
+Component	Current State	Opportunity
+meridian serve output	Basic text	Live dashboard with metrics, QR code, demo commands
+Streamlit UI	Flat dataframe	Feature cards with latency badges, cache indicators
+Jupyter _repr_html_	Basic tables	Interactive cards, architecture diagrams
+Context trace	JSON blob	Visual token budget bar, dependency graph
+4. Missing Integration Hooks (Clyra Prep)
+No extensibility system for:
+
+Pre/post retrieval hooks
+Context assembly middleware
+Webhook delivery for external systems
+context_id propagation for audit trail
+WORK PLAN: High Impact, Low/Medium Effort
+Phase 1: Fix Critical Blockers (1-2 days)
+#	Task	Impact	Effort	Files
+1.1	Fix decorator API in all docs - Remove store param, fix @retriever params	CRITICAL	2h	docs/*.md, README.md
+1.2	Fix Context object usage in docs - ctx.items → ctx.content	CRITICAL	1h	docs/use-cases/rag-chatbot.md, docs/context-store.md
+1.3	Create working /examples/rag_chatbot.py - Actually runnable	CRITICAL	3h	New file
+1.4	Update OpenAI API usage - Deprecated ChatCompletion.acreate → new API	HIGH	1h	All docs
+Phase 2: Wow Factor Enhancements (2-3 days)
+#	Task	Impact	Effort	Files
+2.1	Enhance meridian serve output - ASCII banner, live metrics, demo curl commands	HIGH	4h	cli.py:406-522
+2.2	Add feature cards to Streamlit UI - Replace dataframe with visual cards showing latency, cache status	HIGH	3h	ui.py:129-161
+2.3	Enhance Jupyter _repr_html_ - Feature cards with badges, refresh indicators	MEDIUM	2h	core.py:189-237
+2.4	Visual context trace - Token budget bar, dependency graph in /context/{id}/explain	MEDIUM	3h	server.py:181-211, models.py
+Phase 3: Developer Experience (1-2 days)
+#	Task	Impact	Effort	Files
+3.1	Add --verbose flag to all CLI commands - Enable DEBUG logging	HIGH	1h	cli.py
+3.2	Add --dry-run to meridian init - Preview file creation	MEDIUM	2h	cli.py:220-371
+3.3	Enhance error messages - Add suggestions when feature loading fails	MEDIUM	2h	cli.py:124-125
+3.4	Add shell completion generation - bash/zsh/fish	LOW	2h	cli.py (typer has this built-in)
+Phase 4: Context Store Completeness (2-3 days)
+#	Task	Impact	Effort	Files
+4.1	Add default cache_ttl to @context - 5 min default for latency improvement	HIGH	30m	context.py:54
+4.2	Auto-inject cache backend - Wire Redis automatically when available	MEDIUM	2h	core.py, context.py
+4.3	Graceful budget degradation - Return partial context instead of crash	MEDIUM	3h	context.py:173-175
+4.4	Add cost estimation - USD per context based on token × model rate	HIGH	2h	models.py, context.py
+hardcode the rates from the providers' pricing pages. That's what everyone does (LangSmith, Helicone, OpenMeter, etc.). The prices change infrequently (~2-4x per year), so a static lookup table works fine.
+
+Implementation approach:
+
+# src/meridian/utils/pricing.py
+
+# Source: https://platform.openai.com/docs/pricing?latest-pricing=standard
+# Source: https://www.claude.com/pricing#api
+# Source: https://cohere.com/pricing
+check actual pricing using links provided above. for openai use top 5 their currently popular generative models and 2 embed models for anthropic use all their api pricing. for cohere two models provided in the example pricing.
+Example pricing:
+MODEL_PRICING = {
+    # OpenAI (per 1M tokens)
+    "gpt-4o": {"input": 2.50, "output": 10.00},
+
+
+    # Anthropic (per 1M tokens)
+
+    "claude-3-5-haiku-20241022": {"input": 0.80, "output": 4.00},
+
+    # Cohere (per 1M tokens)
+    "command-A": {"input": 2.50, "output": 10.00},
+    "embed-4": {"input": 0.12, "output": 0.47},
+}
+
+def estimate_cost(model: str, input_tokens: int, output_tokens: int = 0) -> float:
+    """Returns estimated cost in USD."""
+    if model not in MODEL_PRICING:
+        return 0.0  # Unknown model
+
+    rates = MODEL_PRICING[model]
+    cost = (input_tokens / 1_000_000) * rates["input"]
+    cost += (output_tokens / 1_000_000) * rates["output"]
+    return round(cost, 6)
+
+Usage in context assembly:
+
+# In context.py, after token counting
+from meridian.utils.pricing import estimate_cost
+
+ctx.meta["estimated_cost_usd"] = estimate_cost(
+    model="gpt-4o",  # Could be configurable
+    input_tokens=token_usage
+)
+
+Maintenance strategy:
+
+Add a PRICING_VERSION = "2025-01" constant
+Log a warning if pricing is >6 months old
+Accept user overrides via env var or config: MERIDIAN_CUSTOM_PRICING_FILE
+This is a 30-minute task since you already have token counts. The only question is whether to default to a specific model or require explicit configuration.
+
+
+4.5	Add context_version field - Track schema changes	LOW	1h	context.py:32
+Phase 5: Integration & Extensibility (3-4 days)
+#	Task	Impact	Effort	Files
+5.1	Add hook system - @before_retrieval, @after_context decorators	HIGH	6h	New hooks.py
+5.2	Add batch retrieval API - /batch/features for bulk requests	HIGH	3h	server.py
+5.3	API versioning - /v1/features paths	MEDIUM	2h	server.py
+5.4	Webhook subscriber - Notify external systems of events	MEDIUM	4h	worker.py
+5.5	OpenTelemetry integration - Distributed tracing support	MEDIUM	4h	New tracing.py
+
+Files to Modify (Summary)
+HIGH PRIORITY:
+├── docs/
+│   ├── README.md              # Fix decorator API examples
+│   ├── index.md               # Fix Context object usage
+│   ├── context-store.md       # Fix all code examples
+│   ├── retrievers.md          # Fix decorator params
+│   └── use-cases/rag-chatbot.md  # Complete rewrite needed
+├── src/meridian/
+│   ├── cli.py                 # Serve output, --verbose, --dry-run
+│   ├── context.py             # Default cache_ttl, graceful degradation
+│   ├── core.py                # _repr_html_ enhancements
+│   └── server.py              # Batch API, visual trace
+└── examples/
+    └── rag_chatbot.py         # NEW: Working RAG example
+
+MEDIUM PRIORITY:
+├── src/meridian/
+│   ├── hooks.py               # NEW: Hook system
+│   ├── ui.py                  # Feature cards
+│   ├── models.py              # Cost estimation, version field
+│   └── worker.py              # Webhook subscriber

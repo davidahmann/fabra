@@ -47,6 +47,36 @@ class Context(BaseModel):
     def is_fresh(self) -> bool:
         return self.meta.get("freshness_status") == "guaranteed"
 
+    def _repr_html_(self) -> str:
+        status_color = "#1e8e3e" if self.is_fresh else "#d93025"
+        status_text = "FRESH" if self.is_fresh else "DEGRADED"
+
+        # Format content with some line truncation for display
+        content_preview = (
+            self.content[:500] + "..." if len(self.content) > 500 else self.content
+        )
+        content_html = content_preview.replace("\n", "<br>")
+
+        return f"""
+        <div style="font-family: -apple-system, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #202124;">Context Assembly</h3>
+                <span style="background-color: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">{status_text}</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: #5f6368; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                <div><strong>ID:</strong> <code>{self.id}</code></div>
+                <div><strong>Timestamp:</strong> {self.meta.get('timestamp', 'N/A')}</div>
+                <div><strong>Dropped Items:</strong> {self.meta.get('dropped_items', 0)}</div>
+                <div><strong>Sources:</strong> {len(self.meta.get('source_ids', []))}</div>
+            </div>
+
+            <div style="background-color: #f1f3f4; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; color: #333; max-height: 300px; overflow-y: auto;">
+                {content_html}
+            </div>
+        </div>
+        """
+
 
 def context(
     name: Optional[str] = None,
@@ -159,15 +189,24 @@ def context(
                                 limit=max_tokens,
                             )
 
-                            indices_to_drop = []
-                            for idx in range(len(items) - 1, -1, -1):
+                            # Strategy: Collect optional items, sort by priority (lowest 0 -> drop first), then drop.
+                            # We keep indices to remove them from the original list order.
+                            candidates = []
+                            for idx, item in enumerate(items):
+                                if not item.required:
+                                    candidates.append((idx, item))
+
+                            # Sort by priority ascending (0..1..2). Low priority dropped first.
+                            # Secondary sort by index descending (drop from bottom if priorities equal)
+                            candidates.sort(key=lambda x: (x[1].priority, -x[0]))
+
+                            indices_to_drop = set()
+                            for idx, item in candidates:
                                 if total_tokens <= max_tokens:
                                     break
-                                item = items[idx]
-                                if not item.required:
-                                    item_tokens = counter.count(item.content)
-                                    total_tokens -= item_tokens
-                                    indices_to_drop.append(idx)
+                                item_tokens = counter.count(item.content)
+                                total_tokens -= item_tokens
+                                indices_to_drop.add(idx)
 
                             if total_tokens > max_tokens:
                                 raise ContextBudgetError(

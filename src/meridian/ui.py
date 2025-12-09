@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import sys
 import os
 import importlib.util
@@ -126,6 +125,25 @@ def main(args: Optional[List[str]] = None) -> None:
     # Input ID
     entity_id = st.text_input(f"Enter {entity.id_column}", value="u1")
 
+    # Custom Styling
+    st.markdown(
+        """
+        <style>
+        div[data-testid="metric-container"] {
+            background-color: #f0f2f6;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+        }
+        div[data-testid="metric-container"] label {
+            font-weight: bold;
+        }
+        </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
     if st.button("Fetch Features", type="primary"):
         with st.spinner("Fetching features..."):
             # Get all features for this entity
@@ -146,18 +164,41 @@ def main(args: Optional[List[str]] = None) -> None:
                     )
                 )
 
-                # Display as dataframe
-                df = pd.DataFrame([values])
-                st.dataframe(df, use_container_width=True)
+                # Display as Metrics Cards
+                st.subheader("Feature Values")
 
-                # Display detailed view
-                st.subheader("Feature Details")
-                for feat in features:
-                    with st.expander(f"{feat.name}"):
-                        st.write(f"**Refresh:** {feat.refresh}")
-                        st.write(f"**TTL:** {feat.ttl}")
-                        st.write(f"**Materialize:** {feat.materialize}")
-                        st.code(f"Value: {values.get(feat.name)}")
+                # Create 3 columns for grid layout
+                cols = st.columns(3)
+
+                for i, feat in enumerate(features):
+                    val = values.get(feat.name)
+                    col = cols[i % 3]
+
+                    # Determine delta color if relevant (mock logic)
+                    delta = None
+                    if isinstance(val, (int, float)) and val > 50:
+                        delta = "High"
+
+                    col.metric(
+                        label=feat.name,
+                        value=str(val),
+                        delta=delta,
+                        help=f"Type: {feat.func.__annotations__.get('return', 'Any').__name__ if hasattr(feat.func.__annotations__.get('return'), '__name__') else str(feat.func.__annotations__.get('return', 'Any'))}\nRefresh: {feat.refresh}",
+                    )
+
+                # Display detailed view below
+                with st.expander("Feature Definition Details"):
+                    st.json(
+                        [
+                            {
+                                "name": f.name,
+                                "refresh": f.refresh,
+                                "ttl": str(f.ttl),
+                                "materialize": f.materialize,
+                            }
+                            for f in features
+                        ]
+                    )
 
 
 if __name__ == "__main__":
