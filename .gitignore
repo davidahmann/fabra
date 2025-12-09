@@ -45,6 +45,7 @@ meridian.toml
 # Planning Documents (Internal)
 PRD.md
 epic_plan.md
+plan.md
 
 # Generated Artifacts
 *.html
