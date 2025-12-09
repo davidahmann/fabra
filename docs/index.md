@@ -157,6 +157,8 @@ async def chat_context(user_id: str, query: str) -> list[ContextItem]:
     - [Churn Prediction (PIT)](use-cases/churn-prediction.md)
     - [Real-Time Recommendations (Async)](use-cases/real-time-recommendations.md)
 - **[Hybrid Features](hybrid-features.md):** Mixing Python logic and SQL power.
+- **[Hooks](hooks.md):** Before/After hooks for customizing pipelines.
+- **[Unit Testing](unit_testing.md):** Testing your features in isolation.
 
 ### Context Store (New in v1.2.0)
 - **[Context Store Overview](context-store.md):** Vector search and RAG infrastructure.
@@ -168,7 +170,9 @@ async def chat_context(user_id: str, query: str) -> list[ContextItem]:
 ### Reference
 - **[Glossary](glossary.md):** Definitions of key terms (Context Store, Feature, Entity).
 - **[FAQ](faq.md):** Common questions about production, scaling, and comparisons.
+- **[Comparisons](comparisons.md):** Meridian vs other feature stores and RAG tools.
 - **[Troubleshooting](troubleshooting.md):** Common issues and fixes.
+- **[Changelog](changelog.md):** Version history and release notes.
 - **[Why We Built Meridian](why-we-built-meridian.md):** The story behind the "Heroku for ML Features".
 
 ---
