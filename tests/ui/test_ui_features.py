@@ -1,4 +1,4 @@
-"""Playwright UI tests for Meridian Feature Store UI.
+"""Playwright UI tests for Fabra Feature Store UI.
 
 Run with:
     uv run pytest tests/ui/ --headed  # See browser
@@ -17,15 +17,15 @@ class TestUILoading:
         page.wait_for_load_state("networkidle")
 
         # Check title
-        expect(page).to_have_title("Meridian UI")
+        expect(page).to_have_title("Fabra UI")
 
     def test_has_main_title(self, page: Page, ui_server: str) -> None:
         """Test that the main title is visible."""
         page.goto(ui_server)
         page.wait_for_load_state("networkidle")
 
-        # Look for Meridian title
-        title = page.locator("h1:has-text('Meridian')")
+        # Look for Fabra title
+        title = page.locator("h1:has-text('Fabra')")
         expect(title).to_be_visible()
 
     def test_tabs_visible(self, page: Page, ui_server: str) -> None:
@@ -135,7 +135,7 @@ class TestContextAssemblyTab:
         page.wait_for_timeout(3000)
 
         # Page should still be functional after submission
-        expect(page).to_have_title("Meridian UI")
+        expect(page).to_have_title("Fabra UI")
 
 
 class TestSidebar:
@@ -221,7 +221,7 @@ class TestResponsiveness:
         page.wait_for_load_state("networkidle")
 
         # Page should still be usable
-        title = page.locator("h1:has-text('Meridian')")
+        title = page.locator("h1:has-text('Fabra')")
         expect(title).to_be_visible()
 
     def test_tablet_viewport(self, page: Page, ui_server: str) -> None:
@@ -231,7 +231,7 @@ class TestResponsiveness:
         page.wait_for_load_state("networkidle")
 
         # Page should still be usable
-        title = page.locator("h1:has-text('Meridian')")
+        title = page.locator("h1:has-text('Fabra')")
         expect(title).to_be_visible()
 
 

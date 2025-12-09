@@ -1,6 +1,6 @@
 from __future__ import annotations
 from unittest.mock import MagicMock, patch
-from meridian.utils.tokens import OpenAITokenCounter, AnthropicTokenCounter
+from fabra.utils.tokens import OpenAITokenCounter, AnthropicTokenCounter
 
 
 def test_openai_token_counter_basic() -> None:

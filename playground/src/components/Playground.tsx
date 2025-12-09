@@ -102,10 +102,10 @@ export default function Playground() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-2xl">🧭</div>
+              <div className="text-2xl">🔧</div>
               <div>
                 <h1 className="text-xl font-bold text-white">
-                  Meridian Playground
+                  Fabra Playground
                 </h1>
                 <p className="text-sm text-gray-400">
                   Try Feature Store & Context Store in your browser
@@ -146,7 +146,7 @@ export default function Playground() {
                 </span>
               ) : null}
               <a
-                href="https://davidahmann.github.io/meridian/"
+                href="https://davidahmann.github.io/fabra/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-gray-400 hover:text-white transition"
@@ -292,7 +292,7 @@ export default function Playground() {
               <span>Powered by Pyodide (Python in WebAssembly)</span>
               <span>•</span>
               <a
-                href="https://github.com/davidahmann/meridian"
+                href="https://github.com/davidahmann/fabra"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition"
@@ -301,7 +301,7 @@ export default function Playground() {
               </a>
             </div>
             <div>
-              <span>Meridian © 2025</span>
+              <span>Fabra © 2025</span>
             </div>
           </div>
         </div>

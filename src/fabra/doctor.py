@@ -100,11 +100,11 @@ def check_postgres(pg_url: Optional[str]) -> Dict[str, Any]:
 def run_doctor() -> None:
     """Diagnose configuration and connectivity."""
     if console:
-        console.print("[bold blue]🩺 Meridian Doctor[/bold blue]")
+        console.print("[bold blue]🩺 Fabra Doctor[/bold blue]")
         console.print(f"Python: {platform.python_version()} ({sys.executable})")
         console.print(f"Platform: {platform.platform()}")
     else:
-        print("Meridian Doctor")
+        print("Fabra Doctor")
 
     # 1. Env Vars
     env_results = check_env_vars()

@@ -6,7 +6,7 @@ It defines features for both `User` and `Merchant` entities and combines them to
 ## Files
 
 - `main.py`: A standalone script that defines features, simulates materialization, and runs a fraud check logic.
-- `features.py`: The feature definitions extracted for use with `meridian serve`.
+- `features.py`: The feature definitions extracted for use with `fabra serve`.
 
 ## Running the Standalone Script
 
@@ -18,7 +18,7 @@ python examples/fraud_detection/main.py
 
 1. Start the server:
    ```bash
-   meridian serve examples/fraud_detection/features.py
+   fabra serve examples/fraud_detection/features.py
    ```
 
 2. Query User Features:

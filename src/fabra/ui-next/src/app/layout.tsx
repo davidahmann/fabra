@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Meridian UI',
+  title: 'Fabra UI',
   description: 'Feature Store & Context Store Explorer',
   icons: {
     icon: '/favicon.ico',

@@ -1,8 +1,8 @@
 import pytest
 from typing import List, Dict, Any
-from meridian.core import FeatureStore, feature, entity
-from meridian.retrieval import retriever
-from meridian.store import InMemoryOnlineStore
+from fabra.core import FeatureStore, feature, entity
+from fabra.retrieval import retriever
+from fabra.store import InMemoryOnlineStore
 
 # We need to define classes inside test or setup to avoid module-level errors
 # Or define a global store for this test module

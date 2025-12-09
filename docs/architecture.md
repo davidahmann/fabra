@@ -1,12 +1,12 @@
 ---
 title: "Meridian Architecture: Local-First Feature Store & Context Store Design | DuckDB + Redis + pgvector"
-description: "Deep dive into Meridian's architecture. Learn how it uses DuckDB for local development and scales to Postgres, Redis, and pgvector for production ML features and LLM context."
+description: "Deep dive into Fabra.s architecture. Learn how it uses DuckDB for local development and scales to Postgres, Redis, and pgvector for production ML features and LLM context."
 keywords: feature store architecture, context store architecture, duckdb feature store, feature store design, postgres redis mlops, pgvector vector search, rag architecture, llm context assembly
 ---
 
 # Meridian Architecture: Boring Technology, Properly Applied
 
-> **TL;DR:** Meridian uses DuckDB and in-memory dicts for local development (no deps) and standard Postgres + Redis + pgvector for production. It guarantees point-in-time correctness for ML features and intelligent context assembly for LLMs—all without Kubernetes.
+> **TL;DR:** Fabra uses DuckDB and in-memory dicts for local development (no deps) and standard Postgres + Redis + pgvector for production. It guarantees point-in-time correctness for ML features and intelligent context assembly for LLMs—all without Kubernetes.
 
 ## Design Philosophy
 
@@ -49,7 +49,7 @@ Training/serving skew is the #1 killer of ML models in production.
 
 **Problem:** Your model trains on Monday's features but serves Tuesday's features.
 
-**Solution:** Meridian's `get_training_data()` uses "as-of" joins to ensure zero leakage.
+**Solution:** Fabra.s `get_training_data()` uses "as-of" joins to ensure zero leakage.
 
 ### DuckDB (Development)
 Uses native `ASOF JOIN` for high performance:
@@ -74,7 +74,7 @@ Same logic offline (training) and online (serving). Guaranteed consistency.
 
 ## Hybrid Retrieval (Python + SQL)
 
-Meridian supports a unique hybrid architecture:
+Fabra.supports a unique hybrid architecture:
 1.  **Python Features:** Computed on-the-fly (Online) or via `apply()` (Offline).
 2.  **SQL Features:** Computed via SQL queries (Offline) and materialized to Redis (Online).
 3.  **Unified API:** `get_training_data` automatically orchestrates both and joins the results.
@@ -173,7 +173,7 @@ Items are sorted by priority (lowest first), and lower-priority items are trunca
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Meridian Architecture: Local-First Feature Store & Context Store Design",
-  "description": "Technical deep-dive into Meridian's architecture, explaining the use of DuckDB for local development and Postgres/Redis/pgvector for production ML features and LLM context without Kubernetes.",
+  "description": "Technical deep-dive into Fabra.s architecture, explaining the use of DuckDB for local development and Postgres/Redis/pgvector for production ML features and LLM context without Kubernetes.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "feature store architecture, context store, duckdb, redis, pgvector, mlops, rag",
   "articleSection": "Software Architecture"

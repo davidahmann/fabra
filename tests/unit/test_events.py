@@ -1,4 +1,4 @@
-from meridian.events import AxiomEvent
+from fabra.events import AxiomEvent
 
 
 def test_axiom_event_creation() -> None:

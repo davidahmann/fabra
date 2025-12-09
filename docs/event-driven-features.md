@@ -1,6 +1,6 @@
 ---
 title: "Event-Driven Features: Real-Time Updates via Redis Streams | Meridian"
-description: "Build real-time features with Meridian's event-driven architecture. Trigger updates via Redis Streams, process with AxiomWorker, and keep context fresh."
+description: "Build real-time features with Fabra.s event-driven architecture. Trigger updates via Redis Streams, process with AxiomWorker, and keep context fresh."
 keywords: event-driven features, redis streams, real-time features, axiom events, feature triggers, streaming features
 ---
 
@@ -32,8 +32,8 @@ graph LR
 ## Quick Example
 
 ```python
-from meridian.core import FeatureStore, entity, feature
-from meridian.events import AxiomEvent
+from fabra.core import FeatureStore, entity, feature
+from fabra.events import AxiomEvent
 
 store = FeatureStore()
 
@@ -57,8 +57,8 @@ async def total_purchases(user_id: str, event: AxiomEvent) -> int:
 ### From Python
 
 ```python
-from meridian.bus import RedisEventBus
-from meridian.events import AxiomEvent
+from fabra.bus import RedisEventBus
+from fabra.events import AxiomEvent
 
 bus = RedisEventBus()
 
@@ -102,7 +102,7 @@ The worker consumes events from Redis Streams and triggers feature updates:
 meridian worker my_features.py
 
 # Or programmatically
-from meridian.worker import AxiomWorker
+from fabra.worker import AxiomWorker
 
 worker = AxiomWorker(store)
 await worker.run()
@@ -112,9 +112,9 @@ await worker.run()
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `MERIDIAN_WORKER_BATCH_SIZE` | Events per batch | `100` |
-| `MERIDIAN_WORKER_POLL_INTERVAL` | Seconds between polls | `1.0` |
-| `MERIDIAN_WORKER_CONSUMER_GROUP` | Redis consumer group | `meridian_workers` |
+| `FABRA_WORKER_BATCH_SIZE` | Events per batch | `100` |
+| `FABRA_WORKER_POLL_INTERVAL` | Seconds between polls | `1.0` |
+| `FABRA_WORKER_CONSUMER_GROUP` | Redis consumer group | `meridian_workers` |
 
 ## Trigger Patterns
 
@@ -267,7 +267,7 @@ Structured logs for each event:
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Event-Driven Features: Real-Time Updates via Redis Streams",
-  "description": "Build real-time features with Meridian's event-driven architecture. Trigger updates via Redis Streams, process with AxiomWorker, and keep context fresh.",
+  "description": "Build real-time features with Fabra.s event-driven architecture. Trigger updates via Redis Streams, process with AxiomWorker, and keep context fresh.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "event-driven, redis streams, real-time features, streaming",
   "articleSection": "Documentation"

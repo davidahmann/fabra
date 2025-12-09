@@ -1,14 +1,14 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from meridian.store.redis import RedisOnlineStore
+from fabra.store.redis import RedisOnlineStore
 import pandas as pd
 from typing import Any
 
 
 @pytest.fixture
 def mock_redis() -> Any:
-    with patch("meridian.store.redis.redis.Redis") as MockRedis:
+    with patch("fabra.store.redis.redis.Redis") as MockRedis:
         # Create the instance that will be returned
         instance = MagicMock()
 

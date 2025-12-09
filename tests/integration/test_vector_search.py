@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
-from meridian.store.postgres import PostgresOfflineStore
-from meridian.embeddings import OpenAIEmbedding
+from fabra.store.postgres import PostgresOfflineStore
+from fabra.embeddings import OpenAIEmbedding
 from sqlalchemy import text
 
 

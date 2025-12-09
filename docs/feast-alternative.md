@@ -8,7 +8,7 @@ keywords: feast alternative, lightweight feature store, python feature store, me
 
 If you are looking for a **lightweight feature store** that runs on your laptop but scales to production, you have likely found Feast. And you likely found it complicated.
 
-Meridian is the **developer-first alternative to Feast**. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) without the infrastructure tax—plus built-in RAG/LLM support that Feast doesn't have.
+Fabra is the **developer-first alternative to Feast**. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) without the infrastructure tax—plus built-in RAG/LLM support that Feast doesn't have.
 
 ## Feature Comparison
 
@@ -36,7 +36,7 @@ Feast assumes you have a platform team managing a Kubernetes cluster. Meridian a
 
 ### 2. Python, Not YAML
 
-Feast relies heavily on YAML for feature definitions. Meridian uses Python decorators.
+Feast relies heavily on YAML for feature definitions. Fabra uses Python decorators.
 
 **Feast:**
 
@@ -60,8 +60,8 @@ def click_count(user_id: str) -> int:
 Meridian includes a **Context Store** for LLM applications—something Feast doesn't offer at all.
 
 ```python
-from meridian.retrieval import retriever
-from meridian.context import context, ContextItem
+from fabra.retrieval import retriever
+from fabra.context import context, ContextItem
 
 @retriever(index="docs", top_k=5)
 async def search_docs(query: str):
@@ -82,7 +82,7 @@ async def chat_context(user_id: str, query: str):
 Deploy to any cloud with generated configs:
 
 ```bash
-meridian deploy fly --name my-app
+fabra deploy fly --name my-app
 # Generates: Dockerfile, fly.toml, requirements.txt
 ```
 
@@ -107,20 +107,20 @@ Feast is a great tool for massive scale. Use Feast if:
 ## Migration from Feast
 
 ```bash
-# 1. Install Meridian
-pip install "meridian-oss[ui]"
+# 1. Install Fabra
+pip install "fabra[ui]"
 
 # 2. Convert feature definitions
 # YAML -> Python decorators
 
 # 3. Serve
-meridian serve features.py
+fabra serve features.py
 ```
 
 ## Conclusion
 
 If you want "Google Scale" complexity, use Feast.
-If you want **"Heroku for ML Features + RAG"**, use Meridian.
+If you want **"Heroku for ML Features + RAG"**, use Fabra.
 
 <script type="application/ld+json">
 {

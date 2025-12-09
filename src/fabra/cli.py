@@ -19,15 +19,15 @@ console = Console()
 @app.command(name="events")
 def events_cmd(
     action: str = typer.Argument(..., help="Action: listen"),
-    stream: str = typer.Option("meridian_events", help="Stream key to listen to"),
+    stream: str = typer.Option("fabra_events", help="Stream key to listen to"),
     count: int = typer.Option(10, help="Number of events to fetch per poll"),
     redis_url: str = typer.Option(
-        None, envvar="MERIDIAN_REDIS_URL", help="Redis URL Override"
+        None, envvar="FABRA_REDIS_URL", help="Redis URL Override"
     ),
 ) -> None:
     """
-    Manage or listen to Meridian events.
-    Usage: meridian events listen --stream=my_stream
+    Manage or listen to Fabra events.
+    Usage: fabra events listen --stream=my_stream
     """
     if action != "listen":
         console.print(f"[bold red]Unknown action:[/bold red] {action}")
@@ -36,7 +36,7 @@ def events_cmd(
     import asyncio
     from redis.asyncio import Redis
 
-    url = redis_url or os.getenv("MERIDIAN_REDIS_URL") or "redis://localhost:6379"
+    url = redis_url or os.getenv("FABRA_REDIS_URL") or "redis://localhost:6379"
 
     async def listen_loop() -> None:
         console.print(f"[green]Listening to stream:[/green] {stream} on {url}")
@@ -80,7 +80,7 @@ def callback(
     ),
 ) -> None:
     """
-    Meridian CLI
+    Fabra CLI
     """
     if verbose:
         import logging
@@ -99,7 +99,7 @@ def worker_cmd(
         ..., help="Path to the feature definition file (e.g., features.py)"
     ),
     redis_url: str = typer.Option(
-        None, envvar="MERIDIAN_REDIS_URL", help="Redis URL Override"
+        None, envvar="FABRA_REDIS_URL", help="Redis URL Override"
     ),
 ) -> None:
     """
@@ -158,9 +158,9 @@ def setup(
     """
     Generate production-ready configuration files (Docker Compose).
     Usage:
-      meridian setup                # Create files in current directory
-      meridian setup ./prod         # Create files in ./prod
-      meridian setup --dry-run      # Preview what would be created
+      fabra setup                # Create files in current directory
+      fabra setup ./prod         # Create files in ./prod
+      fabra setup --dry-run      # Preview what would be created
     """
     docker_compose = """
 version: '3.8'
@@ -174,9 +174,9 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: meridian
+      POSTGRES_DB: fabra
     volumes:
-      - meridian_postgres_data:/var/lib/postgresql/data
+      - fabra_postgres_data:/var/lib/postgresql/data
 
   # 2. Redis (Online Store + Cache)
   redis:
@@ -184,21 +184,21 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - meridian_redis_data:/data
+      - fabra_redis_data:/data
 
 volumes:
-  meridian_postgres_data:
-  meridian_redis_data:
+  fabra_postgres_data:
+  fabra_redis_data:
 """
     env_example = """
-# Meridian Production Config
+# Fabra Production Config
 
 # Security
-MERIDIAN_API_KEY=change_me_to_something_secure
+FABRA_API_KEY=change_me_to_something_secure
 
 # Data Stores
-MERIDIAN_REDIS_URL=redis://localhost:6379
-MERIDIAN_POSTGRES_URL=postgresql://user:password@localhost:5432/meridian  # pragma: allowlist secret
+FABRA_REDIS_URL=redis://localhost:6379
+FABRA_POSTGRES_URL=postgresql://user:password@localhost:5432/fabra  # pragma: allowlist secret
 
 # LLM Providers (Required for Context Store)
 OPENAI_API_KEY=sk-...
@@ -259,7 +259,7 @@ COHERE_API_KEY=...
 
 @app.command(name="init")
 def init(
-    name: str = typer.Argument("meridian_project", help="Project name"),
+    name: str = typer.Argument("fabra_project", help="Project name"),
     demo: bool = typer.Option(False, help="Include demo features and data"),
     interactive: bool = typer.Option(True, help="Run in interactive mode"),
     dry_run: bool = typer.Option(
@@ -267,7 +267,7 @@ def init(
     ),
 ) -> None:
     """
-    Initialize a new Meridian project.
+    Initialize a new Fabra project.
     """
     if os.path.exists(name) and not dry_run:
         console.print(f"[bold red]Error:[/bold red] Directory '{name}' already exists.")
@@ -338,9 +338,9 @@ __pycache__/
     if demo:
         # Create features.py
         features_py = """
-from meridian.core import FeatureStore, entity, feature
-from meridian.context import context, Context, ContextItem
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore, entity, feature
+from fabra.context import context, Context, ContextItem
+from fabra.retrieval import retriever
 import random
 import os
 
@@ -366,7 +366,7 @@ async def semantic_search(query: str) -> list[str]:
     # For this local demo without Postgres/OpenAI keys, we mock the return
     # if the index isn't reachable or keys aren't set.
     return [
-        "Meridian allows defining features in Python.",
+        "Fabra allows defining features in Python.",
         "The Context Store manages token budgets for LLMs."
     ]
 
@@ -390,25 +390,25 @@ async def chatbot_context(user_id: str, query: str) -> list[ContextItem]:
 
         # Create README
         readme = """
-# Meridian Demo Project
+# Fabra Demo Project
 
 This is a generated demo project.
 
 ## Quickstart
 
-1. **Install Meridian**:
+1. **Install Fabra**:
    ```bash
-   pip install "meridian-oss[ui]"
+   pip install "fabra[ui]"
    ```
 
 2. **Run the Server**:
    ```bash
-   meridian serve features.py
+   fabra serve features.py
    ```
 
 3. **Query Context (E.g. for User 'u1')**:
    ```bash
-   meridian context explain u1 --query "What is Meridian?"
+   fabra context explain u1 --query "What is Fabra?"
    ```
 """
         if dry_run:
@@ -419,7 +419,7 @@ This is a generated demo project.
 
         console.print(f"[green]Initialized demo project in '{name}'[/green]")
         console.print(
-            "Run [bold]meridian serve features.py[/bold] inside the directory to start."
+            "Run [bold]fabra serve features.py[/bold] inside the directory to start."
         )
 
     else:
@@ -431,7 +431,7 @@ This is a generated demo project.
         else:
             with open(os.path.join(name, "features.py"), "w") as f:
                 f.write(
-                    "from meridian.core import FeatureStore\n\nstore = FeatureStore()\n"
+                    "from fabra.core import FeatureStore\n\nstore = FeatureStore()\n"
                 )
         console.print(f"[green]Initialized empty project in '{name}'[/green]")
 
@@ -439,15 +439,15 @@ This is a generated demo project.
 @app.command(name="version")
 def version() -> None:
     """
-    Prints the Meridian version.
+    Prints the Fabra version.
     """
     try:
         from importlib.metadata import version
 
-        v = version("meridian-oss")
+        v = version("fabra")
     except Exception:
         v = "unknown"
-    console.print(f"Meridian OSS v{v}")
+    console.print(f"Fabra v{v}")
 
 
 @app.command(name="serve")
@@ -458,7 +458,7 @@ def serve(
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),
     port: int = typer.Option(8000, help="Port to bind to"),
     api_key: str = typer.Option(
-        None, envvar="MERIDIAN_API_KEY", help="API Key for security"
+        None, envvar="FABRA_API_KEY", help="API Key for security"
     ),
     reload: bool = typer.Option(False, help="Enable auto-reload"),
     verbose: bool = typer.Option(
@@ -466,11 +466,11 @@ def serve(
     ),
 ) -> None:
     """
-    Starts the Meridian server with a live TUI dashboard.
+    Starts the Fabra server with a live TUI dashboard.
 
     Example:
-        meridian serve features.py
-        meridian serve features.py --port 9000 --verbose
+        fabra serve features.py
+        fabra serve features.py --port 9000 --verbose
     """
     import logging
 
@@ -483,8 +483,8 @@ def serve(
 
     console.print(
         Panel(
-            f"Starting Meridian on http://{host}:{port}",
-            title="Meridian",
+            f"Starting Fabra on http://{host}:{port}",
+            title="Fabra",
             style="bold blue",
         )
     )
@@ -545,7 +545,7 @@ def serve(
 
         # Set API key in env for the server to pick up
         if api_key:
-            os.environ["MERIDIAN_API_KEY"] = api_key
+            os.environ["FABRA_API_KEY"] = api_key
 
         app = create_app(store)
 
@@ -581,7 +581,7 @@ def serve(
             # Status section
             table.add_row("Status", "[bold green]● Running[/bold green]")
             table.add_row("Started", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            table.add_row("Environment", os.getenv("MERIDIAN_ENV", "development"))
+            table.add_row("Environment", os.getenv("FABRA_ENV", "development"))
 
             table.add_section()
 
@@ -672,14 +672,14 @@ def ui(
     api_port: int = typer.Option(8502, help="Port for API backend"),
 ) -> None:
     """
-    Launches the Meridian UI.
+    Launches the Fabra UI.
 
     Starts a Next.js-based UI with a FastAPI backend for exploring
     your Feature Store and Context definitions.
 
     Example:
-        meridian ui features.py
-        meridian ui features.py --port 3000
+        fabra ui features.py
+        fabra ui features.py --port 3000
     """
     if not os.path.exists(file):
         console.print(f"[bold red]Error:[/bold red] File '{file}' not found.")
@@ -726,11 +726,11 @@ def ui(
 
     console.print(
         Panel(
-            f"Starting Meridian UI\n\n"
+            f"Starting Fabra UI\n\n"
             f"  API Backend: http://127.0.0.1:{api_port}\n"
             f"  UI Frontend: http://localhost:{port}\n\n"
             f"Loading: [bold cyan]{file}[/bold cyan]",
-            title="Meridian UI",
+            title="Fabra UI",
             style="bold blue",
         )
     )
@@ -806,8 +806,8 @@ app.add_typer(context_app, name="context")
 @context_app.command(name="show")
 def context_show_cmd(
     context_id: str = typer.Argument(..., help="The Context ID to retrieve"),
-    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
-    port: int = typer.Option(8000, help="Meridian server port"),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
     lineage: bool = typer.Option(
         False, "--lineage", "-l", help="Show only lineage info"
     ),
@@ -816,8 +816,8 @@ def context_show_cmd(
     Retrieve and display a historical context by ID.
 
     Example:
-      meridian context show 01912345-6789-7abc-def0-123456789abc
-      meridian context show <context_id> --lineage
+      fabra context show 01912345-6789-7abc-def0-123456789abc
+      fabra context show <context_id> --lineage
     """
     import urllib.request
     import urllib.error
@@ -835,7 +835,7 @@ def context_show_cmd(
 
     try:
         req = urllib.request.Request(url)
-        api_key = os.getenv("MERIDIAN_API_KEY")
+        api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
 
@@ -872,7 +872,7 @@ def context_show_cmd(
         raise typer.Exit(1)
     except urllib.error.URLError as e:
         console.print(
-            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
         )
         raise typer.Exit(1)
     except Exception as e:
@@ -882,8 +882,8 @@ def context_show_cmd(
 
 @context_app.command(name="list")
 def context_list_cmd(
-    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
-    port: int = typer.Option(8000, help="Meridian server port"),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
     limit: int = typer.Option(10, "--limit", "-n", help="Number of contexts to list"),
     start: str = typer.Option(None, "--start", "-s", help="Start time (ISO format)"),
     end: str = typer.Option(None, "--end", "-e", help="End time (ISO format)"),
@@ -892,8 +892,8 @@ def context_list_cmd(
     List recent contexts for debugging/audit.
 
     Example:
-      meridian context list --limit 10
-      meridian context list --start 2024-01-01T00:00:00Z --end 2024-01-02T00:00:00Z
+      fabra context list --limit 10
+      fabra context list --start 2024-01-01T00:00:00Z --end 2024-01-02T00:00:00Z
     """
     import urllib.request
     import urllib.error
@@ -916,7 +916,7 @@ def context_list_cmd(
 
     try:
         req = urllib.request.Request(url)
-        api_key = os.getenv("MERIDIAN_API_KEY")
+        api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
 
@@ -955,7 +955,7 @@ def context_list_cmd(
 
     except urllib.error.URLError as e:
         console.print(
-            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
         )
         raise typer.Exit(1)
     except Exception as e:
@@ -966,8 +966,8 @@ def context_list_cmd(
 @context_app.command(name="export")
 def context_export_cmd(
     context_id: str = typer.Argument(..., help="The Context ID to export"),
-    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
-    port: int = typer.Option(8000, help="Meridian server port"),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
     format: str = typer.Option(
         "json", "--format", "-f", help="Export format: json, yaml"
     ),
@@ -979,9 +979,9 @@ def context_export_cmd(
     Export a context for audit/debugging.
 
     Example:
-      meridian context export <context_id> --format json
-      meridian context export <context_id> --output context.json
-      meridian context export <context_id> --format yaml -o context.yaml
+      fabra context export <context_id> --format json
+      fabra context export <context_id> --output context.json
+      fabra context export <context_id> --format yaml -o context.yaml
     """
     import urllib.request
     import urllib.error
@@ -996,7 +996,7 @@ def context_export_cmd(
 
     try:
         req = urllib.request.Request(url)
-        api_key = os.getenv("MERIDIAN_API_KEY")
+        api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
 
@@ -1043,7 +1043,7 @@ def context_export_cmd(
         raise typer.Exit(1)
     except urllib.error.URLError as e:
         console.print(
-            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
         )
         raise typer.Exit(1)
     except Exception as e:
@@ -1054,8 +1054,8 @@ def context_export_cmd(
 @context_app.command(name="explain")
 def explain_cmd(
     ctx_id: str = typer.Argument(..., help="The Context ID to trace"),
-    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
-    port: int = typer.Option(8000, help="Meridian server port"),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
 ) -> None:
     """
     Fetch and display a context trace (RAG explanation).
@@ -1075,7 +1075,7 @@ def explain_cmd(
         # Use standard lib to avoid extra dependencies for CLI
         req = urllib.request.Request(url)
         # Add API Key if present in env
-        api_key = os.getenv("MERIDIAN_API_KEY")
+        api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
 
@@ -1099,7 +1099,7 @@ def explain_cmd(
 
     except urllib.error.URLError as e:
         console.print(
-            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
         )
         raise typer.Exit(1)
     except Exception as e:
@@ -1113,7 +1113,7 @@ def index_cmd(
     name: str = typer.Argument(..., help="Name of the index"),
     dimension: int = typer.Option(1536, help="Vector dimension (create only)"),
     postgres_url: str = typer.Option(
-        None, envvar="MERIDIAN_POSTGRES_URL", help="Postgres URL Override"
+        None, envvar="FABRA_POSTGRES_URL", help="Postgres URL Override"
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", "-n", help="Preview changes without executing"
@@ -1122,17 +1122,17 @@ def index_cmd(
     """
     Manage vector indexes.
     Usage:
-      meridian index create my_index --dimension=1536
-      meridian index status my_index
-      meridian index create my_index --dry-run  # Preview only
+      fabra index create my_index --dimension=1536
+      fabra index status my_index
+      fabra index create my_index --dry-run  # Preview only
     """
     import asyncio
     from .store.postgres import PostgresOfflineStore
     from sqlalchemy import text
 
-    url = postgres_url or os.getenv("MERIDIAN_POSTGRES_URL")
+    url = postgres_url or os.getenv("FABRA_POSTGRES_URL")
     if not url:
-        console.print("[bold red]Error:[/bold red] MERIDIAN_POSTGRES_URL not set.")
+        console.print("[bold red]Error:[/bold red] FABRA_POSTGRES_URL not set.")
         raise typer.Exit(1)
 
     async def run_action() -> None:
@@ -1140,7 +1140,7 @@ def index_cmd(
             store = PostgresOfflineStore(url)
 
             if action == "create":
-                table_name = f"meridian_index_{name}"
+                table_name = f"fabra_index_{name}"
                 if dry_run:
                     console.print(
                         Panel(
@@ -1162,7 +1162,7 @@ def index_cmd(
                 console.print(f"[green]Index '{name}' created successfully.[/green]")
 
             elif action == "status":
-                table = f"meridian_index_{name}"
+                table = f"fabra_index_{name}"
                 async with store.engine.connect() as conn:  # type: ignore[no-untyped-call]
                     # Check if exists
                     exists = await conn.execute(
@@ -1201,9 +1201,7 @@ def deploy_cmd(
     file: str = typer.Option(
         "features.py", "--file", "-f", help="Feature definition file"
     ),
-    app_name: str = typer.Option(
-        "meridian-app", "--name", "-n", help="Application name"
-    ),
+    app_name: str = typer.Option("fabra-app", "--name", "-n", help="Application name"),
     region: str = typer.Option("iad", "--region", "-r", help="Deployment region"),
     output: str = typer.Option(".", "--output", "-o", help="Output directory"),
     dry_run: bool = typer.Option(
@@ -1214,13 +1212,13 @@ def deploy_cmd(
     Generate deployment configuration for cloud platforms.
 
     Usage:
-      meridian deploy fly --name my-app          # Generate fly.toml
-      meridian deploy cloudrun --name my-app     # Generate Cloud Run config
-      meridian deploy ecs --name my-app          # Generate ECS task definition
-      meridian deploy --dry-run                  # Preview without writing
+      fabra deploy fly --name my-app          # Generate fly.toml
+      fabra deploy cloudrun --name my-app     # Generate Cloud Run config
+      fabra deploy ecs --name my-app          # Generate ECS task definition
+      fabra deploy --dry-run                  # Preview without writing
     """
     # Common Dockerfile for all deployments
-    dockerfile = f"""# Auto-generated by Meridian CLI
+    dockerfile = f"""# Auto-generated by Fabra CLI
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -1241,17 +1239,17 @@ HEALTHCHECK --interval=30s --timeout=3s \\
   CMD curl -f http://localhost:8000/health || exit 1
 
 # Run server
-CMD ["meridian", "serve", "{file}", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fabra", "serve", "{file}", "--host", "0.0.0.0", "--port", "8000"]
 """
 
-    requirements_txt = """meridian>=1.2.0
+    requirements_txt = """fabra>=2.2.0
 redis>=4.0.0
 asyncpg>=0.27.0
 """
 
     configs: dict[str, dict[str, str]] = {
         "fly": {
-            "fly.toml": f"""# Auto-generated by Meridian CLI
+            "fly.toml": f"""# Auto-generated by Fabra CLI
 app = "{app_name}"
 primary_region = "{region}"
 
@@ -1260,7 +1258,7 @@ primary_region = "{region}"
 
 [env]
   PORT = "8000"
-  MERIDIAN_ENV = "production"
+  FABRA_ENV = "production"
 
 [http_service]
   internal_port = 8000
@@ -1288,7 +1286,7 @@ primary_region = "{region}"
 """,
         },
         "cloudrun": {
-            "service.yaml": f"""# Auto-generated by Meridian CLI
+            "service.yaml": f"""# Auto-generated by Fabra CLI
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -1305,7 +1303,7 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: MERIDIAN_ENV
+            - name: FABRA_ENV
               value: production
           resources:
             limits:
@@ -1318,7 +1316,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
 """,
-            "cloudbuild.yaml": f"""# Auto-generated by Meridian CLI
+            "cloudbuild.yaml": f"""# Auto-generated by Fabra CLI
 steps:
   - name: gcr.io/cloud-builders/docker
     args: ["build", "-t", "gcr.io/$PROJECT_ID/{app_name}:$COMMIT_SHA", "."]
@@ -1357,7 +1355,7 @@ images:
         }}
       ],
       "environment": [
-        {{"name": "MERIDIAN_ENV", "value": "production"}}
+        {{"name": "FABRA_ENV", "value": "production"}}
       ],
       "healthCheck": {{
         "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
@@ -1379,7 +1377,7 @@ images:
 """,
         },
         "render": {
-            "render.yaml": f"""# Auto-generated by Meridian CLI
+            "render.yaml": f"""# Auto-generated by Fabra CLI
 services:
   - type: web
     name: {app_name}
@@ -1388,7 +1386,7 @@ services:
     plan: starter
     healthCheckPath: /health
     envVars:
-      - key: MERIDIAN_ENV
+      - key: FABRA_ENV
         value: production
       - key: PORT
         value: 8000
@@ -1402,7 +1400,7 @@ services:
     "dockerfilePath": "Dockerfile"
   }},
   "deploy": {{
-    "startCommand": "meridian serve {file} --host 0.0.0.0 --port $PORT",
+    "startCommand": "fabra serve {file} --host 0.0.0.0 --port $PORT",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
@@ -1472,7 +1470,7 @@ services:
         "fly": [
             "fly auth login",
             "fly launch --no-deploy",
-            "fly secrets set MERIDIAN_REDIS_URL=... MERIDIAN_POSTGRES_URL=...",
+            "fly secrets set FABRA_REDIS_URL=... FABRA_POSTGRES_URL=...",
             "fly deploy",
         ],
         "cloudrun": [

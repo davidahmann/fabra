@@ -1,6 +1,6 @@
 from datetime import timedelta
-from meridian.core import FeatureStore, entity, feature
-from meridian.store import DuckDBOfflineStore, InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store import DuckDBOfflineStore, InMemoryOnlineStore
 
 # Initialize Store
 store = FeatureStore(

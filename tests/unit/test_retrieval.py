@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from meridian.retrieval import Retriever, RetrieverRegistry, retriever
+from fabra.retrieval import Retriever, RetrieverRegistry, retriever
 from datetime import timedelta
 from typing import List, Dict, Any
 
@@ -18,8 +18,8 @@ def test_decorator_registration() -> None:
         return [{"text": query}]
 
     # Check attached metadata
-    assert hasattr(async_search, "_meridian_retriever")
-    ret_obj = getattr(async_search, "_meridian_retriever")
+    assert hasattr(async_search, "_fabra_retriever")
+    ret_obj = getattr(async_search, "_fabra_retriever")
     assert ret_obj.backend == "custom"
 
 
@@ -39,7 +39,7 @@ async def test_caching_logic() -> None:
         return [{"result": q}]
 
     # Manually register to inject backend (simulating store.register_retriever)
-    ret_obj = getattr(async_search, "_meridian_retriever")
+    ret_obj = getattr(async_search, "_fabra_retriever")
     setattr(ret_obj, "_cache_backend", mock_redis)
 
     # 1. Call (Cache Miss)

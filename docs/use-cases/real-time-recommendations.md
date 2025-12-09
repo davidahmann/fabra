@@ -1,6 +1,6 @@
 # Use Case: Real-Time Recommendations
 
-Real-time recommendations require low latency (<50ms) and high throughput. This is where Meridian's **Async I/O** and **Hybrid Features** shine.
+Real-time recommendations require low latency (<50ms) and high throughput. This is where Fabra.s **Async I/O** and **Hybrid Features** shine.
 
 ## The Problem: Latency vs. Freshness
 
@@ -36,6 +36,6 @@ features = await store.get_online_features(
 ```
 
 ## Why This Matters
-- **Async I/O:** Meridian uses `asyncpg` and `redis-py` to fetch both features in parallel.
+- **Async I/O:** Fabra uses `asyncpg` and `redis-py` to fetch both features in parallel.
 - **Performance:** The SQL feature is fetched from Redis in <2ms. The Python feature runs in the same event loop.
 - **Simplicity:** You don't need a separate "Streaming Feature Store". You just write Python.

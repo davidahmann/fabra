@@ -4,9 +4,9 @@ import asyncio
 from httpx import AsyncClient, ASGITransport
 from redis.asyncio import Redis
 from typing import Dict, Any
-from meridian.server import create_app
-from meridian.core import FeatureStore
-from meridian.worker import AxiomWorker
+from fabra.server import create_app
+from fabra.core import FeatureStore
+from fabra.worker import AxiomWorker
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_event_triggers_refresh(redis_client: Redis[str]) -> None:
     Scenario:
     1. Ingest Event -> 2. Worker Processes -> 3. Redis Updated.
     """
-    from meridian.core import entity, feature
+    from fabra.core import entity, feature
     from dataclasses import dataclass
 
     # 1. Setup App & Store

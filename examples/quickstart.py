@@ -1,8 +1,8 @@
 import pandas as pd
 import random
 from datetime import timedelta
-from meridian.core import FeatureStore, entity, feature
-from meridian.store import DuckDBOfflineStore, InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store import DuckDBOfflineStore, InMemoryOnlineStore
 
 # 1. Initialize the Feature Store
 # We use DuckDB for offline (historical) data and In-Memory for online (serving) data.

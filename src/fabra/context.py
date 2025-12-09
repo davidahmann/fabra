@@ -8,17 +8,17 @@ import hashlib
 import json
 from datetime import datetime, timezone, timedelta
 from contextvars import ContextVar
-from meridian.utils.tokens import TokenCounter, OpenAITokenCounter
-from meridian.utils.pricing import estimate_cost
-from meridian.utils.time import parse_duration_to_ms, InvalidSLAFormatError
-from meridian.models import (
+from fabra.utils.tokens import TokenCounter, OpenAITokenCounter
+from fabra.utils.pricing import estimate_cost
+from fabra.utils.time import parse_duration_to_ms, InvalidSLAFormatError
+from fabra.models import (
     ContextTrace,
     ContextLineage,
     FeatureLineage,
     RetrieverLineage,
 )
-from meridian.observability import ContextMetrics
-from meridian.exceptions import FreshnessSLAError
+from fabra.observability import ContextMetrics
+from fabra.exceptions import FreshnessSLAError
 import time
 
 # Type for freshness status
@@ -30,7 +30,7 @@ logger = structlog.get_logger()
 # Assembly Tracking using contextvars
 # This allows us to track feature/retriever calls within a @context decorated function
 _assembly_tracker: ContextVar[Optional["AssemblyTracker"]] = ContextVar(
-    "meridian_assembly_tracker", default=None
+    "fabra_assembly_tracker", default=None
 )
 
 

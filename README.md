@@ -1,12 +1,12 @@
 <div align="center">
-  <h1>Meridian</h1>
+  <h1>Fabra</h1>
   <h3>The Context Store for LLMs & ML Features</h3>
 
   <p>
-    <a href="https://pypi.org/project/meridian-oss/"><img src="https://img.shields.io/pypi/v/meridian-oss?color=blue&label=pypi" alt="PyPI version" /></a>
-    <a href="https://github.com/davidahmann/meridian/actions/workflows/ci.yml"><img src="https://github.com/davidahmann/meridian/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
-    <a href="https://github.com/davidahmann/meridian/security"><img src="https://img.shields.io/badge/security-enabled-brightgreen" alt="Security" /></a>
-    <a href="https://github.com/davidahmann/meridian/blob/main/LICENSE"><img src="https://img.shields.io/github/license/davidahmann/meridian?color=green" alt="License" /></a>
+    <a href="https://pypi.org/project/fabra/"><img src="https://img.shields.io/pypi/v/fabra?color=blue&label=pypi" alt="PyPI version" /></a>
+    <a href="https://github.com/davidahmann/fabra/actions/workflows/ci.yml"><img src="https://github.com/davidahmann/fabra/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+    <a href="https://github.com/davidahmann/fabra/security"><img src="https://img.shields.io/badge/security-enabled-brightgreen" alt="Security" /></a>
+    <a href="https://github.com/davidahmann/fabra/blob/main/LICENSE"><img src="https://img.shields.io/github/license/davidahmann/fabra?color=green" alt="License" /></a>
     <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python Version" />
   </p>
 
@@ -18,9 +18,9 @@
   <br />
 
   <p>
-    <b><a href="https://meridianoss.vercel.app">🎮 Try in Browser</a></b> |
-    <b><a href="https://davidahmann.github.io/meridian/">📚 Docs</a></b> |
-    <b><a href="https://davidahmann.github.io/meridian/context-store">🤖 Context Store</a></b>
+    <b><a href="https://fabraoss.vercel.app">🎮 Try in Browser</a></b> |
+    <b><a href="https://davidahmann.github.io/fabra/">📚 Docs</a></b> |
+    <b><a href="https://davidahmann.github.io/fabra/context-store">🤖 Context Store</a></b>
   </p>
 </div>
 
@@ -36,20 +36,20 @@ You're building an AI app. You need:
 
 Today, this means stitching together LangChain, Pinecone, a feature store, Redis, and prayer.
 
-**Meridian unifies all of this in one Python decorator.**
+**Fabra unifies all of this in one Python decorator.**
 
 ---
 
 ## The 30-Second Quickstart
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore, entity, feature
-from meridian.context import context, ContextItem
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore, entity, feature
+from fabra.context import context, ContextItem
+from fabra.retrieval import retriever
 
 store = FeatureStore()
 
@@ -76,7 +76,7 @@ async def build_prompt(user_id: str, query: str):
 ```
 
 ```bash
-meridian serve features.py
+fabra serve features.py
 # Server running on http://localhost:8000
 ```
 
@@ -105,9 +105,9 @@ print(ctx.meta["freshness_violations"])  # Details on any stale features
 
 ---
 
-## Why Meridian?
+## Why Fabra?
 
-| | Traditional Stack | Meridian |
+| | Traditional Stack | Fabra |
 |:---|:---|:---|
 | **Config** | 500 lines of YAML | Python decorators |
 | **Infrastructure** | Kubernetes + Spark + Pinecone | Your laptop (DuckDB) |
@@ -115,11 +115,11 @@ print(ctx.meta["freshness_violations"])  # Details on any stale features
 | **Feature Serving** | Separate feature store | Same `@feature` decorator |
 | **Time to Production** | Weeks | 30 seconds |
 
-### What Makes Meridian Different
+### What Makes Fabra Different
 
 **1. One Decorator for Everything**
 
-Other tools make you choose: LangChain for RAG, Feast for features, separate vector DB. Meridian gives you `@feature`, `@retriever`, and `@context` — all wired together, all in Python.
+Other tools make you choose: LangChain for RAG, Feast for features, separate vector DB. Fabra gives you `@feature`, `@retriever`, and `@context` — all wired together, all in Python.
 
 **2. Local-First, Production-Ready**
 
@@ -166,18 +166,18 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - **Hybrid Features:** Mix Python logic and SQL in the same pipeline
 - **Event-Driven:** Trigger updates via Redis Streams
 - **Observability:** Prometheus metrics, OpenTelemetry tracing
-- **Self-Healing:** Circuit breakers, fallback chains, `meridian doctor`
+- **Self-Healing:** Circuit breakers, fallback chains, `fabra doctor`
 
 ### For Everyone
-- **One-Command Deploy:** `meridian deploy fly|cloudrun|ecs|railway|render`
+- **One-Command Deploy:** `fabra deploy fly|cloudrun|ecs|railway|render`
 - **Visual UI:** Dependency graphs, live metrics, context debugging
-- **Shell Completion:** `meridian --install-completion`
+- **Shell Completion:** `fabra --install-completion`
 
 ---
 
 ## Architecture
 
-Meridian scales from laptop to production without code changes.
+Fabra scales from laptop to production without code changes.
 
 ```mermaid
 graph TD
@@ -206,10 +206,10 @@ export MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
 export MERIDIAN_REDIS_URL=redis://...
 
 # Deploy
-meridian deploy fly --name my-app
+fabra deploy fly --name my-app
 ```
 
-[Full Deployment Guide →](https://davidahmann.github.io/meridian/local-to-production)
+[Full Deployment Guide →](https://davidahmann.github.io/fabra/local-to-production)
 
 ---
 
@@ -227,13 +227,13 @@ meridian deploy fly --name my-app
 ## Get Started
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 <p align="center">
-  <a href="https://meridianoss.vercel.app"><b>Try in Browser</b></a> ·
-  <a href="https://davidahmann.github.io/meridian/quickstart"><b>Quickstart Guide</b></a> ·
-  <a href="https://davidahmann.github.io/meridian/"><b>Full Documentation</b></a>
+  <a href="https://fabraoss.vercel.app"><b>Try in Browser</b></a> ·
+  <a href="https://davidahmann.github.io/fabra/quickstart"><b>Quickstart Guide</b></a> ·
+  <a href="https://davidahmann.github.io/fabra/"><b>Full Documentation</b></a>
 </p>
 
 ---
@@ -243,5 +243,5 @@ pip install "meridian-oss[ui]"
 We love contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 <div align="center">
-  <p><b>Meridian</b> · Apache 2.0 · 2025</p>
+  <p><b>Fabra</b> · Apache 2.0 · 2025</p>
 </div>

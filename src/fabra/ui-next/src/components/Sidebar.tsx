@@ -63,7 +63,7 @@ export default function Sidebar({ fileName, retrievers }: SidebarProps) {
       {/* Footer */}
       <div className="p-4 border-t border-gray-700">
         <div className="text-xs text-gray-500 text-center">
-          Meridian UI v0.1
+          Fabra UI v2.0
         </div>
       </div>
     </aside>

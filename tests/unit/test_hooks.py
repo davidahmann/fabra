@@ -1,6 +1,6 @@
 import pytest
 from typing import List, Dict, Any
-from meridian.hooks import Hook, HookManager
+from fabra.hooks import Hook, HookManager
 
 
 class TestHook(Hook):

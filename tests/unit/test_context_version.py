@@ -1,5 +1,5 @@
 import pytest
-from meridian.context import context
+from fabra.context import context
 
 
 @pytest.mark.asyncio

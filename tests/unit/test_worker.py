@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from meridian.worker import AxiomWorker
+from fabra.worker import AxiomWorker
 
 
 @pytest.mark.asyncio
@@ -19,5 +19,5 @@ async def test_worker_setup() -> None:
     # xgroup_create(stream, group, id, mkstream)
     mock_redis.xgroup_create.assert_called()
     call_args = mock_redis.xgroup_create.call_args
-    assert call_args[0][0] == "meridian:events:transaction"
+    assert call_args[0][0] == "fabra:events:transaction"
     assert call_args[0][1] == "axiom_workers"

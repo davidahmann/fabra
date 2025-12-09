@@ -17,13 +17,13 @@ From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No
 | | |
 |:---|:---|
 | **What** | Unified Feature Store + Context Store for AI applications |
-| **Install** | `pip install "meridian-oss[ui]"` |
+| **Install** | `pip install "fabra[ui]"` |
 | **Features** | `@feature` decorator for ML features |
 | **RAG** | `@retriever` + `@context` for LLM context assembly |
 | **Vector DB** | pgvector (Postgres extension) |
 | **Local** | DuckDB + in-memory (zero setup) |
 | **Production** | Postgres + Redis (one env var) |
-| **Deploy** | `meridian deploy fly\|cloudrun\|ecs\|railway\|render` |
+| **Deploy** | `fabra deploy fly\|cloudrun\|ecs\|railway\|render` |
 
 ---
 
@@ -45,13 +45,13 @@ Today, this means stitching together LangChain, Pinecone, a feature store, Redis
 ## The 30-Second Quickstart
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore, entity, feature
-from meridian.context import context, ContextItem
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore, entity, feature
+from fabra.context import context, ContextItem
+from fabra.retrieval import retriever
 
 store = FeatureStore()
 
@@ -78,7 +78,7 @@ async def build_prompt(user_id: str, query: str):
 ```
 
 ```bash
-meridian serve features.py
+fabra serve features.py
 # Server running on http://localhost:8000
 ```
 
@@ -86,7 +86,7 @@ meridian serve features.py
 
 ---
 
-## Why Meridian?
+## Why Fabra?
 
 | | Traditional Stack | Meridian |
 |:---|:---|:---|
@@ -103,8 +103,8 @@ Other tools make you choose: LangChain for RAG, Feast for features, a separate v
 ### Local-First, Production-Ready
 
 ```bash
-MERIDIAN_ENV=development  # DuckDB + In-Memory (default)
-MERIDIAN_ENV=production   # Postgres + Redis + pgvector
+FABRA_ENV=development  # DuckDB + In-Memory (default)
+FABRA_ENV=production   # Postgres + Redis + pgvector
 ```
 
 Same code. Zero changes. Just flip an environment variable.
@@ -153,7 +153,7 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 
 ### For Everyone
 
-- **[One-Command Deploy](local-to-production.md):** `meridian deploy fly|cloudrun|ecs|railway|render`
+- **[One-Command Deploy](local-to-production.md):** `fabra deploy fly|cloudrun|ecs|railway|render`
 - **Visual UI:** Dependency graphs, live metrics, context debugging
 - **[Unit Testing](unit_testing.md):** Test features in isolation
 
@@ -217,16 +217,16 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 ## Quick FAQ
 
 **Q: What is Meridian?**
-A: Meridian is a unified Context Store (for LLMs) and Feature Store (for ML) that lets you define features and RAG pipelines with Python decorators. Zero infrastructure to start.
+A: Fabra is a unified Context Store (for LLMs) and Feature Store (for ML) that lets you define features and RAG pipelines with Python decorators. Zero infrastructure to start.
 
 **Q: Do I need Kubernetes or Docker?**
-A: No. Meridian runs locally with DuckDB and in-memory cache. For production, set `MERIDIAN_ENV=production` with Postgres and Redis.
+A: No. Meridian runs locally with DuckDB and in-memory cache. For production, set `FABRA_ENV=production` with Postgres and Redis.
 
 **Q: How is Meridian different from Feast?**
-A: Meridian is a lightweight alternative with Python decorators instead of YAML, plus built-in RAG/LLM support (vector search, token budgeting) that Feast doesn't have.
+A: Fabra is a lightweight alternative with Python decorators instead of YAML, plus built-in RAG/LLM support (vector search, token budgeting) that Feast doesn't have.
 
 **Q: How is Meridian different from LangChain?**
-A: LangChain is a framework for building LLM apps. Meridian is infrastructure—it provides vector storage, token budgets, and ML features that LangChain apps can use.
+A: LangChain is a framework for building LLM apps. Fabra is infrastructure—it provides vector storage, token budgets, and ML features that LangChain apps can use.
 
 **Q: What vector database does Meridian use?**
 A: pgvector (Postgres extension). Your vectors live alongside your relational data—no separate vector database required.
@@ -235,7 +235,7 @@ A: pgvector (Postgres extension). Your vectors live alongside your relational da
 
 ## Contributing
 
-We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/meridian/blob/main/CONTRIBUTING.md) to get started.
+We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabra/blob/main/CONTRIBUTING.md) to get started.
 
 <script type="application/ld+json">
 {

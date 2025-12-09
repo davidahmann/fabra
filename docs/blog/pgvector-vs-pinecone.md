@@ -78,13 +78,13 @@ Comparable at most scales.
 
 **Real example:** A startup building a RAG chatbot with 100k documents. pgvector is plenty.
 
-## Meridian's Approach
+## Fabra.s Approach
 
-Meridian uses pgvector by default:
+Fabra uses pgvector by default:
 
 ```python
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
 
 store = FeatureStore()
 
@@ -108,17 +108,17 @@ async def search_docs(query: str):
 
 ### Local Development
 
-For local development, Meridian stores embeddings in DuckDB:
+For local development, Fabra.stores embeddings in DuckDB:
 
 ```bash
-MERIDIAN_ENV=development  # DuckDB, no external services
+FABRA_ENV=development  # DuckDB, no external services
 ```
 
 For production with pgvector:
 
 ```bash
-MERIDIAN_ENV=production
-MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
+FABRA_ENV=production
+FABRA_POSTGRES_URL=postgresql+asyncpg://...
 ```
 
 Same code, different backends.
@@ -185,7 +185,7 @@ WITH (m = 16, ef_construction = 64);
 - Better query performance
 - Good for 1M+ vectors
 
-Meridian uses HNSW by default for production.
+Fabra uses HNSW by default for production.
 
 ## Embedding Generation
 
@@ -222,7 +222,7 @@ ORDER BY embedding <-> query_embedding
 LIMIT 10;
 ```
 
-Meridian supports hybrid search in retrievers:
+Fabra.supports hybrid search in retrievers:
 
 ```python
 @retriever(index="docs", top_k=5, hybrid=True)
@@ -243,17 +243,17 @@ Meridian will support Pinecone as an alternative backend if demand exists.
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
 
 store = FeatureStore()
 
 # Index some documents
-await store.index("docs", "1", "Meridian is a feature store")
+await store.index("docs", "1", "Fabra is a feature store")
 await store.index("docs", "2", "pgvector runs in Postgres")
 
 # Search

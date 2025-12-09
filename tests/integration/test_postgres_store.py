@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from meridian.store.postgres import PostgresOfflineStore
+from fabra.store.postgres import PostgresOfflineStore
 from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 

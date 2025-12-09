@@ -31,7 +31,7 @@ async def test_rag_chatbot_example_flow() -> None:
 
     # Execute the context assembler
     # user_id="u1" -> hash("u1") odd/even determines premium/free
-    ctx = await rag_chatbot.chat_context(user_id="user_123", query="Hello Meridian")
+    ctx = await rag_chatbot.chat_context(user_id="user_123", query="Hello Fabra")
 
     assert ctx is not None
     assert "You are a helpful assistant" in ctx.content  # System prompt (no prefix)
@@ -49,5 +49,5 @@ async def test_rag_chatbot_example_flow() -> None:
     # Priority 2: Retrieved Docs
     # Priority 3: History
     # If 0 is lowest, then History (3) is HIGHEST priority to KEEP?
-    # Let's check src/meridian/context.py logic.
+    # Let's check src/fabra/context.py logic.
     pass

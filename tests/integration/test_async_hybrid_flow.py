@@ -1,9 +1,9 @@
 import pytest
 import pandas as pd
 from sqlalchemy import text
-from meridian.core import FeatureStore, entity, feature
-from meridian.store.postgres import PostgresOfflineStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store.postgres import PostgresOfflineStore
+from fabra.store.online import InMemoryOnlineStore
 from testcontainers.postgres import PostgresContainer
 
 

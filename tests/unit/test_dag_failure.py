@@ -1,5 +1,5 @@
 import pytest
-from meridian.graph import DependencyResolver
+from fabra.graph import DependencyResolver
 from unittest.mock import MagicMock
 
 

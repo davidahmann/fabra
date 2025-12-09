@@ -1,10 +1,10 @@
 from __future__ import annotations
 from redis.asyncio import Redis
-from meridian.events import AxiomEvent
+from fabra.events import AxiomEvent
 
 
 class RedisEventBus:
-    def __init__(self, redis: Redis[str], stream: str = "meridian_events"):
+    def __init__(self, redis: Redis[str], stream: str = "fabra_events"):
         self.redis = redis
         self.stream = stream
 
@@ -13,7 +13,7 @@ class RedisEventBus:
         Publishes an event to the Redis Stream.
         Returns the Redis Stream Message ID.
         """
-        stream_key = f"meridian:events:{event.event_type}"
+        stream_key = f"fabra:events:{event.event_type}"
         # Serialize the event.
         # We store the entire object as JSON in a single 'data' field
         # OR we store specific fields.

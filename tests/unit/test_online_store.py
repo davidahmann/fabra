@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from meridian.store.online import InMemoryOnlineStore
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio

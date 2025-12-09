@@ -1,18 +1,18 @@
 ---
-title: "Unit Testing ML Features with Meridian | Testing Guide"
-description: "How to unit test your ML features with Meridian. Use the local in-memory store to mock data and test logic without external dependencies."
+title: "Unit Testing ML Features with Fabra | Testing Guide"
+description: "How to unit test your ML features with Fabra. Use the local in-memory store to mock data and test logic without external dependencies."
 keywords: unit testing features, mlops testing, testing feature store, python ml testing
 ---
 
-# Unit Testing with Meridian
+# Unit Testing with Fabra
 
-Meridian is designed to be **testable by default**. You don't need to spin up Docker containers or mock complex database interactions to test your feature logic.
+Fabra is designed to be **testable by default**. You don't need to spin up Docker containers or mock complex database interactions to test your feature logic.
 
 By using the default configuration (DuckDB + In-Memory), you can treat Meridian as a library rather than a service during your test suite execution.
 
 ## The Strategy: "Trojan Horse" Testing
 
-Instead of asking your infra team for a Kubernetes cluster, start by using Meridian to mock feature data in your local unit tests. This gives you immediate value (cleaner tests) with zero operational overhead.
+Instead of asking your infra team for a Kubernetes cluster, start by using Fabra to mock feature data in your local unit tests. This gives you immediate value (cleaner tests) with zero operational overhead.
 
 ## Example: Testing a Fraud Model
 
@@ -20,7 +20,7 @@ Imagine you have a `FraudDetector` class that relies on features.
 
 ```python
 # fraud.py
-from meridian import FeatureStore
+from fabra import FeatureStore
 import pandas as pd
 
 class FraudDetector:
@@ -46,7 +46,7 @@ You can write a standard `pytest` test that populates the in-memory store before
 ```python
 # test_fraud.py
 import pytest
-from meridian import FeatureStore, entity, feature
+from fabra import FeatureStore, entity, feature
 from fraud import FraudDetector
 
 @pytest.fixture
@@ -89,16 +89,16 @@ async def test_high_risk_scenario(store):
 
 1.  **Speed**: Tests run in milliseconds.
 2.  **Isolation**: No network calls to external DBs.
-3.  **Portability**: Runs in any CI environment (GitHub Actions) with just `pip install meridian`.
+3.  **Portability**: Runs in any CI environment (GitHub Actions) with just `pip install fabra`.
 
-Start small by using Meridian to organize your test data. When you're ready, the exact same code deploys to production with Redis.
+Start small by using Fabra to organize your test data. When you're ready, the exact same code deploys to production with Redis.
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Unit Testing ML Features with Meridian",
-  "description": "How to unit test your ML features with Meridian. Use the local in-memory store to mock data and test logic without external dependencies.",
+  "headline": "Unit Testing ML Features with Fabra",
+  "description": "How to unit test your ML features with Fabra. Use the local in-memory store to mock data and test logic without external dependencies.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "unit testing features, mlops testing, testing feature store, python ml testing",
   "articleSection": "Testing"

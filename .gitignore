@@ -37,15 +37,16 @@ venv.bak/
 *.swp
 *.swo
 
-# Meridian Local Data
+# Fabra Local Data
 *.db
 *.duckdb
-meridian.toml
+fabra.toml
 
 # Planning Documents (Internal)
 PRD.md
 epic_plan.md
 plan.md
+brand.md
 pics
 
 # Generated Artifacts

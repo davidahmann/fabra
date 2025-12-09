@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from meridian.server import create_app
-from meridian.core import FeatureStore
-from meridian.hooks import WebhookHook
+from fabra.server import create_app
+from fabra.core import FeatureStore
+from fabra.hooks import WebhookHook
 from fastapi.testclient import TestClient
 
 
@@ -15,7 +15,7 @@ def mock_store() -> MagicMock:
     store.online_store.client = MagicMock()  # Redis client mock
 
     # We need real HookManager to test the triggering
-    from meridian.hooks import HookManager
+    from fabra.hooks import HookManager
 
     store.hooks = HookManager()
 
@@ -44,7 +44,7 @@ async def test_webhook_trigger(mock_store: MagicMock) -> None:
         # The previous error "None object is not iterable" might be from mock_publish usage?
         # No, probably from how patch context manager is used or return value.
         with patch(
-            "meridian.bus.RedisEventBus.publish", new_callable=AsyncMock
+            "fabra.bus.RedisEventBus.publish", new_callable=AsyncMock
         ) as mock_publish:
             mock_publish.return_value = "msg-123"
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from datetime import datetime, timezone, timedelta
 
-from meridian.models import FeatureLineage, RetrieverLineage, ContextLineage
-from meridian.context import (
+from fabra.models import FeatureLineage, RetrieverLineage, ContextLineage
+from fabra.context import (
     context,
     Context,
     AssemblyTracker,
@@ -222,8 +222,8 @@ class TestContextWithLineage:
     @pytest.mark.asyncio
     async def test_context_decorator_creates_lineage_with_store(self) -> None:
         """Test that context decorator creates lineage when store with offline_store is provided."""
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -247,7 +247,7 @@ class TestContextLogging:
     @pytest.mark.asyncio
     async def test_duckdb_log_context(self) -> None:
         """Test logging context to DuckDB offline store."""
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
         store._ensure_context_table()
@@ -283,7 +283,7 @@ class TestContextLogging:
     @pytest.mark.asyncio
     async def test_duckdb_list_contexts(self) -> None:
         """Test listing contexts from DuckDB with time filtering."""
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
         store._ensure_context_table()
@@ -317,7 +317,7 @@ class TestContextLogging:
     @pytest.mark.asyncio
     async def test_duckdb_get_nonexistent_context(self) -> None:
         """Test getting a context that doesn't exist."""
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
         store._ensure_context_table()
@@ -332,8 +332,8 @@ class TestFeatureStoreReplayAPI:
     @pytest.mark.asyncio
     async def test_get_context_at(self) -> None:
         """Test retrieving a historical context by ID."""
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -361,8 +361,8 @@ class TestFeatureStoreReplayAPI:
     @pytest.mark.asyncio
     async def test_get_context_at_not_found(self) -> None:
         """Test retrieving a non-existent context returns None."""
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -375,8 +375,8 @@ class TestFeatureStoreReplayAPI:
     @pytest.mark.asyncio
     async def test_list_contexts(self) -> None:
         """Test listing contexts via FeatureStore."""
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -407,9 +407,9 @@ class TestServerEndpoints:
     async def test_list_contexts_endpoint(self) -> None:
         """Test GET /v1/contexts endpoint."""
         from httpx import AsyncClient, ASGITransport
-        from meridian.server import create_app
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.server import create_app
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -441,9 +441,9 @@ class TestServerEndpoints:
     async def test_get_context_by_id_endpoint(self) -> None:
         """Test GET /v1/context/{context_id} endpoint."""
         from httpx import AsyncClient, ASGITransport
-        from meridian.server import create_app
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.server import create_app
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -474,9 +474,9 @@ class TestServerEndpoints:
     async def test_get_context_not_found_endpoint(self) -> None:
         """Test GET /v1/context/{context_id} returns 404 for missing context."""
         from httpx import AsyncClient, ASGITransport
-        from meridian.server import create_app
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.server import create_app
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
@@ -494,9 +494,9 @@ class TestServerEndpoints:
     async def test_get_context_lineage_endpoint(self) -> None:
         """Test GET /v1/context/{context_id}/lineage endpoint."""
         from httpx import AsyncClient, ASGITransport
-        from meridian.server import create_app
-        from meridian.core import FeatureStore
-        from meridian.store.offline import DuckDBOfflineStore
+        from fabra.server import create_app
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")

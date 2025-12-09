@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from meridian.server import create_app
-from meridian.models import ContextTrace
+from fabra.server import create_app
+from fabra.models import ContextTrace
 from fastapi.testclient import TestClient
 
 

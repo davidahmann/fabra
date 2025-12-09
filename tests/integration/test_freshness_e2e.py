@@ -4,12 +4,12 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
-from meridian.context import (
+from fabra.context import (
     context,
     ContextItem,
     _assembly_tracker,
 )
-from meridian.exceptions import FreshnessSLAError
+from fabra.exceptions import FreshnessSLAError
 
 
 class TestFreshnessE2E:
@@ -210,7 +210,7 @@ class TestFreshnessMetrics:
     @pytest.mark.asyncio
     async def test_metrics_recorded_for_degraded_context(self):
         """Test that metrics are recorded when context is degraded."""
-        from meridian.observability import ContextMetrics
+        from fabra.observability import ContextMetrics
 
         with patch.object(ContextMetrics, "record_freshness_status") as mock_status:
             with patch.object(
@@ -244,7 +244,7 @@ class TestFreshnessMetrics:
     @pytest.mark.asyncio
     async def test_metrics_recorded_for_guaranteed_context(self):
         """Test that metrics are recorded when context is guaranteed."""
-        from meridian.observability import ContextMetrics
+        from fabra.observability import ContextMetrics
 
         with patch.object(ContextMetrics, "record_freshness_status") as mock_status:
 

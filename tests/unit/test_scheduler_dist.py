@@ -1,7 +1,7 @@
 import pytest
 import time
 from fakeredis import FakeStrictRedis
-from meridian.scheduler_dist import DistributedScheduler
+from fabra.scheduler_dist import DistributedScheduler
 
 
 @pytest.fixture

@@ -1,1 +1,1 @@
-# Meridian UI Tests (Playwright)
+# Fabra UI Tests (Playwright)

@@ -3,14 +3,14 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 
-from meridian.utils.time import (
+from fabra.utils.time import (
     parse_duration_to_ms,
     format_ms_to_human,
     validate_sla,
     InvalidSLAFormatError,
 )
-from meridian.exceptions import FreshnessSLAError
-from meridian.context import context, ContextItem, AssemblyTracker
+from fabra.exceptions import FreshnessSLAError
+from fabra.context import context, ContextItem, AssemblyTracker
 
 
 class TestSLAParsing:

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve Meridian
+about: Create a report to help us improve Fabra
 title: ''
 labels: bug
 assignees: ''
@@ -26,7 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
  - OS: [e.g. macOS, Ubuntu]
  - Python Version: [e.g. 3.10]
- - Meridian Version: [e.g. 1.1.0]
+ - Fabra Version: [e.g. 1.1.0]
 
 **Additional context**
 Add any other context about the problem here.

@@ -15,7 +15,7 @@ keywords: meridian faq, feature store questions, context store questions, feast 
 **A:** No. You can deploy Meridian on Heroku, Railway, AWS ECS, or even a single EC2 instance using Docker Compose. If you *want* to use Kubernetes, you can, but it is not a requirement.
 
 ### Q: How does Meridian compare to Feast?
-**A:** Meridian is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries. See [Meridian vs Feast](feast-alternative.md) for a detailed comparison.
+**A:** Fabra is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries. See [Meridian vs Feast](feast-alternative.md) for a detailed comparison.
 
 ## Context Store (New in v1.2.0)
 
@@ -26,7 +26,7 @@ keywords: meridian faq, feature store questions, context store questions, feast 
 **A:** No. The Context Store is optional and designed for LLM/RAG applications. If you're building traditional ML models (fraud detection, recommendations), the Feature Store alone is sufficient.
 
 ### Q: How does Meridian compare to LangChain?
-**A:** LangChain is a framework for building LLM applications. Meridian is infrastructure. You can use Meridian's Context Store as the retrieval layer in a LangChain application, or use it standalone. Meridian provides: vector storage (pgvector), token budget management, and unified feature+context in one system.
+**A:** LangChain is a framework for building LLM applications. Fabra is infrastructure. You can use Fabra.s Context Store as the retrieval layer in a LangChain application, or use it standalone. Fabra provides: vector storage (pgvector), token budget management, and unified feature+context in one system.
 
 ### Q: What embedding providers are supported?
 **A:** OpenAI (text-embedding-3-small, ada-002) and Cohere (embed-english-v3.0). Set `OPENAI_API_KEY` or `COHERE_API_KEY` environment variable.
@@ -48,18 +48,18 @@ keywords: meridian faq, feature store questions, context store questions, feast 
 ### Q: Why not just write to Redis directly?
 **A:** You can, but you lose:
 1.  **Point-in-Time Correctness:** Redis only knows "now". It cannot generate historical training data without leakage.
-2.  **Schema Evolution:** Changing a feature definition in Meridian is a code change. In raw Redis, it's a migration nightmare.
-3.  **Observability:** Meridian provides built-in metrics for hit rates, latency, and staleness.
+2.  **Schema Evolution:** Changing a feature definition in Fabra is a code change. In raw Redis, it's a migration nightmare.
+3.  **Observability:** Fabra provides built-in metrics for hit rates, latency, and staleness.
 
 ### Q: Why not just use dbt?
-**A:** dbt is excellent for *batch* transformations in the warehouse, but it cannot serve *individual rows* to a live API with low latency. Meridian bridges the gap between your dbt models (Offline) and your production API (Online).
+**A:** dbt is excellent for *batch* transformations in the warehouse, but it cannot serve *individual rows* to a live API with low latency. Fabra bridges the gap between your dbt models (Offline) and your production API (Online).
 
 ## Operations
 
 ### Q: How do I migrate from Local to Production?
 **A:** It's a configuration change, not a code change.
-1.  Set `MERIDIAN_ENV=production`.
-2.  Provide `MERIDIAN_POSTGRES_URL` and `MERIDIAN_REDIS_URL`.
+1.  Set `FABRA_ENV=production`.
+2.  Provide `FABRA_POSTGRES_URL` and `FABRA_REDIS_URL`.
 3.  Deploy.
 See [Local to Production](local-to-production.md) for a guide.
 
@@ -75,13 +75,13 @@ See [Local to Production](local-to-production.md) for a guide.
 
 ### Q: Where is context lineage stored?
 
-**A:** In the `context_log` table in your offline store (DuckDB or Postgres). You can query it directly with SQL or use the CLI: `meridian context list`.
+**A:** In the `context_log` table in your offline store (DuckDB or Postgres). You can query it directly with SQL or use the CLI: `fabra context list`.
 
 ## Freshness SLAs (v1.5+)
 
 ### Q: How do I ensure my AI context uses fresh data?
 
-**A:** Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Meridian tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
+**A:** Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Fabra tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
 
 ### Q: What happens when features are stale?
 
@@ -114,7 +114,7 @@ See [Local to Production](local-to-production.md) for a guide.
     "name": "How does Meridian compare to Feast?",
     "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Meridian is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries."
+      "text": "Fabra is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries."
     }
   }, {
     "@type": "Question",
@@ -149,7 +149,7 @@ See [Local to Production](local-to-production.md) for a guide.
     "name": "How do I ensure my AI context uses fresh data?",
     "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Add freshness_sla to your @context decorator: @context(store, freshness_sla=\"5m\"). Meridian tracks feature ages and reports violations via ctx.meta[\"freshness_violations\"]."
+      "text": "Add freshness_sla to your @context decorator: @context(store, freshness_sla=\"5m\"). Fabra tracks feature ages and reports violations via ctx.meta[\"freshness_violations\"]."
     }
   }, {
     "@type": "Question",

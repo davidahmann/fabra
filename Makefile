@@ -8,8 +8,8 @@ help:
 	@echo "  make lint        - Run linters (ruff, mypy)"
 	@echo "  make format      - Run formatters (ruff)"
 	@echo "  make clean       - Clean build artifacts"
-	@echo "  make ui          - Run Meridian UI"
-	@echo "  make serve       - Run Meridian Server (TUI)"
+	@echo "  make ui          - Run Fabra UI"
+	@echo "  make serve       - Run Fabra Server (TUI)"
 	@echo "  make docker-up   - Start local production stack"
 	@echo "  make docker-down - Stop local production stack"
 	@echo "  make pre-commit  - Run all pre-commit hooks"
@@ -19,7 +19,7 @@ setup:
 	uv venv
 	uv pip install -e ".[dev,ui]"
 	uv run pre-commit install
-	cd src/meridian/ui-next && npm install
+	cd src/fabra/ui-next && npm install
 
 install:
 	uv pip install -e ".[dev,ui]"
@@ -40,10 +40,10 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
 
 ui:
-	uv run meridian ui examples/basic_features.py
+	uv run fabra ui examples/basic_features.py
 
 serve:
-	uv run meridian serve examples/basic_features.py
+	uv run fabra serve examples/basic_features.py
 
 docker-up:
 	docker compose up -d

@@ -79,7 +79,7 @@ def index(
 
         # We need to register it.
         # Attach to function
-        setattr(func, "_meridian_index", idx)
+        setattr(func, "_fabra_index", idx)
 
         # Return func as is
         return func

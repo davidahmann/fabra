@@ -62,7 +62,7 @@ def _get_pricing() -> Dict[str, PriceRates]:
     pricing = DEFAULT_PRICING.copy()
 
     # 2. Check for Override File
-    custom_file = os.environ.get("MERIDIAN_CUSTOM_PRICING_FILE")
+    custom_file = os.environ.get("FABRA_CUSTOM_PRICING_FILE")
     if custom_file:
         try:
             if os.path.exists(custom_file):
@@ -94,7 +94,7 @@ def _check_pricing_freshness() -> None:
             logger.warning(
                 "pricing_data_stale",
                 version=PRICING_VERSION,
-                msg="Pricing data may be outdated (>6 months). Set MERIDIAN_CUSTOM_PRICING_FILE or upgrade Meridian.",
+                msg="Pricing data may be outdated (>6 months). Set FABRA_CUSTOM_PRICING_FILE or upgrade Fabra.",
             )
     except Exception:  # nosec
         pass

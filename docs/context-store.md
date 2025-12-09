@@ -1,12 +1,12 @@
 ---
 title: "Context Store for LLMs: RAG Infrastructure | Meridian"
-description: "Build production RAG applications with Meridian's Context Store. Vector search with pgvector, automatic chunking, token budgets, and priority-based context assembly."
+description: "Build production RAG applications with Fabra.s Context Store. Vector search with pgvector, automatic chunking, token budgets, and priority-based context assembly."
 keywords: context store, rag infrastructure, llm context, pgvector, vector search, token budget, context assembly, retrieval augmented generation
 ---
 
 # Context Store for LLMs
 
-> **TL;DR:** Meridian's Context Store is RAG infrastructure that actually works. Index documents, search with pgvector, and assemble context with token budgets—all with Python decorators.
+> **TL;DR:** Fabra.s Context Store is RAG infrastructure that actually works. Index documents, search with pgvector, and assemble context with token budgets—all with Python decorators.
 
 ## Why Context Store?
 
@@ -17,14 +17,14 @@ Building LLM applications requires more than just features. You need:
 3. **Context Assembly:** Combine retrieved docs with user data under token limits.
 4. **Freshness:** Update context when documents change.
 
-Most teams cobble together Pinecone + LangChain + custom glue code. Meridian provides all of this in one unified system that shares infrastructure with your Feature Store.
+Most teams cobble together Pinecone + LangChain + custom glue code. Fabra provides all of this in one unified system that shares infrastructure with your Feature Store.
 
 ## Quick Example
 
 ```python
-from meridian.core import FeatureStore
-from meridian.context import context, Context, ContextItem
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore
+from fabra.context import context, Context, ContextItem
+from fabra.retrieval import retriever
 
 store = FeatureStore()
 
@@ -61,7 +61,7 @@ An **Index** is a collection of documents stored with vector embeddings for sema
 await store.index(
     index_name="knowledge_base",
     entity_id="doc_123",
-    text="Meridian is a feature store and context store...",
+    text="Fabra is a feature store and context store...",
     metadata={"source": "docs", "version": "1.2.0"}
 )
 ```
@@ -73,7 +73,7 @@ curl -X POST http://localhost:8000/ingest/document \
   -d '{
     "index_name": "knowledge_base",
     "entity_id": "doc_123",
-    "text": "Meridian is a feature store...",
+    "text": "Fabra is a feature store...",
     "metadata": {"source": "docs"}
   }'
 ```
@@ -98,7 +98,7 @@ meridian index status knowledge_base
 A **Retriever** performs vector search and returns relevant documents.
 
 ```python
-from meridian.retrieval import retriever
+from fabra.retrieval import retriever
 
 @retriever(index="knowledge_base", cache_ttl=300)
 async def search_docs(query: str):
@@ -117,7 +117,7 @@ async def search_docs(query: str):
 A **Context** combines multiple sources under a token budget.
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> list[ContextItem]:
@@ -183,7 +183,7 @@ async def support_context(query: str) -> list[ContextItem]:
 Keep context fresh by triggering updates on events.
 
 ```python
-from meridian.core import feature
+from fabra.core import feature
 
 @feature(entity=Document, trigger="document_updated")
 async def doc_summary(doc_id: str, event: AxiomEvent) -> str:
@@ -207,16 +207,16 @@ meridian events listen --stream document_updated
 | :--- | :--- | :--- |
 | `OPENAI_API_KEY` | API key for OpenAI embeddings | Required for embeddings |
 | `COHERE_API_KEY` | API key for Cohere embeddings (alternative) | Optional |
-| `MERIDIAN_EMBEDDING_MODEL` | Embedding model to use | `text-embedding-3-small` |
-| `MERIDIAN_CHUNK_SIZE` | Tokens per chunk | `512` |
+| `FABRA_EMBEDDING_MODEL` | Embedding model to use | `text-embedding-3-small` |
+| `FABRA_CHUNK_SIZE` | Tokens per chunk | `512` |
 
 ### Production Tuning
 
 | Variable | Description | Recommendation |
 | :--- | :--- | :--- |
-| `MERIDIAN_EMBEDDING_CONCURRENCY` | Max concurrent embedding requests | Set to `20+` if you have high Tier limits. Default `10`. |
-| `MERIDIAN_PG_POOL_SIZE` | Postgres Connection Pool Size | Set to `10-20` for high-throughput API pods. Default `5`. |
-| `MERIDIAN_PG_MAX_OVERFLOW` | Postgres Connection Pool Overflow | Set to `20+` to handle spikes. Default `10`. |
+| `FABRA_EMBEDDING_CONCURRENCY` | Max concurrent embedding requests | Set to `20+` if you have high Tier limits. Default `10`. |
+| `FABRA_PG_POOL_SIZE` | Postgres Connection Pool Size | Set to `10-20` for high-throughput API pods. Default `5`. |
+| `FABRA_PG_MAX_OVERFLOW` | Postgres Connection Pool Overflow | Set to `20+` to handle spikes. Default `10`. |
 
 ## Architecture
 
@@ -254,14 +254,14 @@ graph LR
 
 ## 🐛 Debugging & Tracing
 
-Meridian provides built-in observability for your context assembly. Because context is often assembled from multiple stochastic sources (vector search, cached features), understanding *why* a specific prompt was built is crucial.
+Fabra provides built-in observability for your context assembly. Because context is often assembled from multiple stochastic sources (vector search, cached features), understanding *why* a specific prompt was built is crucial.
 
-### The `meridian context explain` Command
+### The `fabra context explain` Command
 
 You can trace any context request by its ID:
 
 ```bash
-meridian context explain ctx_12345
+fabra context explain ctx_12345
 ```
 
 **Output:**
@@ -288,7 +288,7 @@ meridian context explain ctx_12345
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Context Store for LLMs: RAG Infrastructure",
-  "description": "Build production RAG applications with Meridian's Context Store. Vector search with pgvector, automatic chunking, token budgets, and priority-based context assembly.",
+  "description": "Build production RAG applications with Fabra.s Context Store. Vector search with pgvector, automatic chunking, token budgets, and priority-based context assembly.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "context store, rag, llm, pgvector, vector search",
   "articleSection": "Documentation"

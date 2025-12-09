@@ -57,7 +57,7 @@ Without proper context logging, you're guessing.
 
 ---
 
-## Meridian's Approach: Context Lineage
+## Fabra.s Approach: Context Lineage
 
 Meridian v1.4 introduces **Context Lineage** — automatic tracking of every piece of data that goes into your AI's context window.
 
@@ -114,7 +114,7 @@ We use **UUIDv7** for context IDs. These are:
 
 ```bash
 # Find all contexts from a specific hour
-meridian context list --start 2025-01-15T14:00:00 --end 2025-01-15T15:00:00
+fabra context list --start 2025-01-15T14:00:00 --end 2025-01-15T15:00:00
 ```
 
 ### Point-in-Time Accuracy
@@ -130,7 +130,7 @@ Every feature records when it was fetched and how fresh it was. If a user's cred
 It's on by default in Meridian v1.4. Just use the `@context` decorator:
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000)
 async def build_loan_decision_context(user_id: str, application_id: str):
@@ -185,7 +185,7 @@ print(context.lineage.model_dump_json(indent=2))
 Or via CLI:
 
 ```bash
-meridian context export 01948c9a-2b3e-7d4f-8e5a-1c2d3e4f5a6b --format yaml
+fabra context export 01948c9a-2b3e-7d4f-8e5a-1c2d3e4f5a6b --format yaml
 ```
 
 ---
@@ -261,10 +261,10 @@ Auditors may need data in specific formats:
 
 ```bash
 # JSON for programmatic processing
-meridian context export <id> --format json > audit.json
+fabra context export <id> --format json > audit.json
 
 # YAML for human review
-meridian context export <id> --format yaml > audit.yaml
+fabra context export <id> --format yaml > audit.yaml
 ```
 
 ---
@@ -284,7 +284,7 @@ When you can answer "what did the AI know?" definitively:
 ## Getting Started
 
 ```bash
-pip install --upgrade "meridian-oss[ui]"
+pip install --upgrade "fabra[ui]"
 ```
 
 Context Accountability is enabled by default. Your contexts are already being tracked.
@@ -293,4 +293,4 @@ Context Accountability is enabled by default. Your contexts are already being tr
 
 ---
 
-*Have questions about AI compliance? [Open a discussion](https://github.com/davidahmann/meridian/discussions) on GitHub.*
+*Have questions about AI compliance? [Open a discussion](https://github.com/davidahmann/fabra/discussions) on GitHub.*

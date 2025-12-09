@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
-from meridian.cli import app
+from fabra.cli import app
 
 runner = CliRunner()
 

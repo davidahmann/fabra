@@ -1,6 +1,6 @@
-# Meridian Playground
+# Fabra Playground
 
-Interactive playground to try Meridian Feature Store & Context Store in your browser using Pyodide (Python compiled to WebAssembly).
+Interactive playground to try Fabra Feature Store & Context Store in your browser using Pyodide (Python compiled to WebAssembly).
 
 ## Features
 
@@ -44,7 +44,7 @@ Or push to GitHub and connect to Vercel for automatic deployments.
 - No network access from Python code (browser sandbox)
 - No file system access
 - Some Python packages may not be available in Pyodide
-- The examples use simulated Meridian code (not the actual library)
+- The examples use simulated Fabra code (not the actual library)
 
 ## Examples Included
 

@@ -35,9 +35,9 @@ services:
       dockerfile: Dockerfile
     command: python examples/production/prod_app.py
     environment:
-      - MERIDIAN_ENV=production
-      - MERIDIAN_POSTGRES_URL=postgresql+asyncpg://user:password@postgres:5432/meridian_prod
-      - MERIDIAN_REDIS_URL=redis://redis:6379/0
+      - FABRA_ENV=production
+      - FABRA_POSTGRES_URL=postgresql+asyncpg://user:password@postgres:5432/meridian_prod
+      - FABRA_REDIS_URL=redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy

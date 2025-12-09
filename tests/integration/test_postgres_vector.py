@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
 import pytest_asyncio
-from meridian.store.postgres import PostgresOfflineStore
+from fabra.store.postgres import PostgresOfflineStore
 from typing import Dict, Any, AsyncGenerator
 
 
@@ -43,7 +43,7 @@ async def test_vector_flow(vector_store: PostgresOfflineStore) -> None:
     assert results[0]["metadata"]["tag"] == "a"
     assert "content_hash" in results[0]["metadata"]
     assert "ingestion_timestamp" in results[0]["metadata"]
-    assert results[0]["metadata"]["indexer_version"] == "meridian-v1"
+    assert results[0]["metadata"]["indexer_version"] == "fabra-v1"
     # Score should be high (close to 1 if using cosine sim equivalent, or distance close to 0)
     # Our search returns "1 - distance" as score.
     # embedding <=> query is Cosine DISTANCE.

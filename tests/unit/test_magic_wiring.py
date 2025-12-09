@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
-from meridian.store import OfflineStore, OnlineStore
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
+from fabra.store import OfflineStore, OnlineStore
 from typing import Any
 
 

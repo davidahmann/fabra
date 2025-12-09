@@ -2,13 +2,13 @@ from __future__ import annotations
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from typing import Any
-from meridian.embeddings import OpenAIEmbedding
+from fabra.embeddings import OpenAIEmbedding
 from openai.types import CreateEmbeddingResponse, Embedding
 
 
 @pytest.mark.asyncio
 async def test_openai_embedding_basic() -> None:
-    with patch("meridian.embeddings.AsyncOpenAI") as mock_client_cls:
+    with patch("fabra.embeddings.AsyncOpenAI") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client_cls.return_value = mock_client
 
@@ -35,7 +35,7 @@ async def test_openai_embedding_basic() -> None:
 
 @pytest.mark.asyncio
 async def test_openai_embedding_batching() -> None:
-    with patch("meridian.embeddings.AsyncOpenAI") as mock_client_cls:
+    with patch("fabra.embeddings.AsyncOpenAI") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client_cls.return_value = mock_client
 

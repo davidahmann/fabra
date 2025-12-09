@@ -6,7 +6,7 @@ keywords: meridian vs feast, tecton alternative, feature store comparison, langc
 
 # Feature Store & RAG Comparison: Meridian vs The World
 
-> **TL;DR:** Meridian is the only tool that unifies **Feature Store** (for ML) and **Context Store** (for LLMs) in one system. No Kubernetes required.
+> **TL;DR:** Fabra is the only tool that unifies **Feature Store** (for ML) and **Context Store** (for LLMs) in one system. No Kubernetes required.
 
 ## Quick Comparison Table
 
@@ -63,7 +63,7 @@ def click_count(user_id: str) -> int:
 ```
 
 **When to use Feast:** You have 100k+ QPS and a platform team.
-**When to use Meridian:** You want to ship features this week, not this quarter.
+**When to use Fabra:** You want to ship features this week, not this quarter.
 
 ---
 
@@ -82,7 +82,7 @@ def click_count(user_id: str) -> int:
 - Deploy anywhere (Fly.io, Railway, AWS, GCP)
 
 **When to use Tecton:** You're a Fortune 500 with dedicated ML budget.
-**When to use Meridian:** You want enterprise features without enterprise pricing.
+**When to use Fabra:** You want enterprise features without enterprise pricing.
 
 ---
 
@@ -118,7 +118,7 @@ async def build_prompt(user_id: str, query: str):
 ```
 
 **When to use LangChain:** You need complex agent workflows.
-**When to use Meridian:** You need reliable RAG infrastructure.
+**When to use Fabra:** You need reliable RAG infrastructure.
 
 ---
 
@@ -138,7 +138,7 @@ async def build_prompt(user_id: str, query: str):
 - Built-in token budgets and caching
 
 **When to use Pinecone:** You only need vector search and prefer SaaS.
-**When to use Meridian:** You want vector search + ML features + token budgets in one system.
+**When to use Fabra:** You want vector search + ML features + token budgets in one system.
 
 ---
 
@@ -148,10 +148,10 @@ async def build_prompt(user_id: str, query: str):
 
 ```bash
 # 1. Install
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 
 # 2. Convert YAML to Python decorators
-# 3. Run: meridian serve features.py
+# 3. Run: fabra serve features.py
 ```
 
 ### From LangChain to Meridian

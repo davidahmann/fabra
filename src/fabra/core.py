@@ -40,15 +40,15 @@ from contextlib import contextmanager
 
 # Metrics
 FEATURE_REQUESTS = Counter(
-    "meridian_feature_requests_total", "Total feature requests", ["feature", "status"]
+    "fabra_feature_requests_total", "Total feature requests", ["feature", "status"]
 )
 FEATURE_LATENCY = Histogram(
-    "meridian_feature_latency_seconds",
+    "fabra_feature_latency_seconds",
     "Latency of feature retrieval",
     ["feature", "step"],
 )
 FEATURE_MATERIALIZE_FAILURES = Counter(
-    "meridian_feature_materialize_failures_total",
+    "fabra_feature_materialize_failures_total",
     "Total feature materialization failures",
     ["feature"],
 )
@@ -58,7 +58,7 @@ logger = structlog.get_logger()
 # Time Travel Context Variable
 # Stores the timestamp for the current execution context. if set, all queries should be historical.
 _context_timestamp: contextvars.ContextVar[Optional[datetime]] = contextvars.ContextVar(
-    "meridian_context_timestamp", default=None
+    "fabra_context_timestamp", default=None
 )
 
 
@@ -159,7 +159,7 @@ class FeatureStore:
 
         # Auto-configure stores if not provided
         if offline_store is None or online_store is None:
-            from meridian.config import get_store_factory
+            from fabra.config import get_store_factory
 
             default_offline, default_online = get_store_factory()
             self.offline_store = offline_store or default_offline
@@ -199,7 +199,7 @@ class FeatureStore:
             <div style="display: flex; align-items: center; margin-bottom: 20px;">
                 <div style="font-size: 24px; margin-right: 10px;">🧭</div>
                 <div>
-                    <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">Meridian Feature Store</h2>
+                    <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">Fabra Feature Store</h2>
                     <div style="color: #666; font-size: 13px;">Version: 1.2.5</div>
                 </div>
             </div>
@@ -595,14 +595,14 @@ class FeatureStore:
 
     def register_retriever(self, retriever_or_func: Any) -> None:
         """Registers a retriever with the store."""
-        if hasattr(retriever_or_func, "_meridian_retriever"):
-            retriever = getattr(retriever_or_func, "_meridian_retriever")
+        if hasattr(retriever_or_func, "_fabra_retriever"):
+            retriever = getattr(retriever_or_func, "_fabra_retriever")
         else:
             retriever = retriever_or_func
 
         self.retriever_registry.register(retriever)
         # Inject Store Reference for DAG Resolution
-        setattr(retriever, "_meridian_store_ref", self)
+        setattr(retriever, "_fabra_store_ref", self)
 
         # Inject Cache Backend if available
         # We use online_store.redis for caching
@@ -688,7 +688,7 @@ class FeatureStore:
         2. Search Offline Store.
         """
         if not hasattr(self, "embedding_provider"):
-            from meridian.embeddings import OpenAIEmbedding
+            from fabra.embeddings import OpenAIEmbedding
 
             self.embedding_provider = OpenAIEmbedding()
 
@@ -733,8 +733,8 @@ class FeatureStore:
         Returns:
             The exact Context object that was assembled, or None if not found.
         """
-        from meridian.context import Context
-        from meridian.models import ContextLineage
+        from fabra.context import Context
+        from fabra.models import ContextLineage
 
         row = await self.offline_store.get_context(context_id)
         if row is None:
@@ -826,8 +826,8 @@ def entity(
         # Python's class docstring is in __doc__, but sometimes it needs to be stripped
         doc = cls.__doc__.strip() if cls.__doc__ else None
         store.register_entity(name=cls.__name__, id_column=id_column, description=doc)
-        setattr(cls, "_meridian_entity_name", cls.__name__)
-        setattr(cls, "_meridian_store", store)  # Link store to entity
+        setattr(cls, "_fabra_entity_name", cls.__name__)
+        setattr(cls, "_fabra_store", store)  # Link store to entity
         return cls
 
     return decorator
@@ -860,7 +860,7 @@ def feature(
         nonlocal store
         if store is None:
             # Try to get store from the entity class
-            store = getattr(entity, "_meridian_store", None)
+            store = getattr(entity, "_fabra_store", None)
 
         if store is None:
             raise ValueError(
@@ -882,7 +882,7 @@ def feature(
 
         store.register_feature(
             name=func.__name__,
-            entity_name=getattr(entity, "_meridian_entity_name"),
+            entity_name=getattr(entity, "_fabra_entity_name"),
             func=func,
             refresh=parsed_refresh,
             ttl=parsed_ttl,

@@ -1,8 +1,8 @@
 from __future__ import annotations
 import pytest
 import json
-from meridian.bus import RedisEventBus
-from meridian.events import AxiomEvent
+from fabra.bus import RedisEventBus
+from fabra.events import AxiomEvent
 from redis.asyncio import Redis
 
 
@@ -15,7 +15,7 @@ async def test_redis_bus_publish(redis_client: Redis[str]) -> None:
     assert msg_id is not None
 
     # Read back to verify
-    stream_key = "meridian:events:integration_test"
+    stream_key = "fabra:events:integration_test"
     # xread returns [[key, [(msg_id, fields)]]]
     result = await redis_client.xread({stream_key: "0-0"}, count=1)
     assert result

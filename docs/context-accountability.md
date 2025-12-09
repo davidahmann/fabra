@@ -9,7 +9,7 @@
 | **Context ID** | UUIDv7 (time-sortable, unique) |
 | **Replay API** | `store.get_context_at(context_id)` |
 | **List API** | `store.list_contexts(start, end, limit)` |
-| **CLI** | `meridian context show <id>`, `meridian context list` |
+| **CLI** | `fabra context show <id>`, `fabra context list` |
 | **Storage** | `context_log` table in DuckDB/Postgres |
 | **Lineage** | Features used, retrievers called, items dropped |
 
@@ -27,7 +27,7 @@ Without context accountability, debugging AI decisions is guesswork.
 Meridian automatically tracks **lineage** for every context assembly:
 
 ```python
-from meridian import FeatureStore, context, ContextItem
+from fabra import FeatureStore, context, ContextItem
 
 store = FeatureStore()
 
@@ -203,30 +203,30 @@ Returns just the lineage data (useful for audit dashboards):
 
 ```bash
 # Display full context details
-meridian context show 01912345-6789-7abc-def0-123456789abc
+fabra context show 01912345-6789-7abc-def0-123456789abc
 
 # Show only lineage information
-meridian context show 01912345-6789-7abc-def0-123456789abc --lineage
+fabra context show 01912345-6789-7abc-def0-123456789abc --lineage
 ```
 
 ### List Contexts
 
 ```bash
 # List recent contexts
-meridian context list --limit 10
+fabra context list --limit 10
 
 # Filter by time range
-meridian context list --start 2024-01-15T10:00:00Z --end 2024-01-15T11:00:00Z
+fabra context list --start 2024-01-15T10:00:00Z --end 2024-01-15T11:00:00Z
 ```
 
 ### Export for Audit
 
 ```bash
 # Export as JSON
-meridian context export 01912345-6789-7abc-def0-123456789abc --format json
+fabra context export 01912345-6789-7abc-def0-123456789abc --format json
 
 # Export as YAML
-meridian context export 01912345-6789-7abc-def0-123456789abc --format yaml -o context.yaml
+fabra context export 01912345-6789-7abc-def0-123456789abc --format yaml -o context.yaml
 ```
 
 ## UUIDv7 Identifiers
@@ -284,8 +284,8 @@ Export context lineage for regulatory review:
 
 ```bash
 # Export all contexts for a time period
-for ctx_id in $(meridian context list --start 2024-01-01 --end 2024-01-31 --limit 10000 | jq -r '.[].context_id'); do
-    meridian context export $ctx_id --format json -o "audit/$ctx_id.json"
+for ctx_id in $(fabra context list --start 2024-01-01 --end 2024-01-31 --limit 10000 | jq -r '.[].context_id'); do
+    fabra context export $ctx_id --format json -o "audit/$ctx_id.json"
 done
 ```
 
@@ -311,8 +311,8 @@ for r in ctx.lineage.retrievers_used:
 Context accountability is enabled automatically when using a `FeatureStore` with an offline store:
 
 ```python
-from meridian import FeatureStore
-from meridian.store.offline import DuckDBOfflineStore, PostgresOfflineStore
+from fabra import FeatureStore
+from fabra.store.offline import DuckDBOfflineStore, PostgresOfflineStore
 
 # Local development - uses DuckDB
 store = FeatureStore()  # Includes DuckDB by default
@@ -354,10 +354,10 @@ A: Yes. Every context gets a UUIDv7 ID. Use `store.get_context_at(id)` to retrie
 A: UUIDv7 encodes a timestamp in the first 48 bits, making IDs time-sortable. This enables efficient range queries (`WHERE id > X`) and chronological ordering without a separate timestamp column.
 
 **Q: How do I audit AI decisions for compliance?**
-A: Use `meridian context export <id> --format json` to export full context with lineage. For bulk export, use `meridian context list` to get IDs in a time range.
+A: Use `fabra context export <id> --format json` to export full context with lineage. For bulk export, use `fabra context list` to get IDs in a time range.
 
 **Q: What happens if lineage logging fails?**
-A: Context assembly succeeds anyway. Meridian uses graceful degradation—logging errors are recorded but don't block the response.
+A: Context assembly succeeds anyway. Fabra uses graceful degradation—logging errors are recorded but don't block the response.
 
 **Q: Where is context lineage stored?**
 A: In the `context_log` table in your offline store (DuckDB or Postgres). You can query it directly with SQL.

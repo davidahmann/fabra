@@ -63,7 +63,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_PASSWORD: password # pragma: allowlist secret
-          POSTGRES_DB: meridian
+          POSTGRES_DB: fabra
         ports:
           - 5432:5432
         options: >-
@@ -90,7 +90,7 @@ jobs:
     - name: Run Integration Tests
       env:
         MERIDIAN_REDIS_URL: redis://localhost:6379
-        MERIDIAN_POSTGRES_URL: postgresql+asyncpg://postgres:password@localhost:5432/meridian # pragma: allowlist secret
+        FABRA_POSTGRES_URL: postgresql+asyncpg://postgres:password@localhost:5432/fabra # pragma: allowlist secret
       run: |
         source .venv/bin/activate
         pytest tests/integration

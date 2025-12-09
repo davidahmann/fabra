@@ -21,7 +21,7 @@ If you naively join these tables on `user_id`, you might accidentally use the `t
 
 ## The Solution: Point-in-Time Correctness
 
-Meridian solves this automatically using `ASOF JOIN` (DuckDB) or `LATERAL JOIN` (Postgres).
+Fabra.solves this automatically using `ASOF JOIN` (DuckDB) or `LATERAL JOIN` (Postgres).
 
 ```python
 # features.py

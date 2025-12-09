@@ -10,10 +10,10 @@ keywords: deploy feature store, meridian production, postgres redis feature stor
 
 | Environment | Offline Store | Online Cache | Deploy Command |
 |:---|:---|:---|:---|
-| Development | DuckDB (embedded) | In-memory | `meridian serve` |
-| Production | Postgres | Redis | `MERIDIAN_ENV=production` |
+| Development | DuckDB (embedded) | In-memory | `fabra serve` |
+| Production | Postgres | Redis | `FABRA_ENV=production` |
 | Local Prod | Postgres (Docker) | Redis (Docker) | `meridian setup && docker compose up` |
-| Cloud | Postgres (managed) | Redis (managed) | `meridian deploy fly\|cloudrun\|ecs` |
+| Cloud | Postgres (managed) | Redis (managed) | `fabra deploy fly\|cloudrun\|ecs` |
 
 ## Step 1: Local Development (Day 1)
 
@@ -36,9 +36,9 @@ Test in Jupyter. Iterate fast. Zero infrastructure.
 Same code, just set environment variables:
 
 ```bash
-export MERIDIAN_ENV=production
-export MERIDIAN_POSTGRES_URL="postgresql+asyncpg://prod-db/features"
-export MERIDIAN_REDIS_URL="redis://prod-cache:6379"
+export FABRA_ENV=production
+export FABRA_POSTGRES_URL="postgresql+asyncpg://prod-db/features"
+export FABRA_REDIS_URL="redis://prod-cache:6379"
 ```
 
 And initialize the store without arguments:
@@ -92,7 +92,7 @@ Deploy to any major cloud platform with a single command. Meridian generates all
 ### Fly.io
 
 ```bash
-meridian deploy fly --name my-feature-store
+fabra deploy fly --name my-feature-store
 # Generates: Dockerfile, fly.toml, requirements.txt
 # Then: fly deploy
 ```
@@ -100,7 +100,7 @@ meridian deploy fly --name my-feature-store
 ### Google Cloud Run
 
 ```bash
-meridian deploy cloudrun --name my-feature-store --project my-gcp-project
+fabra deploy cloudrun --name my-feature-store --project my-gcp-project
 # Generates: Dockerfile, cloudbuild.yaml, service.yaml
 # Then: gcloud run deploy
 ```
@@ -108,7 +108,7 @@ meridian deploy cloudrun --name my-feature-store --project my-gcp-project
 ### AWS ECS
 
 ```bash
-meridian deploy ecs --name my-feature-store --cluster my-cluster
+fabra deploy ecs --name my-feature-store --cluster my-cluster
 # Generates: Dockerfile, task-definition.json, ecs-params.yml
 # Then: ecs-cli compose up
 ```
@@ -116,7 +116,7 @@ meridian deploy ecs --name my-feature-store --cluster my-cluster
 ### Railway
 
 ```bash
-meridian deploy railway --name my-feature-store
+fabra deploy railway --name my-feature-store
 # Generates: Dockerfile, railway.json
 # Then: railway up
 ```
@@ -124,7 +124,7 @@ meridian deploy railway --name my-feature-store
 ### Render
 
 ```bash
-meridian deploy render --name my-feature-store
+fabra deploy render --name my-feature-store
 # Generates: Dockerfile, render.yaml
 # Then: git push (auto-deploys)
 ```
@@ -143,19 +143,19 @@ meridian deploy render --name my-feature-store
 Use `--dry-run` to see what would be generated without writing files:
 
 ```bash
-meridian deploy fly --name my-app --dry-run
+fabra deploy fly --name my-app --dry-run
 ```
 
 ## FAQ
 
 **Q: How do I deploy Meridian to production?**
-A: Set `MERIDIAN_ENV=production` and configure `MERIDIAN_POSTGRES_URL` and `MERIDIAN_REDIS_URL`. Same code works locally and in production—zero changes required.
+A: Set `FABRA_ENV=production` and configure `FABRA_POSTGRES_URL` and `FABRA_REDIS_URL`. Same code works locally and in production—zero changes required.
 
 **Q: What infrastructure do I need for production?**
 A: Postgres (for offline store), Redis (for online cache), and any app host. Total cost starts at ~$100/month on managed services.
 
 **Q: How do I deploy to Fly.io?**
-A: Run `meridian deploy fly --name my-app`. This generates Dockerfile and fly.toml, then run `fly deploy`.
+A: Run `fabra deploy fly --name my-app`. This generates Dockerfile and fly.toml, then run `fly deploy`.
 
 **Q: Can I run a production stack locally?**
 A: Yes. Run `meridian setup` to generate docker-compose.yml with Postgres (pgvector) and Redis. Then `docker compose up -d`.
@@ -172,7 +172,7 @@ A: Deploy multiple API pods behind a load balancer. No code changes needed—Pos
 {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": "Deploy Meridian Feature Store to Production",
+  "name": "Deploy Fabra Feature Store to Production",
   "description": "Step-by-step guide to deploying Meridian from local development to production on Fly.io, Cloud Run, AWS ECS, Railway, or Render.",
   "totalTime": "PT1H",
   "step": [{
@@ -182,11 +182,11 @@ A: Deploy multiple API pods behind a load balancer. No code changes needed—Pos
   }, {
     "@type": "HowToStep",
     "name": "Set Production Environment",
-    "text": "Set MERIDIAN_ENV=production and configure Postgres/Redis URLs."
+    "text": "Set FABRA_ENV=production and configure Postgres/Redis URLs."
   }, {
     "@type": "HowToStep",
     "name": "Deploy to Cloud",
-    "text": "Use 'meridian deploy' command to generate deployment configs for your platform."
+    "text": "Use 'fabra deploy' command to generate deployment configs for your platform."
   }]
 }
 </script>

@@ -1,7 +1,7 @@
 import os
 from fastapi.testclient import TestClient
-from meridian.server import create_app
-from meridian.core import FeatureStore
+from fabra.server import create_app
+from fabra.core import FeatureStore
 
 
 def test_api_key_enforcement() -> None:

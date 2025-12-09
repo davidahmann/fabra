@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-from meridian.server import create_app
-from meridian.core import FeatureStore, entity, feature
-from meridian.store.online import InMemoryOnlineStore
+from fabra.server import create_app
+from fabra.core import FeatureStore, entity, feature
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio
@@ -60,7 +60,7 @@ async def test_api_visualize_context() -> None:
     store = FeatureStore(online_store=InMemoryOnlineStore())
 
     # Manually seed a trace
-    from meridian.models import ContextTrace
+    from fabra.models import ContextTrace
 
     trace = ContextTrace(
         context_id="test_ctx_123",

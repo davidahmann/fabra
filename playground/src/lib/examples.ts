@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Dict, Any
 from datetime import timedelta
 
-# Simulated Meridian core (simplified for browser demo)
+# Simulated Fabra core (simplified for browser demo)
 class FeatureStore:
     def __init__(self):
         self._features: Dict[str, Any] = {}
@@ -79,7 +79,7 @@ def login_count(user_id: str) -> int:
 # --- TEST THE FEATURES ---
 
 async def main():
-    print("\\n🚀 Meridian Feature Store Demo\\n")
+    print("\\n🚀 Fabra Feature Store Demo\\n")
 
     # Fetch features for different users
     for uid in ["user_001", "user_002", "user_003"]:
@@ -164,7 +164,7 @@ print("🎯 Context Assembly Demo\\n")
 
 # Simulate retrieved documents
 docs = [
-    "Meridian is a feature store and context store for ML and LLM applications.",
+    "Fabra is a feature store and context store for ML and LLM applications.",
     "It runs locally with DuckDB and scales to production with Postgres + Redis.",
     "The @feature decorator lets you define features in pure Python.",
 ]
@@ -181,7 +181,7 @@ chat_history = "\\n".join([
 # Build context items
 items = [
     ContextItem(
-        content="You are a helpful assistant for Meridian documentation.",
+        content="You are a helpful assistant for Fabra documentation.",
         priority=0,  # System prompt: highest priority
         required=True
     ),
@@ -240,7 +240,7 @@ class VectorStore:
         self.documents: Dict[str, dict] = {}
 
     def index(self, doc_id: str, text: str, embedding: List[float] = None):
-        # In real Meridian, this would use OpenAI/Cohere embeddings
+        # In real Fabra, this would use OpenAI/Cohere embeddings
         if embedding is None:
             embedding = [random.random() for _ in range(8)]  # Fake embedding
 
@@ -251,7 +251,7 @@ class VectorStore:
         print(f"📄 Indexed: {doc_id}")
 
     def search(self, query: str, top_k: int = 3) -> List[dict]:
-        # Simulate semantic search (in real Meridian: pgvector cosine similarity)
+        # Simulate semantic search (in real Fabra: pgvector cosine similarity)
         results = []
         for doc_id, doc in self.documents.items():
             # Fake similarity based on word overlap
@@ -299,7 +299,7 @@ cache = RetrieverCache()
 print("📚 Indexing documents...\\n")
 
 documents = [
-    ("doc_1", "Meridian is a feature store for ML engineers"),
+    ("doc_1", "Fabra is a feature store for ML engineers"),
     ("doc_2", "The context store helps build RAG applications"),
     ("doc_3", "Use @retriever decorator for semantic search"),
     ("doc_4", "Token budgeting ensures prompts fit LLM context windows"),

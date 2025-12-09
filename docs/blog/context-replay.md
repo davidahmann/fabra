@@ -44,7 +44,7 @@ All tied to a **UUIDv7 context ID** that's time-sortable and globally unique.
 The `@context` decorator now tracks everything automatically:
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000)
 async def build_support_prompt(user_id: str, query: str):
@@ -68,7 +68,7 @@ Got a bug report? Pull up exactly what the model saw:
 
 ```bash
 # CLI
-meridian context show 01948c9a-2b3e-7d4f-8e5a-1c2d3e4f5a6b
+fabra context show 01948c9a-2b3e-7d4f-8e5a-1c2d3e4f5a6b
 
 # Or via REST API
 curl http://localhost:8000/v1/context/01948c9a-2b3e-7d4f-8e5a-1c2d3e4f5a6b
@@ -107,7 +107,7 @@ Need to investigate a time range?
 
 ```bash
 # List contexts from a specific period
-meridian context list --start 2025-01-15T14:00:00 --end 2025-01-15T16:00:00 --limit 50
+fabra context list --start 2025-01-15T14:00:00 --end 2025-01-15T16:00:00 --limit 50
 ```
 
 ---
@@ -127,7 +127,7 @@ Running A/B tests? Compare context assembly across model versions. See if contex
 Regulators asking what data influenced AI decisions? Export contexts for any time period with full lineage.
 
 ```bash
-meridian context export 01948c9a-... --format yaml > audit_evidence.yaml
+fabra context export 01948c9a-... --format yaml > audit_evidence.yaml
 ```
 
 ### 4. Debugging Data Freshness
@@ -168,7 +168,7 @@ Set retention policies per environment. Keep 7 days in dev, 90 days in productio
 Upgrade to Meridian v1.4:
 
 ```bash
-pip install --upgrade "meridian-oss[ui]"
+pip install --upgrade "fabra[ui]"
 ```
 
 Context replay is enabled by default. No configuration required.

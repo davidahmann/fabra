@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 from datetime import timedelta
 
 

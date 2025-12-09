@@ -1,8 +1,8 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from meridian.context import context, ContextItem
-from meridian.core import FeatureStore
+from fabra.context import context, ContextItem
+from fabra.core import FeatureStore
 
 
 @pytest.mark.asyncio

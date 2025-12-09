@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import AsyncMock
 from datetime import datetime
 from typing import Dict, Any
-from meridian.core import FeatureStore, get_context, get_current_timestamp
-from meridian.store.offline import OfflineStore, DuckDBOfflineStore
+from fabra.core import FeatureStore, get_context, get_current_timestamp
+from fabra.store.offline import OfflineStore, DuckDBOfflineStore
 
 
 @pytest.mark.asyncio

@@ -53,10 +53,10 @@ Problems:
 
 ## The Meridian Solution
 
-Meridian's `@context` decorator handles this properly:
+Fabra.s `@context` decorator handles this properly:
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000)
 async def build_prompt(user_id: str, query: str):
@@ -121,10 +121,10 @@ You know exactly what was included and what was dropped.
 
 ## Token Counting That Works
 
-Meridian uses `tiktoken` for accurate token counting:
+Fabra uses `tiktoken` for accurate token counting:
 
 ```python
-from meridian.utils.tokens import OpenAITokenCounter
+from fabra.utils.tokens import OpenAITokenCounter
 
 counter = OpenAITokenCounter(model="gpt-4")
 tokens = counter.count("Your text here")
@@ -224,12 +224,12 @@ async def build(query: str):
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore
-from meridian.context import context, ContextItem
+from fabra.core import FeatureStore
+from fabra.context import context, ContextItem
 
 store = FeatureStore()
 

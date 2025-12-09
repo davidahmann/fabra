@@ -1,9 +1,9 @@
 import os
 import pytest
 from unittest.mock import patch
-from meridian.config import get_config, DevConfig, ProdConfig, get_store_factory
-from meridian.store.offline import DuckDBOfflineStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.config import get_config, DevConfig, ProdConfig, get_store_factory
+from fabra.store.offline import DuckDBOfflineStore
+from fabra.store.online import InMemoryOnlineStore
 
 # Mock Postgres/Redis imports if they are not installed in the test env
 # But for unit tests we can mock the classes themselves or the config module behavior.
@@ -62,8 +62,8 @@ def test_prod_config_success() -> None:
         # But we assume deps are installed.
 
         try:
-            from meridian.store.postgres import PostgresOfflineStore
-            from meridian.store.redis import RedisOnlineStore
+            from fabra.store.postgres import PostgresOfflineStore
+            from fabra.store.redis import RedisOnlineStore
 
             offline = config.get_offline_store()
             assert isinstance(offline, PostgresOfflineStore)

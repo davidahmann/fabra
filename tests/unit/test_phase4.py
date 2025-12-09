@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock
 import pandas as pd
 from datetime import timedelta
-from meridian.core import FeatureStore, Entity, FeatureRegistry, entity, feature
-from meridian.scheduler import Scheduler
+from fabra.core import FeatureStore, Entity, FeatureRegistry, entity, feature
+from fabra.scheduler import Scheduler
 from fastapi.testclient import TestClient
 
 
@@ -22,7 +22,7 @@ def test_feature_store_repr_html() -> None:
     html = store._repr_html_()
     assert "User" in html
     assert "user_feature" in html
-    assert "Compass" not in html  # Should be "Meridian"
+    assert "Compass" not in html  # Should be "Fabra"
 
 
 def test_entity_repr_html() -> None:
@@ -58,7 +58,7 @@ async def test_get_training_data_missing_timestamp() -> None:
 
 # 4.3 Missing Tests - Server Module
 def test_metrics_endpoint() -> None:
-    from meridian.server import create_app
+    from fabra.server import create_app
 
     store = FeatureStore()
     app = create_app(store)
@@ -66,15 +66,15 @@ def test_metrics_endpoint() -> None:
 
     response = client.get("/metrics")
     assert response.status_code == 200
-    assert "meridian_request_count" in response.text
+    assert "fabra_request_count" in response.text
 
 
 def test_features_non_existent_entity() -> None:
-    from meridian.server import create_app
+    from fabra.server import create_app
 
     store = FeatureStore()
     # Mock auth
-    from meridian.server import get_api_key
+    from fabra.server import get_api_key
 
     app = create_app(store)
     app.dependency_overrides[get_api_key] = lambda: "dev-mode"
@@ -111,7 +111,7 @@ def test_scheduler_deduplication() -> None:
 
 # 4.6 Edge Case Tests
 def test_parse_timedelta_zero() -> None:
-    from meridian.core import _parse_timedelta
+    from fabra.core import _parse_timedelta
 
     assert _parse_timedelta("0s") == timedelta(seconds=0)
     assert _parse_timedelta("0m") == timedelta(minutes=0)

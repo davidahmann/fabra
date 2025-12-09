@@ -20,7 +20,7 @@ Cached in Redis. Refreshed every 5 minutes. Served in <5ms.
 
 That's it. You don't need Spark. You don't need Kafka. You don't need Kubernetes.
 
-Meridian is optimized for this 95%. If you need the other 5% (sub-second streaming, complex DAGs), you should use Tecton or Feast.
+Fabra is optimized for this 95%. If you need the other 5% (sub-second streaming, complex DAGs), you should use Tecton or Feast.
 
 ## Why Not Just Redis?
 
@@ -39,7 +39,7 @@ dbt is fantastic for batch transformations. We love dbt. But dbt stops at the da
 *   **dbt** creates **tables** (e.g., `daily_user_stats`).
 *   **Meridian** serves **rows** (e.g., `user_id: 123`).
 
-If you only need features refreshed once a day, dbt is enough. But if you need to serve those features to a live API with <10ms latency, you need a serving layer. Meridian bridges that gap.
+If you only need features refreshed once a day, dbt is enough. But if you need to serve those features to a live API with <10ms latency, you need a serving layer. Fabra bridges that gap.
 
 ## Why Context Store?
 
@@ -51,7 +51,7 @@ With the rise of LLMs, we saw teams building parallel infrastructure:
 
 This is the same complexity trap. Three systems to maintain, three sets of credentials, three failure modes.
 
-**Meridian's Context Store** unifies this:
+**Fabra.s Context Store** unifies this:
 
 *   **Same Postgres:** Features in tables, embeddings in pgvector.
 *   **Same Redis:** Feature cache and retriever cache.
@@ -70,7 +70,7 @@ So we gave up.
 
 We built Meridian in 2 weeks with a simple goal: **"It must run in a Jupyter notebook with `pip install`."**
 
-If you value "works on my laptop" over "scales to exabytes", Meridian is for you.
+If you value "works on my laptop" over "scales to exabytes", Fabra is for you.
 
 <script type="application/ld+json">
 {

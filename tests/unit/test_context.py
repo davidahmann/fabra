@@ -2,7 +2,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import timedelta, datetime, timezone
-from meridian.context import context, Context, ContextItem
+from fabra.context import context, Context, ContextItem
 
 
 @pytest.mark.asyncio

@@ -29,7 +29,7 @@ That shouldn't require a Platform Team. It should require `pip install`.
 
 ## Enter Meridian
 
-Meridian is the **"Heroku for ML Features"**. It is designed to be:
+Fabra is the **"Heroku for ML Features"**. It is designed to be:
 
 *   **Developer-First:** No YAML. No DSLs. Just Python decorators (`@feature`).
 *   **Infrastructure-Light:** Runs on your laptop with DuckDB. Scales to production with standard Postgres and Redis.
@@ -59,7 +59,7 @@ It does three things extremely well:
 
 ## Join the Rebellion
 
-If you value **shipping** over **configuring**, Meridian is for you.
+If you value **shipping** over **configuring**, Fabra is for you.
 
 [Get Started in 30 Seconds →](quickstart.md)
 

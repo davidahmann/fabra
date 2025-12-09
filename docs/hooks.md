@@ -15,7 +15,7 @@ keywords: hooks, webhooks, plugins, extensibility, events, validation
 | **Events** | `before_feature_retrieval`, `after_feature_retrieval`, `after_ingest` |
 | **Built-in** | `WebhookHook(url="...", headers={...})` |
 
-Meridian provides a powerful **Hook System** that allows you to intercept key lifecycle events in the Feature Store. This is useful for:
+Fabra provides a powerful **Hook System** that allows you to intercept key lifecycle events in the Feature Store. This is useful for:
 
 *   **Validation**: Check feature values before returning them.
 *   **Audit Logging**: specific compliance logging requirements.
@@ -26,7 +26,7 @@ Meridian provides a powerful **Hook System** that allows you to intercept key li
 To create a custom hook, subclass `meridian.hooks.Hook` and valid methods.
 
 ```python
-from meridian.hooks import Hook
+from fabra.hooks import Hook
 from typing import List, Dict, Any
 import structlog
 
@@ -51,7 +51,7 @@ class AuditLogHook(Hook):
 Register your hooks when initializing the `FeatureStore`.
 
 ```python
-from meridian.core import FeatureStore
+from fabra.core import FeatureStore
 
 store = FeatureStore(
     hooks=[
@@ -68,8 +68,8 @@ Meridian includes a built-in `WebhookHook` to trigger external HTTP endpoints wh
 ### Configuration
 
 ```python
-from meridian.core import FeatureStore
-from meridian.hooks import WebhookHook
+from fabra.core import FeatureStore
+from fabra.hooks import WebhookHook
 
 store = FeatureStore(
     hooks=[

@@ -2,8 +2,8 @@ import asyncio
 import structlog
 from typing import Optional, Dict, Any
 from redis.asyncio import Redis
-from meridian.events import AxiomEvent
-from meridian.core import FeatureStore
+from fabra.events import AxiomEvent
+from fabra.core import FeatureStore
 
 logger = structlog.get_logger()
 
@@ -31,7 +31,7 @@ class AxiomWorker:
             if redis_url:
                 self.redis = Redis.from_url(redis_url, decode_responses=True)
             else:
-                from meridian.config import get_store_factory
+                from fabra.config import get_store_factory
 
                 _, online_store = get_store_factory()
                 if hasattr(online_store, "client"):
@@ -39,7 +39,7 @@ class AxiomWorker:
                 elif hasattr(online_store, "redis"):
                     self.redis = online_store.redis
                 else:
-                    from meridian.config import get_redis_url
+                    from fabra.config import get_redis_url
 
                     url = get_redis_url()
                     self.redis = Redis.from_url(url, decode_responses=True)
@@ -56,11 +56,11 @@ class AxiomWorker:
         # We need to decide: do we listen to ALL streams? Redis Streams doesn't support wildcard XREAD nicely.
         # We usually listen to specific streams.
         # Let's assume a fixed list or discovery.
-        # For Story 1.1.1, we have `meridian:events:{event_type}`.
-        # We'll listen to `meridian:events:transaction` as a default for now, or just `meridian:events:all`?
-        # The RedisEventBus publishes to `meridian:events:{event_type}`.
-        # Let's listen to `meridian:events:transaction` for the demo scenario.
-        self.streams = ["meridian:events:transaction"]
+        # For Story 1.1.1, we have `fabra:events:{event_type}`.
+        # We'll listen to `fabra:events:transaction` as a default for now, or just `fabra:events:all`?
+        # The RedisEventBus publishes to `fabra:events:{event_type}`.
+        # Let's listen to `fabra:events:transaction` for the demo scenario.
+        self.streams = ["fabra:events:transaction"]
 
         for stream in self.streams:
             try:
@@ -160,7 +160,7 @@ class AxiomWorker:
             logger.error(f"Failed to process message {msg_id}: {e}")
             try:
                 # Dead Letter Queue Logic
-                dlq_stream = f"meridian:dlq:{stream}"
+                dlq_stream = f"fabra:dlq:{stream}"
                 dlq_payload = fields.copy()
                 dlq_payload["error"] = str(e)
                 dlq_payload["original_stream"] = stream

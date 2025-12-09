@@ -1,11 +1,11 @@
 import asyncio
 import random
 from datetime import timedelta
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 # 1. Initialize Feature Store (Auto-Configured)
 # In production, this will pick up Postgres and Redis from env vars.
-print("🚀 Initializing Meridian Feature Store...")
+print("🚀 Initializing Fabra Feature Store...")
 store = FeatureStore()
 
 

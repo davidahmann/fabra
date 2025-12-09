@@ -1,6 +1,6 @@
 import pytest
-from meridian.core import FeatureStore, entity, feature
-from meridian.store.online import InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio

@@ -37,7 +37,7 @@ cd examples/recommendations
 python main.py
 
 # Or serve features via API
-meridian serve recommendation_features.py --port 8000
+fabra serve recommendation_features.py --port 8000
 ```
 
 ## API Usage

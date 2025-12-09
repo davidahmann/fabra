@@ -7,7 +7,7 @@ logger = structlog.get_logger()
 
 class Hook(ABC):
     """
-    Abstract base class for Meridian hooks.
+    Abstract base class for Fabra hooks.
     Subclasses can implement methods to intercept lifecycle events.
     """
 

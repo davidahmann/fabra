@@ -7,7 +7,7 @@ import hashlib
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
-from meridian.store.offline import OfflineStore
+from fabra.store.offline import OfflineStore
 
 
 class PostgresOfflineStore(OfflineStore):
@@ -239,7 +239,7 @@ class PostgresOfflineStore(OfflineStore):
         Schema: id (UUID), entity_id, chunk_index, content, embedding, metadata.
         STRICT SCHEMA: Adds content_hash for deduplication.
         """
-        table_name = f"meridian_index_{index_name}"
+        table_name = f"fabra_index_{index_name}"
         async with self.engine.begin() as conn:  # type: ignore[no-untyped-call]
             # Enable extension
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -290,7 +290,7 @@ class PostgresOfflineStore(OfflineStore):
         if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", index_name):
             raise ValueError(f"Invalid index name {index_name}. Must be alphanumeric.")
 
-        table_name = f"meridian_index_{index_name}"
+        table_name = f"fabra_index_{index_name}"
 
         values = []
         for i, (chunk, vec) in enumerate(zip(chunks, embeddings)):
@@ -302,7 +302,7 @@ class PostgresOfflineStore(OfflineStore):
             # Add Mandatory Metadata
             meta["ingestion_timestamp"] = datetime.now(timezone.utc).isoformat()
             meta["content_hash"] = content_hash
-            meta["indexer_version"] = "meridian-v1"
+            meta["indexer_version"] = "fabra-v1"
 
             vec_str = str(vec)
 
@@ -344,7 +344,7 @@ class PostgresOfflineStore(OfflineStore):
         if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", index_name):
             raise ValueError(f"Invalid index name {index_name}. Must be alphanumeric.")
 
-        table_name = f"meridian_index_{index_name}"
+        table_name = f"fabra_index_{index_name}"
         vec_str = str(query_embedding)
 
         where_clause = ""

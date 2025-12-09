@@ -1,6 +1,6 @@
 import os
 from unittest.mock import patch
-from meridian.config import DevConfig, RedisOnlineStore, InMemoryOnlineStore
+from fabra.config import DevConfig, RedisOnlineStore, InMemoryOnlineStore
 
 
 def test_dev_config_auto_redis() -> None:

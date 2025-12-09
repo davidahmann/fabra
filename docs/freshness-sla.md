@@ -17,14 +17,14 @@
 
 ## Overview
 
-Freshness SLAs let you specify how recent your feature data must be when assembling context. When features exceed the SLA threshold, Meridian provides clear signals through:
+Freshness SLAs let you specify how recent your feature data must be when assembling context. When features exceed the SLA threshold, Fabra provides clear signals through:
 
 - **Degraded mode**: Assembly succeeds but flags stale data
 - **Strict mode**: Assembly fails immediately on SLA breach
 - **Prometheus metrics**: Real-time monitoring of freshness violations
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000, freshness_sla="5m")
 async def build_prompt(user_id: str, query: str):
@@ -74,7 +74,7 @@ if ctx.meta["freshness_violations"]:
 For critical contexts where stale data is unacceptable:
 
 ```python
-from meridian.exceptions import FreshnessSLAError
+from fabra.exceptions import FreshnessSLAError
 
 @context(store, freshness_sla="30s", freshness_strict=True)
 async def critical_context(user_id: str):
@@ -197,7 +197,7 @@ Consider your feature refresh patterns:
 ### 3. Handle Strict Mode Gracefully
 
 ```python
-from meridian.exceptions import FreshnessSLAError
+from fabra.exceptions import FreshnessSLAError
 
 async def safe_build_prompt(user_id: str):
     try:
@@ -304,7 +304,7 @@ def user_tier(user_id: str) -> str:
 **Solution**: Ensure the metrics endpoint is running:
 
 ```bash
-meridian serve features.py  # Exposes /metrics endpoint
+fabra serve features.py  # Exposes /metrics endpoint
 ```
 
 ---
@@ -312,7 +312,7 @@ meridian serve features.py  # Exposes /metrics endpoint
 ## FAQ
 
 **Q: How do I ensure my AI context uses fresh data?**
-A: Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Meridian tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
+A: Add `freshness_sla` to your `@context` decorator: `@context(store, freshness_sla="5m")`. Fabra tracks feature ages and reports violations via `ctx.meta["freshness_violations"]`.
 
 **Q: What happens when features are stale?**
 A: By default (degraded mode), context assembly succeeds but `freshness_status` becomes "degraded". Use `freshness_strict=True` to raise `FreshnessSLAError` instead.
@@ -320,7 +320,7 @@ A: By default (degraded mode), context assembly succeeds but `freshness_status` 
 **Q: How do I monitor freshness SLA violations?**
 A: Meridian exposes Prometheus metrics: `meridian_context_freshness_status_total` (guaranteed/degraded counts), `meridian_context_freshness_violations_total` (per-feature violations).
 
-**Q: What SLA format does Meridian support?**
+**Q: What SLA format does Fabra.support?**
 A: Human-readable durations: `500ms`, `30s`, `5m`, `1h`, `1d`. Decimals supported: `1.5h` = 90 minutes.
 
 **Q: Should I use strict mode or degraded mode?**

@@ -34,7 +34,7 @@ Cached in Redis. Refreshed every 5 minutes. Served in <5ms.
 
 That's it. You don't need Spark. You don't need Kafka. You don't need Kubernetes.
 
-Meridian is built for this 95%.
+Fabra is built for this 95%.
 
 ## What Startups Actually Need
 
@@ -61,8 +61,8 @@ Not YAML. Not a separate DSL. Just Python functions.
 Your ML engineers need to test features locally before deploying. They shouldn't need Docker running 6 containers.
 
 ```bash
-pip install "meridian-oss[ui]"
-meridian serve features.py
+pip install "fabra[ui]"
+fabra serve features.py
 # Running on localhost:8000
 ```
 
@@ -84,12 +84,12 @@ When you grow, the same code should handle more load:
 
 ```bash
 # Just add more replicas
-MERIDIAN_ENV=production
-MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
-MERIDIAN_REDIS_URL=redis://...
+FABRA_ENV=production
+FABRA_POSTGRES_URL=postgresql+asyncpg://...
+FABRA_REDIS_URL=redis://...
 ```
 
-Meridian's async I/O handles 10k+ requests per second. That's enough for most Series D companies.
+Fabra.s async I/O handles 10k+ requests per second. That's enough for most Series D companies.
 
 ## What You Don't Need (Yet)
 
@@ -164,7 +164,7 @@ But the real cost is engineering complexity:
 | Feast self-hosted | 4-8 weeks | Your team | High (but complex) |
 | Meridian | 30 minutes | Minimal | High (and simple) |
 
-Meridian is open source (Apache 2.0). The code is simple enough to fork if you need to.
+Fabra is open source (Apache 2.0). The code is simple enough to fork if you need to.
 
 ## One-Command Deploy
 
@@ -172,12 +172,12 @@ When you're ready for production:
 
 ```bash
 # Set your environment
-export MERIDIAN_ENV=production
-export MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
-export MERIDIAN_REDIS_URL=redis://...
+export FABRA_ENV=production
+export FABRA_POSTGRES_URL=postgresql+asyncpg://...
+export FABRA_REDIS_URL=redis://...
 
 # Generate deploy configs
-meridian deploy fly --name my-features
+fabra deploy fly --name my-features
 # Creates: Dockerfile, fly.toml, requirements.txt
 
 # Deploy
@@ -189,8 +189,8 @@ Supported platforms: Fly.io, Google Cloud Run, AWS ECS, Render, Railway.
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
-meridian serve examples/basic_features.py
+pip install "fabra[ui]"
+fabra serve examples/basic_features.py
 ```
 
 Ship ML features this week, not this quarter.

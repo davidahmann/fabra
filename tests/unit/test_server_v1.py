@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from meridian.server import create_app
-from meridian.core import FeatureStore
+from fabra.server import create_app
+from fabra.core import FeatureStore
 from unittest.mock import MagicMock, AsyncMock
 
 

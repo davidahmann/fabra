@@ -1,4 +1,4 @@
-"""Time parsing utilities for Meridian."""
+"""Time parsing utilities for Fabra."""
 
 import re
 from typing import Optional

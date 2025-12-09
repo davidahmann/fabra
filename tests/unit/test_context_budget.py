@@ -1,6 +1,6 @@
 import pytest
-from meridian.context import ContextItem, context
-from meridian.utils.tokens import TokenCounter
+from fabra.context import ContextItem, context
+from fabra.utils.tokens import TokenCounter
 
 
 class MockCounter(TokenCounter):

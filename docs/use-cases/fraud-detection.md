@@ -1,4 +1,4 @@
-# Real-Time Fraud Detection with Meridian
+# Real-Time Fraud Detection with Fabra
 
 ## The Use Case
 

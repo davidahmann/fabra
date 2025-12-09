@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timedelta
-from meridian.context import context
-from meridian.server import create_app
+from fabra.context import context
+from fabra.server import create_app
 from fastapi.testclient import TestClient
-from meridian.models import ContextTrace
-from meridian.observability import CONTEXT_ASSEMBLY_TOTAL
+from fabra.models import ContextTrace
+from fabra.observability import CONTEXT_ASSEMBLY_TOTAL
 
 
 @pytest.fixture

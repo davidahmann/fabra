@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pytest
-from meridian.graph import DependencyResolver
+from fabra.graph import DependencyResolver
 
 
 def test_parse_dependencies() -> None:

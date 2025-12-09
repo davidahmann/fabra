@@ -33,7 +33,7 @@ Most feature stores assume you have Docker running. Feast requires it for the re
 
 ## The DuckDB Solution
 
-Meridian uses DuckDB for local development. DuckDB is:
+Fabra uses DuckDB for local development. DuckDB is:
 
 - **Embedded** — runs in your Python process, no server needed
 - **Fast** — columnar analytics engine, perfect for feature aggregations
@@ -42,7 +42,7 @@ Meridian uses DuckDB for local development. DuckDB is:
 Here's how it works:
 
 ```python
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 # No connection strings. No Docker. Just Python.
 store = FeatureStore()
@@ -61,8 +61,8 @@ def user_tier(user_id: str) -> str:
 ```
 
 ```bash
-pip install "meridian-oss[ui]"
-meridian serve features.py
+pip install "fabra[ui]"
+fabra serve features.py
 # Server running on http://localhost:8000
 ```
 
@@ -70,13 +70,13 @@ That's it. No containers. No configuration files. The feature store is running.
 
 ## What Happens Under the Hood
 
-When you run locally (`MERIDIAN_ENV=development`, the default):
+When you run locally (`FABRA_ENV=development`, the default):
 
 1. **Online Store:** In-memory Python dictionary (instant reads)
 2. **Offline Store:** DuckDB file (`.meridian/features.duckdb`)
 3. **Scheduler:** APScheduler in-process (no external dependencies)
 
-When you deploy (`MERIDIAN_ENV=production`):
+When you deploy (`FABRA_ENV=production`):
 
 1. **Online Store:** Redis (sub-millisecond reads)
 2. **Offline Store:** Postgres with async I/O
@@ -86,21 +86,21 @@ When you deploy (`MERIDIAN_ENV=production`):
 
 ```bash
 # Development (default)
-MERIDIAN_ENV=development
-meridian serve features.py
+FABRA_ENV=development
+fabra serve features.py
 
 # Production
-MERIDIAN_ENV=production
-MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
-MERIDIAN_REDIS_URL=redis://...
-meridian serve features.py
+FABRA_ENV=production
+FABRA_POSTGRES_URL=postgresql+asyncpg://...
+FABRA_REDIS_URL=redis://...
+fabra serve features.py
 ```
 
 ## Point-in-Time Correctness, Locally
 
 The hardest problem in feature stores is point-in-time correctness: when generating training data, you need feature values as they existed at prediction time.
 
-Most feature stores solve this with Spark jobs. Meridian solves it with SQL.
+Most feature stores solve this with Spark jobs. Fabra.solves it with SQL.
 
 **DuckDB (local):**
 ```sql
@@ -137,12 +137,12 @@ When you outgrow it:
 
 ```bash
 # Generate production configs
-meridian deploy fly --name my-app
+fabra deploy fly --name my-app
 
 # Or just set environment variables
-export MERIDIAN_ENV=production
-export MERIDIAN_POSTGRES_URL=postgresql+asyncpg://...
-export MERIDIAN_REDIS_URL=redis://...
+export FABRA_ENV=production
+export FABRA_POSTGRES_URL=postgresql+asyncpg://...
+export FABRA_REDIS_URL=redis://...
 ```
 
 No code changes. The same `@feature` decorators work with Postgres and Redis.
@@ -150,11 +150,11 @@ No code changes. The same `@feature` decorators work with Postgres and Redis.
 ## Try It Now
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 
 # Create a features file
 cat > features.py << 'EOF'
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 
@@ -168,7 +168,7 @@ def login_count(user_id: str) -> int:
 EOF
 
 # Serve it
-meridian serve features.py
+fabra serve features.py
 
 # Test it
 curl http://localhost:8000/features/login_count?user_id=test123

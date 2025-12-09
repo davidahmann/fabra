@@ -48,7 +48,7 @@ export default function Home() {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <div className="text-gray-400">Loading Meridian UI...</div>
+          <div className="text-gray-400">Loading Fabra UI...</div>
         </div>
       </div>
     );
@@ -62,7 +62,7 @@ export default function Home() {
             Failed to Load
           </div>
           <div className="text-gray-400">
-            Could not connect to Meridian API. Make sure the server is running.
+            Could not connect to Fabra API. Make sure the server is running.
           </div>
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function Home() {
           <div className="px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="text-2xl">🧭</div>
-              <h1 className="text-xl font-bold text-gray-100">Meridian</h1>
+              <h1 className="text-xl font-bold text-gray-100">Fabra</h1>
             </div>
           </div>
         </header>

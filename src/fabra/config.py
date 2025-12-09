@@ -16,17 +16,17 @@ __all__ = [
     "RedisOnlineStore",
 ]
 
-from meridian.store.offline import OfflineStore, DuckDBOfflineStore
-from meridian.store.online import OnlineStore, InMemoryOnlineStore
+from fabra.store.offline import OfflineStore, DuckDBOfflineStore
+from fabra.store.online import OnlineStore, InMemoryOnlineStore
 
 # Try to import production stores (dependencies might not be installed in dev)
 try:
-    from meridian.store.postgres import PostgresOfflineStore
+    from fabra.store.postgres import PostgresOfflineStore
 except ImportError:
     PostgresOfflineStore = None  # type: ignore
 
 try:
-    from meridian.store.redis import RedisOnlineStore
+    from fabra.store.redis import RedisOnlineStore
 except ImportError:
     RedisOnlineStore = None  # type: ignore
 

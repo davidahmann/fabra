@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from meridian.embeddings import CohereEmbedding
+from fabra.embeddings import CohereEmbedding
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-from meridian.doctor import check_redis, check_postgres
+from fabra.doctor import check_redis, check_postgres
 from unittest.mock import patch
 
 

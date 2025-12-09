@@ -1,6 +1,6 @@
 ---
 title: "Context Assembly: Token Budgets and Priority | Meridian"
-description: "Compose LLM context from multiple sources with Meridian's @context decorator. Token budget management, priority-based truncation, and explainability."
+description: "Compose LLM context from multiple sources with Fabra.s @context decorator. Token budget management, priority-based truncation, and explainability."
 keywords: context assembly, token budget, llm context, priority truncation, context composition, rag context
 ---
 
@@ -32,7 +32,7 @@ LLM prompts have token limits. You need to fit:
 ## Basic Usage
 
 ```python
-from meridian.context import context, Context, ContextItem
+from fabra.context import context, Context, ContextItem
 
 @context(store, max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
@@ -81,7 +81,7 @@ ContextItem(content=docs, priority=1, required=True)
 
 ## Token Counting
 
-Meridian uses tiktoken for accurate token counting:
+Fabra uses tiktoken for accurate token counting:
 
 ```python
 @context(store, max_tokens=4000, model="gpt-4")
@@ -207,7 +207,7 @@ async def adaptive_context(user_id: str, query: str) -> Context:
 Raised when required items can't fit:
 
 ```python
-from meridian.context import ContextBudgetError
+from fabra.context import ContextBudgetError
 
 try:
     ctx = await chat_context(user_id, query)
@@ -279,7 +279,7 @@ for v in ctx.meta["freshness_violations"]:
 For critical contexts, fail on stale data:
 
 ```python
-from meridian.exceptions import FreshnessSLAError
+from fabra.exceptions import FreshnessSLAError
 
 @context(store, freshness_sla="30s", freshness_strict=True)
 async def critical_context(...):
@@ -299,8 +299,8 @@ A: Items are dropped by priority (highest number first). Items with `required=Tr
 **Q: How do I prioritize content in LLM context?**
 A: Set `priority` on `ContextItem`: `priority=0` (critical, kept first), `priority=1` (high), `priority=2+` (lower, dropped first). System prompts should always be priority 0.
 
-**Q: Does Meridian support token counting for Claude and GPT-4?**
-A: Yes. Meridian uses tiktoken for accurate counting. Specify model: `@context(store, max_tokens=4000, model="gpt-4")`. Claude-3 uses approximation.
+**Q: Does Fabra.support token counting for Claude and GPT-4?**
+A: Yes. Fabra uses tiktoken for accurate counting. Specify model: `@context(store, max_tokens=4000, model="gpt-4")`. Claude-3 uses approximation.
 
 **Q: How do I debug context assembly?**
 A: Use the explain API: `await store.explain_context("context_name", ...)` or HTTP endpoint `GET /context/{id}/explain`. Returns which items were included, truncated, or dropped.
@@ -322,7 +322,7 @@ A: Yes. Return a `Context` object with `max_tokens` set: `return Context(items=[
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Context Assembly: Token Budgets and Priority",
-  "description": "Compose LLM context from multiple sources with Meridian's @context decorator. Token budget management, priority-based truncation, and explainability.",
+  "description": "Compose LLM context from multiple sources with Fabra.s @context decorator. Token budget management, priority-based truncation, and explainability.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "context assembly, token budget, llm context, rag",
   "articleSection": "Documentation"

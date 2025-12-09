@@ -1,8 +1,8 @@
 import asyncio
 from datetime import timedelta
-from meridian.core import FeatureStore, entity, feature
-from meridian.context import context, Context, ContextItem
-from meridian.retrieval import retriever
+from fabra.core import FeatureStore, entity, feature
+from fabra.context import context, Context, ContextItem
+from fabra.retrieval import retriever
 
 # Initialize Store
 store = FeatureStore()

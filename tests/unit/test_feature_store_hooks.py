@@ -1,9 +1,9 @@
 import pytest
 from typing import List, Dict, Any
 from unittest.mock import MagicMock
-from meridian.core import FeatureStore
-from meridian.hooks import Hook
-from meridian.store import InMemoryOnlineStore
+from fabra.core import FeatureStore
+from fabra.hooks import Hook
+from fabra.store import InMemoryOnlineStore
 
 
 class SpyHook(Hook):

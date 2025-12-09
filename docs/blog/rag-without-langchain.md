@@ -49,9 +49,9 @@ When this breaks (and it will), good luck debugging nested chain abstractions.
 ## The Meridian Way
 
 ```python
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
-from meridian.context import context, ContextItem
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
+from fabra.context import context, ContextItem
 import openai
 
 store = FeatureStore()
@@ -103,11 +103,11 @@ No chains. No abstractions. Just Python functions you can read and debug.
 
 Pinecone is $70/month minimum. pgvector is free and runs in Postgres.
 
-Meridian uses pgvector for vector search:
+Fabra uses pgvector for vector search:
 
 ```python
 # Index documents
-await store.index("docs", "doc_1", "Meridian is a feature store...")
+await store.index("docs", "doc_1", "Fabra is a feature store...")
 await store.index("docs", "doc_2", "Features are defined with decorators...")
 
 # Search (automatic embedding via OpenAI)
@@ -124,7 +124,7 @@ For local development, embeddings are cached. For production, pgvector handles t
 
 LangChain's "stuff" chain type just concatenates documents until they don't fit. Then it fails.
 
-Meridian's `@context` decorator handles this properly:
+Fabra.s `@context` decorator handles this properly:
 
 ```python
 @context(store, max_tokens=4000)
@@ -157,7 +157,7 @@ print(ctx.meta["items_dropped"])  # 2
 
 ## User Personalization + RAG
 
-This is where Meridian shines. LangChain treats RAG and user features as separate concerns. Meridian unifies them:
+This is where Fabra.shines. LangChain treats RAG and user features as separate concerns. Meridian unifies them:
 
 ```python
 @feature(entity=User, refresh="daily")
@@ -211,13 +211,13 @@ async def build_context(query: str):
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
-from meridian.context import context, ContextItem
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
+from fabra.context import context, ContextItem
 
 store = FeatureStore()
 

@@ -1,6 +1,6 @@
 ---
-title: "Use Case: RAG Chatbot with Meridian | Production LLM Application"
-description: "Build a production RAG chatbot with Meridian. Vector search, context assembly, user personalization, and real-time document updates."
+title: "Use Case: RAG Chatbot with Fabra | Production LLM Application"
+description: "Build a production RAG chatbot with Fabra. Vector search, context assembly, user personalization, and real-time document updates."
 keywords: rag chatbot, llm application, production rag, context store use case, chatbot tutorial, retrieval augmented generation
 ---
 
@@ -34,7 +34,7 @@ graph TD
 
 ```python
 # chatbot.py
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 from datetime import timedelta
 
 store = FeatureStore()
@@ -93,20 +93,20 @@ if __name__ == "__main__":
 
 ```python
 # chatbot.py (continued)
-from meridian.retrieval import retriever
+from fabra.retrieval import retriever
 
 @retriever(name="knowledge_base", cache_ttl=300)
 async def search_docs(query: str) -> list[str]:
     # Logic to search pgvector
     # return await store.vector_search("knowledge_base", query)
-    return ["Meridian simplifies RAG.", "Context Store manages tokens."]
+    return ["Fabra.simplifies RAG.", "Context Store manages tokens."]
 ```
 
 ## Step 4: Assemble Context
 
 ```python
 # chatbot.py (continued)
-from meridian.context import context, Context, ContextItem
+from fabra.context import context, Context, ContextItem
 
 @context(max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
@@ -181,7 +181,7 @@ Keep context fresh when documents change:
 
 ```python
 # chatbot.py (continued)
-from meridian.events import AxiomEvent
+from fabra.events import AxiomEvent
 
 @feature(entity=Document, trigger="doc_updated")
 async def doc_content(doc_id: str, event: AxiomEvent) -> str:
@@ -202,8 +202,8 @@ Publish updates from your CMS:
 
 ```python
 # cms_webhook.py
-from meridian.bus import RedisEventBus
-from meridian.events import AxiomEvent
+from fabra.bus import RedisEventBus
+from fabra.events import AxiomEvent
 
 bus = RedisEventBus()
 
@@ -219,7 +219,7 @@ async def on_doc_save(doc_id: str, content: str, metadata: dict):
 
 ```bash
 # Terminal 1: Start server
-meridian serve chatbot.py
+fabra serve chatbot.py
 
 # Terminal 2: Start worker (for event processing)
 meridian worker chatbot.py
@@ -302,10 +302,10 @@ With this setup, you get:
 {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": "Build a Production RAG Chatbot with Meridian",
+  "name": "Build a Production RAG Chatbot with Fabra",
   "description": "Step-by-step guide to building a production RAG chatbot with vector search, context assembly, and real-time updates.",
   "totalTime": "PT30M",
-  "tool": [{"@type": "HowToTool", "name": "Meridian OSS"}, {"@type": "HowToTool", "name": "OpenAI API"}],
+  "tool": [{"@type": "HowToTool", "name": "Fabra"}, {"@type": "HowToTool", "name": "OpenAI API"}],
   "step": [
     {"@type": "HowToStep", "name": "Define entities and features", "text": "Create User and Document entities with personalization features."},
     {"@type": "HowToStep", "name": "Index knowledge base", "text": "Use store.index() to add documents with embeddings."},

@@ -1,9 +1,9 @@
 from __future__ import annotations
 import pytest
-from meridian.core import FeatureStore, entity, feature
-from meridian.context import context, ContextItem
-from meridian.retrieval import retriever
-from meridian.utils.tokens import TokenCounter
+from fabra.core import FeatureStore, entity, feature
+from fabra.context import context, ContextItem
+from fabra.retrieval import retriever
+from fabra.utils.tokens import TokenCounter
 
 
 # Mock Token Counter for deterministic testing
@@ -59,11 +59,11 @@ async def test_full_rag_flow() -> None:
     # Total chars: 13 + 30 + 20 = 63 > 50.
     # "Extra info that fits" (low priority 2) should be dropped.
 
-    ctx = await build_rag_prompt(user_id="u1", query="meridian")
+    ctx = await build_rag_prompt(user_id="u1", query="fabra")
 
     # Verification
     assert "User is premium" in ctx.content
-    assert "Results: ['Doc about meridian', 'Another Doc']" in ctx.content
+    assert "Results: ['Doc about fabra', 'Another Doc']" in ctx.content
     assert "Extra info" not in ctx.content
 
     assert ctx.meta["dropped_items"] == 1

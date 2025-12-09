@@ -99,12 +99,12 @@ def is_active(user_id: str) -> bool:
 
 Return types are explicit. Your IDE knows. Your tests know.
 
-## Meridian's @feature Decorator
+## Fabra.s @feature Decorator
 
 ### Basic Usage
 
 ```python
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 
@@ -249,7 +249,7 @@ Import and register:
 # main.py
 from features import user, transaction
 
-meridian serve main.py  # All features available
+fabra serve main.py  # All features available
 ```
 
 ## Hooks for Cross-Cutting Concerns
@@ -257,7 +257,7 @@ meridian serve main.py  # All features available
 Add behavior to all features:
 
 ```python
-from meridian.hooks import Hook
+from fabra.hooks import Hook
 
 class LoggingHook(Hook):
     async def before_compute(self, feature_name: str, entity_id: str):
@@ -315,11 +315,11 @@ def transaction_count(user_id: str) -> int:
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 
@@ -332,7 +332,7 @@ def simple_feature(user_id: str) -> int:
     return hash(user_id) % 100
 
 # Serve
-# meridian serve features.py
+# fabra serve features.py
 ```
 
 [Quickstart guide →](../quickstart.md)

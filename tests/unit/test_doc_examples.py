@@ -12,35 +12,35 @@ class TestRetrieverAPISignature:
 
     def test_retriever_with_index_and_top_k(self):
         """Docs show: @retriever(index="docs", top_k=5)"""
-        from meridian.retrieval import retriever
+        from fabra.retrieval import retriever
 
         @retriever(index="knowledge_base", top_k=5)
         async def search_docs(query: str):
             return []
 
         # Should have the decorator metadata
-        assert hasattr(search_docs, "_meridian_retriever")
-        assert search_docs._meridian_retriever.name == "search_docs"
+        assert hasattr(search_docs, "_fabra_retriever")
+        assert search_docs._fabra_retriever.name == "search_docs"
 
     def test_retriever_with_cache_ttl(self):
         """Docs show: @retriever(index="docs", cache_ttl=timedelta(...))"""
-        from meridian.retrieval import retriever
+        from fabra.retrieval import retriever
 
         @retriever(index="docs", top_k=3, cache_ttl=timedelta(seconds=300))
         async def cached_search(query: str):
             return []
 
-        assert cached_search._meridian_retriever.name == "cached_search"
+        assert cached_search._fabra_retriever.name == "cached_search"
 
     def test_retriever_with_name_override(self):
         """Docs show: @retriever(name="custom_name")"""
-        from meridian.retrieval import retriever
+        from fabra.retrieval import retriever
 
         @retriever(name="my_custom_retriever")
         async def search_func(query: str):
             return []
 
-        assert search_func._meridian_retriever.name == "my_custom_retriever"
+        assert search_func._fabra_retriever.name == "my_custom_retriever"
 
 
 class TestContextAPISignature:
@@ -48,8 +48,8 @@ class TestContextAPISignature:
 
     def test_context_with_store_and_max_tokens(self):
         """Docs show: @context(store, max_tokens=4000)"""
-        from meridian.core import FeatureStore
-        from meridian.context import context, ContextItem
+        from fabra.core import FeatureStore
+        from fabra.context import context, ContextItem
 
         store = FeatureStore()
 
@@ -66,7 +66,7 @@ class TestContextAPISignature:
 
     def test_context_without_store(self):
         """Context can work without store for simple cases."""
-        from meridian.context import context, ContextItem
+        from fabra.context import context, ContextItem
 
         @context(max_tokens=1000)
         async def simple_context(query: str):
@@ -82,7 +82,7 @@ class TestContextItemSignature:
 
     def test_context_item_with_content_kwarg(self):
         """Docs show: ContextItem(content="...", priority=0)"""
-        from meridian.context import ContextItem
+        from fabra.context import ContextItem
 
         item = ContextItem(content="Hello", priority=0, required=True)
         assert item.content == "Hello"
@@ -91,7 +91,7 @@ class TestContextItemSignature:
 
     def test_context_item_optional_fields(self):
         """ContextItem has optional source_id and last_updated."""
-        from meridian.context import ContextItem
+        from fabra.context import ContextItem
         from datetime import datetime, timezone
 
         item = ContextItem(
@@ -110,7 +110,7 @@ class TestContextObjectSignature:
 
     def test_context_has_content_and_meta(self):
         """Docs show: ctx.content, ctx.meta, ctx.id"""
-        from meridian.context import Context
+        from fabra.context import Context
 
         ctx = Context(
             id="test-id-123",
@@ -129,7 +129,7 @@ class TestContextObjectSignature:
 
     def test_context_has_no_items_attribute(self):
         """Context should NOT have .items (old API)."""
-        from meridian.context import Context
+        from fabra.context import Context
 
         ctx = Context(id="x", content="y", meta={})
 
@@ -142,7 +142,7 @@ class TestFeatureStoreIntegration:
 
     def test_feature_decorator(self):
         """Docs show: @feature(entity=User, refresh=...)"""
-        from meridian.core import FeatureStore, entity, feature
+        from fabra.core import FeatureStore, entity, feature
         from datetime import timedelta
 
         store = FeatureStore()
@@ -161,7 +161,7 @@ class TestFeatureStoreIntegration:
     @pytest.mark.asyncio
     async def test_get_online_features(self):
         """Docs show: await store.get_online_features(...)"""
-        from meridian.core import FeatureStore, entity, feature
+        from fabra.core import FeatureStore, entity, feature
 
         store = FeatureStore()
 
@@ -184,9 +184,9 @@ class TestEndToEndExample:
     @pytest.mark.asyncio
     async def test_readme_example_works(self):
         """The README quickstart example should execute without errors."""
-        from meridian.core import FeatureStore, entity, feature
-        from meridian.context import context, ContextItem
-        from meridian.retrieval import retriever
+        from fabra.core import FeatureStore, entity, feature
+        from fabra.context import context, ContextItem
+        from fabra.retrieval import retriever
         from datetime import timedelta
 
         store = FeatureStore()
@@ -201,7 +201,7 @@ class TestEndToEndExample:
 
         @retriever(index="docs", top_k=3)
         async def find_docs(query: str):
-            return [{"content": "Meridian bridges ML features and RAG.", "score": 0.9}]
+            return [{"content": "Fabra bridges ML features and RAG.", "score": 0.9}]
 
         @context(store, max_tokens=4000)
         async def build_prompt(user_id: str, query: str):
@@ -216,7 +216,7 @@ class TestEndToEndExample:
             ]
 
         # Execute the context assembly
-        ctx = await build_prompt(user_id="u1", query="How does Meridian help?")
+        ctx = await build_prompt(user_id="u1", query="How does Fabra help?")
 
         # Verify output structure
         assert ctx.id is not None

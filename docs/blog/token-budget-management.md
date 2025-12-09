@@ -55,7 +55,7 @@ print(len(tokens))  # Actual token count
 Meridian wraps this:
 
 ```python
-from meridian.utils.tokens import OpenAITokenCounter
+from fabra.utils.tokens import OpenAITokenCounter
 
 counter = OpenAITokenCounter(model="gpt-4")
 count = counter.count("Your text here")
@@ -80,7 +80,7 @@ Problems:
 ### The Right Approach
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000)
 async def build_prompt(query: str):
@@ -110,7 +110,7 @@ async def build_prompt(query: str):
     ]
 ```
 
-Meridian's algorithm:
+Fabra.s algorithm:
 
 1. Sort items by priority (lowest number = most important)
 2. Add items until budget exhausted
@@ -170,7 +170,7 @@ Tokens cost money:
 | GPT-3.5 Turbo | $0.0005/1K | $0.0015/1K |
 | Claude 3.5 Sonnet | $0.003/1K | $0.015/1K |
 
-Meridian tracks costs:
+Fabra tracks costs:
 
 ```python
 ctx = await build_prompt("user_123", "query")
@@ -232,7 +232,7 @@ Same query within 5 minutes? Return cached context.
 ### Fallback on Budget Error
 
 ```python
-from meridian.context import ContextBudgetError
+from fabra.context import ContextBudgetError
 
 try:
     ctx = await build_prompt(query)
@@ -281,7 +281,7 @@ Measure: response quality, user satisfaction, cost.
 context = text[:8000]
 
 # Right
-from meridian.utils.tokens import OpenAITokenCounter
+from fabra.utils.tokens import OpenAITokenCounter
 counter = OpenAITokenCounter()
 # Use counter.count() and proper truncation
 ```
@@ -315,12 +315,12 @@ if ctx.meta["items_dropped"] > 0:
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore
-from meridian.context import context, ContextItem
+from fabra.core import FeatureStore
+from fabra.context import context, ContextItem
 
 store = FeatureStore()
 

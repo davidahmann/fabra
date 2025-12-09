@@ -1,6 +1,6 @@
 import pytest
 from datetime import timedelta
-from meridian.core import _parse_timedelta, feature, FeatureStore, entity
+from fabra.core import _parse_timedelta, feature, FeatureStore, entity
 
 
 def test_parse_timedelta_valid() -> None:

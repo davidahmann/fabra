@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting Meridian: Common Errors and Fixes"
-description: "Resolve common Meridian issues like Point-in-Time Correctness errors, Redis connection failures, and Async loop errors."
+description: "Resolve common Fabra issues like Point-in-Time Correctness errors, Redis connection failures, and Async loop errors."
 keywords: meridian troubleshooting, feature store errors, redis connection error, timestamp error
 ---
 
@@ -17,7 +17,7 @@ meridian doctor
 ```
 
 This command checks:
-*   **Environment Variables:** `MERIDIAN_REDIS_URL`, `MERIDIAN_POSTGRES_URL`, etc.
+*   **Environment Variables:** `FABRA_REDIS_URL`, `FABRA_POSTGRES_URL`, etc.
 *   **Connectivity:** Pings Redis and Postgres (if URLs are provided).
 *   **Dependencies:** Verifies critical packages like `fastapi`, `redis`, `duckdb`.
 
@@ -26,14 +26,14 @@ This command checks:
 ## Point-in-Time Correctness
 
 ### "KeyError: timestamp" or "Column timestamp not found"
-**Cause:** Meridian's `get_training_data` requires a `timestamp` column in your entity DataFrame to perform point-in-time joins.
+**Cause:** Fabra.s `get_training_data` requires a `timestamp` column in your entity DataFrame to perform point-in-time joins.
 **Fix:**
 ```python
 entity_df["timestamp"] = pd.to_datetime("now")
 ```
 
 ### "No matching features found"
-**Cause:** Your entity timestamps might be *older* than your feature timestamps. Meridian uses `ASOF JOIN ... WHERE entity.ts >= feature.ts`. If your features are from today but your entities are from yesterday, you get nothing (to prevent data leakage).
+**Cause:** Your entity timestamps might be *older* than your feature timestamps. Fabra uses `ASOF JOIN ... WHERE entity.ts >= feature.ts`. If your features are from today but your entities are from yesterday, you get nothing (to prevent data leakage).
 **Fix:** Ensure your feature data covers the time range of your training labels.
 
 ## Production (Async/Postgres)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 ### "ConnectionError: Connection refused"
 **Cause:** Redis is not running or the URL is wrong.
 **Fix:**
-Ensure your `redis` service name in `docker-compose.yml` matches `MERIDIAN_REDIS_URL`. If using the default `redis://localhost:6379`, ensure you mapped ports (`6379:6379`) in Docker.
+Ensure your `redis` service name in `docker-compose.yml` matches `FABRA_REDIS_URL`. If using the default `redis://localhost:6379`, ensure you mapped ports (`6379:6379`) in Docker.
 
 ### "asyncpg.exceptions.DataError: invalid input for query argument"
 **Cause:** Postgres is strict about Timezone Aware (`TIMESTAMPTZ`) vs Naive (`TIMESTAMP`) datetimes. If you pass a Naive datetime (e.g., from `datetime.now()`) to a component expecting an Aware one (or vice versa), `asyncpg` may fail.
@@ -91,7 +91,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Troubleshooting Meridian: Common Errors and Fixes",
-  "description": "Resolve common Meridian issues like Point-in-Time Correctness errors, Redis connection failures, and Async loop errors.",
+  "description": "Resolve common Fabra issues like Point-in-Time Correctness errors, Redis connection failures, and Async loop errors.",
   "author": {"@type": "Organization", "name": "Meridian Team"},
   "keywords": "meridian troubleshooting, feature store errors, redis connection error, context budget error",
   "articleSection": "Support"

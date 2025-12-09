@@ -1,12 +1,28 @@
 ---
-title: "Meridian Changelog: Release Notes and History"
-description: "Stay up to date with Meridian releases. See what's new in v1.2.0 with Context Store for LLMs, and v1.1.0 with Hybrid Features and Point-in-Time Correctness."
-keywords: meridian changelog, release notes, feature store updates, context store, rag updates, software version history
+title: "Fabra Changelog: Release Notes and History"
+description: "Stay up to date with Fabra releases. See what's new in v1.2.0 with Context Store for LLMs, and v1.1.0 with Hybrid Features and Point-in-Time Correctness."
+keywords: fabra changelog, release notes, feature store updates, context store, rag updates, software version history
 ---
 
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [v2.0.0] - 2025-12-09
+
+### 🎉 Major Release: Rebrand to Fabra
+
+*   **Rebrand:** Project renamed from Meridian to **Fabra** ("Craft ML Features").
+    *   Package renamed from `meridian-oss` to `fabra` on PyPI.
+    *   CLI command changed from `meridian` to `fabra`.
+    *   All imports changed from `from meridian` to `from fabra`.
+*   **Breaking Changes:**
+    *   Environment variables renamed: `MERIDIAN_*` → `FABRA_*`.
+    *   Internal metric names renamed: `meridian_*` → `fabra_*`.
+    *   Config file renamed: `meridian.toml` → `fabra.toml`.
+*   **Migration:** Users of `meridian-oss` should update imports and environment variables.
+
+---
 
 ## [v1.6.0] - 2025-12-09
 
@@ -31,8 +47,8 @@ All notable changes to this project will be documented in this file.
 
 ### 🔧 Improvements
 
-*   Removed legacy Streamlit UI (`src/meridian/ui.py`).
-*   Simplified CLI `meridian ui` command (removed `--legacy` flag).
+*   Removed legacy Streamlit UI (`src/fabra/ui.py`).
+*   Simplified CLI `fabra ui` command (removed `--legacy` flag).
 *   Updated pre-commit config with ESLint for TypeScript/TSX files.
 *   Updated `.gitignore` with Next.js and Playwright artifacts.
 
@@ -59,7 +75,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🔧 Improvements
 
-*   Added `src/meridian/utils/time.py` with `parse_duration_to_ms()` and `format_ms_to_human()` utilities.
+*   Added `src/fabra/utils/time.py` with `parse_duration_to_ms()` and `format_ms_to_human()` utilities.
 *   Added `FreshnessSLAError` exception with structured violation data.
 *   Context meta now includes `freshness_violations` and `freshness_sla_ms` fields.
 *   Added `is_fresh` property to `Context` class for easy checking.
@@ -89,9 +105,9 @@ All notable changes to this project will be documented in this file.
     *   `GET /v1/context/{id}` - Retrieve full context by ID.
     *   `GET /v1/context/{id}/lineage` - Get just the lineage data.
 *   **CLI Commands:**
-    *   `meridian context show <id>` - Display context details.
-    *   `meridian context list` - List recent contexts.
-    *   `meridian context export <id>` - Export context for audit (JSON/YAML).
+    *   `fabra context show <id>` - Display context details.
+    *   `fabra context list` - List recent contexts.
+    *   `fabra context export <id>` - Export context for audit (JSON/YAML).
 
 ### 🔧 Improvements
 
@@ -159,7 +175,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🚀 Major Features
 
-*   **Production Stack (`MERIDIAN_ENV=production`)**: full support for running in production with Postgres (Async) and Redis.
+*   **Production Stack (`FABRA_ENV=production`)**: full support for running in production with Postgres (Async) and Redis.
 *   **Point-in-Time Correctness**:
     *   Development: Uses DuckDB `ASOF JOIN` logic for zero leakage.
     *   Production: Uses Postgres `LATERAL JOIN` logic for zero leakage.

@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
-from meridian.cli import app
-from meridian.doctor import check_redis, check_postgres
+from fabra.cli import app
+from fabra.doctor import check_redis, check_postgres
 from unittest.mock import patch
 
 from pathlib import Path

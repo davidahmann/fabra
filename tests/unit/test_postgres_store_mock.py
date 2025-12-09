@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from meridian.store.postgres import PostgresOfflineStore
+from fabra.store.postgres import PostgresOfflineStore
 import pandas as pd
 from datetime import datetime
 from typing import Any
 
 # Path to patch
-PATCH_PATH = "meridian.store.postgres.create_async_engine"
+PATCH_PATH = "fabra.store.postgres.create_async_engine"
 
 
 @pytest.fixture

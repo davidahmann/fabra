@@ -1,4 +1,4 @@
-from meridian.index import Index
+from fabra.index import Index
 
 
 def test_chunking_basic() -> None:

@@ -1,8 +1,8 @@
 import pytest
 import pandas as pd
-from meridian.core import FeatureStore, entity, feature
-from meridian.store.offline import DuckDBOfflineStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store.offline import DuckDBOfflineStore
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio

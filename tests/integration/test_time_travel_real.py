@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta, timezone
-from meridian.store.postgres import PostgresOfflineStore
+from fabra.store.postgres import PostgresOfflineStore
 from sqlalchemy import text
 import os
 

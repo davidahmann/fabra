@@ -41,7 +41,7 @@ That's it. We don't need Spark. We don't need Kubernetes. We don't need a 47-fil
 So we built Meridian.
 
 ```python
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 
@@ -60,7 +60,7 @@ def avg_purchase_amount(user_id: str) -> float:
 ```
 
 ```bash
-meridian serve features.py
+fabra serve features.py
 # That's it. Server running on :8000
 ```
 
@@ -82,11 +82,11 @@ Feast solves real problems. We kept the solutions:
 
 **Spark/Flink Requirement:** SQL is enough for 95% of feature transformations.
 
-**Platform Team Assumption:** Meridian is for the ML engineer who wants to ship, not the platform team managing infrastructure.
+**Platform Team Assumption:** Fabra is for the ML engineer who wants to ship, not the platform team managing infrastructure.
 
 ## What We Added
 
-Feast is a feature store. Meridian is a feature store + context store.
+Feast is a feature store. Fabra is a feature store + context store.
 
 If you're building LLM applications, you need more than structured features. You need:
 
@@ -95,8 +95,8 @@ If you're building LLM applications, you need more than structured features. You
 - Priority-based truncation when context exceeds limits
 
 ```python
-from meridian.retrieval import retriever
-from meridian.context import context, ContextItem
+from fabra.retrieval import retriever
+from fabra.context import context, ContextItem
 
 @retriever(index="docs", top_k=5)
 async def search_docs(query: str):
@@ -127,8 +127,8 @@ Be honest with yourself:
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
-meridian serve examples/basic_features.py
+pip install "fabra[ui]"
+fabra serve examples/basic_features.py
 ```
 
 No Docker. No Kubernetes. No YAML.

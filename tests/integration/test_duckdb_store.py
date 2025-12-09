@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
-from meridian.core import FeatureStore
-from meridian.store.offline import DuckDBOfflineStore
+from fabra.core import FeatureStore
+from fabra.store.offline import DuckDBOfflineStore
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_duckdb_offline_store_basic() -> None:
     )
 
     # Register dummy feature
-    from meridian.core import feature, entity
+    from fabra.core import feature, entity
 
     @entity(store)
     class User:

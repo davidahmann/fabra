@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from meridian.worker import AxiomWorker
-from meridian.server import create_app
-from meridian.core import FeatureStore
+from fabra.worker import AxiomWorker
+from fabra.server import create_app
+from fabra.core import FeatureStore
 from fastapi.testclient import TestClient
 
 
@@ -24,7 +24,7 @@ async def test_worker_dlq_logic() -> None:
         # Verify XADD to DLQ
         assert worker.redis.xadd.called
         args = worker.redis.xadd.call_args
-        assert args[0][0] == "meridian:dlq:stream1"
+        assert args[0][0] == "fabra:dlq:stream1"
         assert args[0][1]["error"] is not None
         assert args[0][1]["data"] == "invalid-json"
 
@@ -47,7 +47,7 @@ def test_audit_middleware(mock_store: MagicMock) -> None:
     app = create_app(mock_store)
     client = TestClient(app)
 
-    with patch("meridian.server.logger") as mock_logger:
+    with patch("fabra.server.logger") as mock_logger:
         # POST request should trigger audit
         client.post(
             "/v1/features",

@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from meridian.store.postgres import PostgresOfflineStore
+from fabra.store.postgres import PostgresOfflineStore
 
 
 @pytest.mark.asyncio
 async def test_index_dedup_logic() -> None:
     # Patch create_async_engine to prevent real connection
-    with patch("meridian.store.postgres.create_async_engine") as MockEngine:
+    with patch("fabra.store.postgres.create_async_engine") as MockEngine:
         mock_conn = AsyncMock()
         mock_conn.__aenter__.return_value = mock_conn
         mock_conn.__aexit__.return_value = None
@@ -25,5 +25,5 @@ async def test_index_dedup_logic() -> None:
         # call_args[0][0] is the first positional arg (text object)
         sql_text = str(call_args[0][0])
 
-        assert "INSERT INTO meridian_index_test_idx" in sql_text
+        assert "INSERT INTO fabra_index_test_idx" in sql_text
         assert "ON CONFLICT (entity_id, content_hash) DO NOTHING" in sql_text

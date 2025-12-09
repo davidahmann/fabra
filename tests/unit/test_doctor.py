@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock, patch
-from meridian.doctor import check_redis, check_postgres, run_doctor
+from fabra.doctor import check_redis, check_postgres, run_doctor
 
 
 def test_check_redis_skipped() -> None:
@@ -30,7 +30,7 @@ def test_check_postgres_connected() -> None:
 def test_run_doctor_print() -> None:
     # Verify it runs without error (smoke test)
     # We patch print/console
-    with patch("meridian.doctor.console") as mock_console:
+    with patch("fabra.doctor.console") as mock_console:
         # Need to mock env vars check logic?
         run_doctor()
         # Should print stuff

@@ -1,6 +1,6 @@
 import pytest
 from datetime import timedelta
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 
 def test_register_entity() -> None:

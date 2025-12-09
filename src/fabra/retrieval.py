@@ -77,7 +77,7 @@ def retriever(
         )
 
         # Attach to function for inspection
-        setattr(func, "_meridian_retriever", ret_obj)
+        setattr(func, "_fabra_retriever", ret_obj)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
@@ -100,7 +100,7 @@ def retriever(
                     key_parts = [r_name, str(args), str(kwargs)]
                     key_str = json.dumps(key_parts, sort_keys=True, default=str)
                     key_hash = hashlib.sha256(key_str.encode("utf-8")).hexdigest()
-                    _cache_key = f"meridian:retriever:{r_name}:{key_hash}"
+                    _cache_key = f"fabra:retriever:{r_name}:{key_hash}"
 
                     # ... Sync wrapper cache logic omitted for brevity as we prioritize Async ...
 
@@ -113,7 +113,7 @@ def retriever(
 
         # Helper for DAG Resolution
         async def _resolve_args(args: Any, kwargs: Any) -> Any:
-            store_ref = getattr(ret_obj, "_meridian_store_ref", None)
+            store_ref = getattr(ret_obj, "_fabra_store_ref", None)
             if not store_ref:
                 return args, kwargs
 
@@ -122,7 +122,7 @@ def retriever(
             if not entity_id:
                 return args, kwargs
 
-            from meridian.graph import DependencyResolver
+            from fabra.graph import DependencyResolver
 
             resolver = DependencyResolver(store_ref)
 
@@ -164,7 +164,7 @@ def retriever(
                         key_parts = [r_name, str(args), str(kwargs)]
                         key_str = json.dumps(key_parts, sort_keys=True, default=str)
                         key_hash = hashlib.sha256(key_str.encode("utf-8")).hexdigest()
-                        cache_key = f"meridian:retriever:{r_name}:{key_hash}"
+                        cache_key = f"fabra:retriever:{r_name}:{key_hash}"
 
                         # Try fetch
                         cached = await store_backend.get(cache_key)
@@ -180,7 +180,7 @@ def retriever(
                 # AUTO-WIRING LOGIC
                 if index is not None:
                     # We need the store reference
-                    store_ref = getattr(ret_obj, "_meridian_store_ref", None)
+                    store_ref = getattr(ret_obj, "_fabra_store_ref", None)
                     if store_ref:
                         # Assumption: First arg is query string
                         query = args[0] if args else kwargs.get("query")

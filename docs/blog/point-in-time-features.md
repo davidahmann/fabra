@@ -77,11 +77,11 @@ Every time this feature is computed, Meridian logs:
 | user_1  | transaction_count_1h  | 5     | 2024-01-15 09:10:00 |
 ```
 
-When you generate training data, Meridian uses the appropriate temporal join.
+When you generate training data, Fabra uses the appropriate temporal join.
 
 ## DuckDB: ASOF JOIN
 
-For local development, Meridian uses DuckDB's native `ASOF JOIN`:
+For local development, Fabra uses DuckDB's native `ASOF JOIN`:
 
 ```sql
 SELECT
@@ -97,7 +97,7 @@ DuckDB's `ASOF JOIN` finds the most recent matching row efficiently.
 
 ## Postgres: LATERAL JOIN
 
-Postgres doesn't have `ASOF JOIN`, so Meridian uses `LATERAL JOIN`:
+Postgres doesn't have `ASOF JOIN`, so Fabra uses `LATERAL JOIN`:
 
 ```sql
 SELECT
@@ -120,7 +120,7 @@ Same semantics, slightly different syntax.
 ## Generating Training Data
 
 ```python
-from meridian.core import FeatureStore
+from fabra.core import FeatureStore
 
 store = FeatureStore()
 
@@ -142,10 +142,10 @@ The result includes feature values as they existed at each event's timestamp.
 
 ## Time Travel for Debugging
 
-Meridian supports "time travel" queries for debugging:
+Fabra.supports "time travel" queries for debugging:
 
 ```python
-from meridian.core import get_context
+from fabra.core import get_context
 
 # Get features as they existed at a specific time
 async with store.time_travel(timestamp="2024-01-15 09:30:00"):
@@ -210,11 +210,11 @@ A fraud model we worked with went from 62% production accuracy to 78% after impl
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 ```
 
 ```python
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from meridian.context import context
+from fabra.context import context
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 import pytest
-from meridian.context import context, ContextItem
-from meridian.core import FeatureStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.context import context, ContextItem
+from fabra.core import FeatureStore
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio

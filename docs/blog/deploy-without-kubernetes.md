@@ -21,7 +21,7 @@ kubectl apply -f secrets.yaml
 What if you could just run:
 
 ```bash
-meridian deploy fly --name my-features
+fabra deploy fly --name my-features
 ```
 
 ## The Kubernetes Tax
@@ -46,23 +46,23 @@ Modern PaaS platforms handle:
 
 For $5-50/month. With zero YAML.
 
-## Meridian's Deploy Command
+## Fabra.s Deploy Command
 
 ```bash
 # Fly.io
-meridian deploy fly --name my-app
+fabra deploy fly --name my-app
 
 # Google Cloud Run
-meridian deploy cloudrun --name my-app --project my-gcp-project
+fabra deploy cloudrun --name my-app --project my-gcp-project
 
 # AWS ECS (via Copilot)
-meridian deploy ecs --name my-app
+fabra deploy ecs --name my-app
 
 # Railway
-meridian deploy railway --name my-app
+fabra deploy railway --name my-app
 
 # Render
-meridian deploy render --name my-app
+fabra deploy render --name my-app
 ```
 
 Each command generates the right configuration files and deploys.
@@ -72,7 +72,7 @@ Each command generates the right configuration files and deploys.
 ### Fly.io
 
 ```bash
-meridian deploy fly --name my-features
+fabra deploy fly --name my-features
 ```
 
 Creates:
@@ -86,7 +86,7 @@ primary_region = "iad"
   dockerfile = "Dockerfile"
 
 [env]
-  MERIDIAN_ENV = "production"
+  FABRA_ENV = "production"
 
 [http_service]
   internal_port = 8000
@@ -127,7 +127,7 @@ CMD ["meridian", "serve", "features.py", "--host", "0.0.0.0"]
 ### Google Cloud Run
 
 ```bash
-meridian deploy cloudrun --name my-features --project my-gcp-project
+fabra deploy cloudrun --name my-features --project my-gcp-project
 ```
 
 Creates:
@@ -157,8 +157,8 @@ Production needs database and cache connections:
 ### Fly.io
 
 ```bash
-fly secrets set MERIDIAN_POSTGRES_URL="postgresql+asyncpg://..."
-fly secrets set MERIDIAN_REDIS_URL="redis://..."
+fly secrets set FABRA_POSTGRES_URL="postgresql+asyncpg://..."
+fly secrets set FABRA_REDIS_URL="redis://..."
 ```
 
 ### Cloud Run
@@ -168,15 +168,15 @@ gcloud secrets create meridian-postgres --data-file=-
 gcloud secrets create meridian-redis --data-file=-
 
 gcloud run services update my-features \
-  --set-secrets=MERIDIAN_POSTGRES_URL=meridian-postgres:latest \
-  --set-secrets=MERIDIAN_REDIS_URL=meridian-redis:latest
+  --set-secrets=FABRA_POSTGRES_URL=meridian-postgres:latest \
+  --set-secrets=FABRA_REDIS_URL=meridian-redis:latest
 ```
 
 ### Railway
 
 ```bash
-railway variables set MERIDIAN_POSTGRES_URL="postgresql+asyncpg://..."
-railway variables set MERIDIAN_REDIS_URL="redis://..."
+railway variables set FABRA_POSTGRES_URL="postgresql+asyncpg://..."
+railway variables set FABRA_REDIS_URL="redis://..."
 ```
 
 ## Production Stack Options
@@ -238,9 +238,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MERIDIAN_ENV: production
-      MERIDIAN_POSTGRES_URL: postgresql+asyncpg://postgres:yourpassword@postgres:5432/meridian  # pragma: allowlist secret
-      MERIDIAN_REDIS_URL: redis://redis:6379
+      FABRA_ENV: production
+      FABRA_POSTGRES_URL: postgresql+asyncpg://postgres:yourpassword@postgres:5432/meridian  # pragma: allowlist secret
+      FABRA_REDIS_URL: redis://redis:6379
     depends_on:
       - postgres
       - redis
@@ -366,11 +366,11 @@ Connect to:
 ## Try It
 
 ```bash
-pip install "meridian-oss[ui]"
+pip install "fabra[ui]"
 
 # Create features
 cat > features.py << 'EOF'
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
 
@@ -384,7 +384,7 @@ def login_count(user_id: str) -> int:
 EOF
 
 # Deploy to Fly.io
-meridian deploy fly --name my-features
+fabra deploy fly --name my-features
 fly deploy
 
 # Test

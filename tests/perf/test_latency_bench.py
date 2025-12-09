@@ -1,7 +1,7 @@
 import pytest
 import time
-from meridian.core import FeatureStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.core import FeatureStore
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio

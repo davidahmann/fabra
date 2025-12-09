@@ -1,7 +1,7 @@
-"""FastAPI server for Meridian UI.
+"""FastAPI server for Fabra UI.
 
 This server provides API endpoints for the Next.js frontend to interact
-with Meridian's Feature Store and Context Store.
+with Fabra.s Feature Store and Context Store.
 """
 
 import asyncio
@@ -15,9 +15,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from meridian.core import FeatureStore
+from fabra.core import FeatureStore
 
-app = FastAPI(title="Meridian UI API", version="0.1.0")
+app = FastAPI(title="Fabra UI API", version="0.1.0")
 
 # CORS middleware for development
 app.add_middleware(
@@ -120,7 +120,7 @@ class ContextResult(BaseModel):
 
 
 def load_module(file_path: str) -> None:
-    """Load a Python module and extract Meridian objects."""
+    """Load a Python module and extract Fabra objects."""
     global _state
 
     if not os.path.exists(file_path):
@@ -147,8 +147,8 @@ def load_module(file_path: str) -> None:
         if hasattr(attr, "_is_context") and attr._is_context:
             contexts[attr_name] = attr
 
-        if hasattr(attr, "_meridian_retriever"):
-            retrievers[attr_name] = getattr(attr, "_meridian_retriever")
+        if hasattr(attr, "_fabra_retriever"):
+            retrievers[attr_name] = getattr(attr, "_fabra_retriever")
 
     if not store:
         raise ValueError("No FeatureStore instance found in the provided file.")
@@ -392,7 +392,7 @@ def create_app(file_path: str) -> FastAPI:
 
 
 def run_server(file_path: str, port: int = 8502, host: str = "127.0.0.1") -> None:
-    """Run the Meridian UI server."""
+    """Run the Fabra UI server."""
     import uvicorn
 
     load_module(file_path)

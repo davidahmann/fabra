@@ -56,4 +56,4 @@ A **Context Store** is a specialized system for assembling the "context window" 
 **Hybrid Features** allow defining feature logic using both Python (for complex imperative logic, API calls, or math) and SQL (for efficient batch aggregations) within the same pipeline, managed by a single Python decorator system.
 
 ### RAG (Retrieval-Augmented Generation)
-**RAG** is a technique for enhancing LLM responses by retrieving relevant data from an external knowledge base and inserting it into the prompt context before generation. Meridian's Context Store provides the infrastructure to operationalize RAG.
+**RAG** is a technique for enhancing LLM responses by retrieving relevant data from an external knowledge base and inserting it into the prompt context before generation. Fabra.s Context Store provides the infrastructure to operationalize RAG.

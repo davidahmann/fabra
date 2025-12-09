@@ -1,5 +1,5 @@
 from typer.testing import CliRunner
-from meridian.cli import app
+from fabra.cli import app
 import os
 
 from pathlib import Path
@@ -27,7 +27,7 @@ def test_serve_success(tmp_path: Path) -> None:
     # Create a valid feature definitions file
     d = tmp_path / "valid_features.py"
     content = """
-from meridian.core import FeatureStore, entity, feature
+from fabra.core import FeatureStore, entity, feature
 from datetime import timedelta
 
 store = FeatureStore()
@@ -93,5 +93,5 @@ def test_verbose_flag() -> None:
     result = runner.invoke(app, ["--verbose", "version"])
 
     assert result.exit_code == 0
-    assert "Meridian OSS v" in result.stdout
+    assert "Fabra v" in result.stdout
     assert "Verbose output enabled" in result.stdout

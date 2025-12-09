@@ -30,7 +30,7 @@ Traditional observability doesn't help. You can see latency, error rates, token 
 Meridian v1.5 brings explicit freshness guarantees to your AI contexts. You declare how fresh your data needs to be, and Meridian enforces it.
 
 ```python
-from meridian.context import context, ContextItem
+from fabra.context import context, ContextItem
 
 @context(store, max_tokens=4000, freshness_sla="5m")
 async def build_prompt(user_id: str, query: str):
@@ -48,7 +48,7 @@ That `freshness_sla="5m"` declaration means: **every feature used in this contex
 
 ## Graceful Degradation
 
-What happens when a feature is stale? By default, Meridian uses **graceful degradation**:
+What happens when a feature is stale? By default, Fabra uses **graceful degradation**:
 
 1. **Assembly succeeds** — Your AI still gets context
 2. **Status is "degraded"** — Freshness breach is recorded
@@ -73,7 +73,7 @@ This approach lets you **monitor before enforcing**. Deploy freshness SLAs in ob
 For critical contexts where stale data is unacceptable, enable strict mode:
 
 ```python
-from meridian.exceptions import FreshnessSLAError
+from fabra.exceptions import FreshnessSLAError
 
 @context(store, freshness_sla="30s", freshness_strict=True)
 async def financial_context(user_id: str):
@@ -180,9 +180,9 @@ Combined with [Context Accountability](context-accountability.md) from v1.4, you
 **Upgrade to v1.5 today:**
 
 ```bash
-pip install --upgrade meridian-oss
+pip install --upgrade fabra
 ```
 
 ---
 
-*Questions? Issues? [Open a GitHub issue](https://github.com/davidahmann/meridian/issues) or check the [full documentation](https://davidahmann.github.io/meridian/freshness-sla).*
+*Questions? Issues? [Open a GitHub issue](https://github.com/davidahmann/fabra/issues) or check the [full documentation](https://davidahmann.github.io/meridian/freshness-sla).*

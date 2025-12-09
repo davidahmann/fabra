@@ -1,5 +1,5 @@
 import pytest
-from meridian.store.redis import RedisOnlineStore
+from fabra.store.redis import RedisOnlineStore
 from testcontainers.redis import RedisContainer
 
 

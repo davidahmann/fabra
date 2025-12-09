@@ -6,7 +6,7 @@ keywords: meridian quickstart, feature store tutorial, context store tutorial, p
 
 # Feature Store & Context Store That Actually Work Locally: 30-Second Setup
 
-> **TL;DR:** Install with `pip install "meridian-oss[ui]"`. Define features with `@feature`. Run `meridian serve`.
+> **TL;DR:** Install with `pip install "fabra[ui]"`. Define features with `@feature`. Run `fabra serve`.
 
 > [!IMPORTANT]
 > **Prerequisites for RAG/Context Store:**
@@ -27,8 +27,8 @@ You want to serve ML features. Feast documentation says:
 ## Meridian in 30 Seconds
 
 ```bash
-pip install "meridian-oss[ui]"
-meridian serve examples/basic_features.py
+pip install "fabra[ui]"
+fabra serve examples/basic_features.py
 ```
 
 Done. No Docker. No Kubernetes. No YAML.
@@ -38,14 +38,14 @@ Done. No Docker. No Kubernetes. No YAML.
 Building a RAG app? Add context retrieval:
 
 ```python
-from meridian.core import FeatureStore
-from meridian.retrieval import retriever
-from meridian.context import context, Context, ContextItem
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
+from fabra.context import context, Context, ContextItem
 
 store = FeatureStore()
 
 # Index documents
-await store.index("docs", "doc_1", "Meridian is a feature store...")
+await store.index("docs", "doc_1", "Fabra is a feature store...")
 
 # Define retriever
 @retriever(index="docs", top_k=3)
@@ -67,7 +67,7 @@ async def chat_context(query: str) -> list[ContextItem]:
 ## FAQ
 
 **Q: How do I run a feature store locally without Docker?**
-A: Meridian uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install "meridian-oss[ui]"`, define features in Python, run `meridian serve`. Zero infrastructure required.
+A: Fabra uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install "fabra[ui]"`, define features in Python, run `fabra serve`. Zero infrastructure required.
 
 **Q: What's the simplest feature store for small ML teams?**
 A: Meridian targets "Tier 2" companies (Series B-D, 10-500 engineers) who need real-time ML but can't afford Kubernetes ops. Uses Postgres + Redis in production - boring, reliable technology.
@@ -87,16 +87,16 @@ A: Meridian eliminates YAML configuration. Define features in Python with `@feat
   "@context": "https://schema.org",
   "@type": "HowTo",
   "name": "How to Build a Feature Store & Context Store in 30 Seconds",
-  "description": "Install Meridian and serve ML features and LLM context from Python in under 30 seconds.",
+  "description": "Install Fabra and serve ML features and LLM context from Python in under 30 seconds.",
   "totalTime": "PT30S",
   "tool": [{
     "@type": "HowToTool",
-    "name": "Meridian OSS"
+    "name": "Fabra"
   }],
   "step": [{
     "@type": "HowToStep",
-    "name": "Install Meridian",
-    "text": "Run pip install \"meridian-oss[ui]\" to install the library."
+    "name": "Install Fabra",
+    "text": "Run pip install \"fabra[ui]\" to install the library."
   }, {
     "@type": "HowToStep",
     "name": "Define Features",
@@ -108,7 +108,7 @@ A: Meridian eliminates YAML configuration. Define features in Python with `@feat
   }, {
     "@type": "HowToStep",
     "name": "Serve",
-    "text": "Run meridian serve examples/basic_features.py to start the API."
+    "text": "Run fabra serve examples/basic_features.py to start the API."
   }]
 }
 </script>

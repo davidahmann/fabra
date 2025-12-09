@@ -1,8 +1,8 @@
 import pytest
 import pandas as pd
-from meridian.core import FeatureStore, entity, feature
-from meridian.store.offline import DuckDBOfflineStore
-from meridian.store.online import InMemoryOnlineStore
+from fabra.core import FeatureStore, entity, feature
+from fabra.store.offline import DuckDBOfflineStore
+from fabra.store.online import InMemoryOnlineStore
 
 
 @pytest.mark.asyncio
@@ -65,7 +65,7 @@ async def test_pit_correctness_duckdb() -> None:
 
 @pytest.mark.asyncio
 async def test_pit_correctness_postgres() -> None:
-    from meridian.store.postgres import PostgresOfflineStore
+    from fabra.store.postgres import PostgresOfflineStore
     from testcontainers.postgres import PostgresContainer
     from sqlalchemy import text
 

@@ -37,7 +37,7 @@ export default function ExampleSelector({
             onClick={() => onSelect(example)}
             className={`text-left p-3 rounded-lg border transition-all ${
               selectedId === example.id
-                ? 'border-meridian-500 bg-meridian-500/10'
+                ? 'border-fabra-500 bg-fabra-500/10'
                 : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
             }`}
           >

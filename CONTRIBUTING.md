@@ -1,6 +1,6 @@
-# Contributing to Meridian
+# Contributing to Fabra
 
-We love your input! We want to make contributing to Meridian as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to Fabra as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code
@@ -10,7 +10,7 @@ We love your input! We want to make contributing to Meridian as easy and transpa
 
 ## Development Setup
 
-Meridian uses `uv` for dependency management and `make` for common tasks.
+Fabra uses `uv` for dependency management and `make` for common tasks.
 
 ### 1. Prerequisites
 - Python 3.9+
@@ -21,8 +21,8 @@ Meridian uses `uv` for dependency management and `make` for common tasks.
 Fork the repo, then:
 
 ```bash
-git clone https://github.com/<your-username>/meridian.git
-cd meridian
+git clone https://github.com/<your-username>/fabra.git
+cd fabra
 
 # Create virtualenv and install dependencies
 make setup
@@ -48,7 +48,7 @@ We have a comprehensive `Makefile` to make development easy:
 
 In short, when you submit code changes, your submissions are understood to be under the same [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using GitHub's [issue tracker](https://github.com/davidahmann/meridian/issues)
+## Report bugs using GitHub's [issue tracker](https://github.com/davidahmann/fabra/issues)
 
 We use GitHub issues to track public bugs. Report a bug by [opening a new issue](); it's that easy!
 

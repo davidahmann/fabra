@@ -1,4 +1,4 @@
-"""Playwright test fixtures for Meridian UI testing.
+"""Playwright test fixtures for Fabra UI testing.
 
 Run with:
     uv run pytest tests/ui/ --headed  # See browser
@@ -31,7 +31,7 @@ def wait_for_port(port: int, timeout: int = 30) -> bool:
 
 @pytest.fixture(scope="session")
 def ui_server() -> Generator[str, None, None]:
-    """Start the Meridian UI server for testing.
+    """Start the Fabra UI server for testing.
 
     This starts both:
     1. FastAPI backend on port 8502
@@ -50,7 +50,7 @@ def ui_server() -> Generator[str, None, None]:
     project_root = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
-    ui_next_dir = os.path.join(project_root, "src", "meridian", "ui-next")
+    ui_next_dir = os.path.join(project_root, "src", "fabra", "ui-next")
     features_file = os.path.join(project_root, "examples", "rag_chatbot.py")
 
     # Start FastAPI backend
@@ -63,7 +63,7 @@ def ui_server() -> Generator[str, None, None]:
             f"""
 import sys
 sys.path.insert(0, '{project_root}')
-from meridian.ui_server import run_server
+from fabra.ui_server import run_server
 run_server('{features_file}', port={api_port}, host='127.0.0.1')
 """,
         ],

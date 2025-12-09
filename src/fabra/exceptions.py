@@ -1,15 +1,15 @@
-"""Custom exceptions for Meridian."""
+"""Custom exceptions for Fabra."""
 
 from typing import List, Dict, Any
 
 
-class MeridianError(Exception):
-    """Base exception for all Meridian errors."""
+class FabraError(Exception):
+    """Base exception for all Fabra errors."""
 
     pass
 
 
-class FreshnessSLAError(MeridianError):
+class FreshnessSLAError(FabraError):
     """
     Raised when context assembly violates a freshness SLA in strict mode.
 
@@ -38,19 +38,19 @@ class FreshnessSLAError(MeridianError):
         return f"FreshnessSLAError(message={self.message!r}, violations={self.violations!r})"
 
 
-class ContextBudgetError(MeridianError):
+class ContextBudgetError(FabraError):
     """Raised when context exceeds max_tokens even after dropping optional items."""
 
     pass
 
 
-class StoreConnectionError(MeridianError):
+class StoreConnectionError(FabraError):
     """Raised when unable to connect to a backend store."""
 
     pass
 
 
-class FeatureNotFoundError(MeridianError):
+class FeatureNotFoundError(FabraError):
     """Raised when a requested feature does not exist."""
 
     pass
