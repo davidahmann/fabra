@@ -261,7 +261,7 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabr
     "Context Accountability (v1.4)",
     "Freshness SLAs (v1.5)"
   ],
-  "softwareVersion": "2.0.2",
+  "softwareVersion": "2.0.3",
   "license": "https://opensource.org/licenses/Apache-2.0"
 }
 </script>
