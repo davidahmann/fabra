@@ -77,7 +77,6 @@ def login_count(user_id: str) -> int:
     return abs(hash(user_id + "login")) % 100
 
 # --- TEST THE FEATURES ---
-import asyncio
 
 async def main():
     print("\\n🚀 Meridian Feature Store Demo\\n")
@@ -90,8 +89,8 @@ async def main():
 
     print("\\n✨ Demo complete!")
 
-# Run the async main function
-asyncio.run(main())
+# Run the async main function (await works in Pyodide)
+await main()
 `,
   },
   {
@@ -690,8 +689,8 @@ async def simulate_events():
     print(f"\\n📈 Total events processed: {len(bus.event_log)}")
     print("✨ Demo complete!")
 
-# Run simulation
-asyncio.run(simulate_events())
+# Run simulation (await works in Pyodide)
+await simulate_events()
 `,
   },
 ];
