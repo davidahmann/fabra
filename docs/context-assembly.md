@@ -28,11 +28,11 @@ async def chat_context(user_id: str, query: str) -> Context:
     docs = await search_docs(query)
     history = await get_history(user_id)
 
-    return Context(items=[
-        ContextItem("You are a helpful assistant.", priority=0, required=True),
-        ContextItem(docs, priority=1, required=True),
-        ContextItem(history, priority=2),  # Truncated first
-    ])
+    return [
+        ContextItem(content="You are a helpful assistant.", priority=0, required=True),
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content=history, priority=2),  # Truncated first
+    ]
 ```
 
 ## ContextItem
@@ -62,7 +62,7 @@ Items are sorted by priority. When over budget, highest-numbered (lowest priorit
 ### Required Flag
 
 ```python
-ContextItem(docs, priority=1, required=True)
+ContextItem(content=docs, priority=1, required=True)
 ```
 
 - `required=True`: Raises `ContextBudgetError` if item can't fit.
@@ -92,11 +92,11 @@ Lower-priority items are dropped entirely:
 ```python
 @context(store, max_tokens=1000)
 async def simple_context(query: str) -> Context:
-    return Context(items=[
-        ContextItem(short_text, priority=0),     # 100 tokens - kept
-        ContextItem(medium_text, priority=1),    # 400 tokens - kept
-        ContextItem(long_text, priority=2),      # 800 tokens - DROPPED
-    ])
+    return [
+        ContextItem(content=short_text, priority=0),     # 100 tokens - kept
+        ContextItem(content=medium_text, priority=1),    # 400 tokens - kept
+        ContextItem(content=long_text, priority=2),      # 800 tokens - DROPPED
+    ]
 # Result: 500 tokens (short + medium)
 ```
 
@@ -106,9 +106,9 @@ Truncate content within an item:
 
 ```python
 ContextItem(
-    long_text,
+    content=long_text,
     priority=2,
-    truncate_strategy="end"  # Truncate from end
+    # truncate_strategy="end"  # Future: Truncate from end
 )
 ```
 
@@ -161,12 +161,12 @@ async def rich_context(user_id: str, query: str) -> Context:
     prefs = await store.get_feature("user_preferences", user_id)
     tier = await store.get_feature("user_tier", user_id)
 
-    return Context(items=[
-        ContextItem(SYSTEM_PROMPT, priority=0, required=True),
-        ContextItem(docs, priority=1, required=True),
-        ContextItem(f"User tier: {tier}", priority=2),
-        ContextItem(f"Preferences: {prefs}", priority=3),
-    ])
+    return [
+        ContextItem(content=SYSTEM_PROMPT, priority=0, required=True),
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content=f"User tier: {tier}", priority=2),
+        ContextItem(content=f"Preferences: {prefs}", priority=3),
+    ]
 ```
 
 ## Dynamic Budgets
@@ -213,7 +213,8 @@ If all items are truncated:
 ctx = await minimal_context(user_id, query)
 if ctx.is_empty:
     # Handle gracefully
-    ctx = Context(items=[ContextItem("Default response.", priority=0)])
+    # Note: In practice, you'd handle this in your app logic
+    # by returning a default response directly
 ```
 
 ## Best Practices

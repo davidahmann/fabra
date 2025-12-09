@@ -25,7 +25,8 @@
   <p>
     <b>📚 <a href="https://davidahmann.github.io/meridian/">Documentation</a></b> |
     <b>🤖 <a href="https://davidahmann.github.io/meridian/context-store">Context Store</a></b> |
-    <b>🛠️ <a href="docs/unit_testing.md">Testing Guide</a></b>
+    <b>🛠️ <a href="docs/unit_testing.md">Testing Guide</a></b> |
+    <b>🎮 <a href="https://meridian-playground.vercel.app">Try in Browser</a></b>
   </p>
 </div>
 
@@ -88,8 +89,8 @@ async def build_prompt(user_id: str, query: str):
     docs = await find_docs(query)
 
     return [
-        ContextItem(f"User is {tier}. Adjust tone accordingly.", priority=0),
-        ContextItem(str(docs), priority=1)
+        ContextItem(content=f"User is {tier}. Adjust tone accordingly.", priority=0),
+        ContextItem(content=str(docs), priority=1)
     ]
 ```
 
@@ -142,6 +143,20 @@ Meridian bridges the gap between **AI Engineers** building RAG agents and **ML E
 *   **Event-Driven:** Trigger feature updates instantly from Redis Streams (`trigger="transaction_event"`).
 *   **Extensibility:** Use `Before/After` hooks to customize retrieval or ingest pipelines.
 *   **Observability:** Built-in OpenTelemetry tracing and cost estimation per-request.
+
+#### 🚀 One-Command Deploy (New in v1.3.0)
+
+Deploy to any cloud platform with generated configs:
+
+```bash
+meridian deploy fly --name my-app      # Fly.io
+meridian deploy cloudrun --name my-app # Google Cloud Run
+meridian deploy ecs --name my-app      # AWS ECS
+meridian deploy railway --name my-app  # Railway
+meridian deploy render --name my-app   # Render
+```
+
+Use `--dry-run` to preview generated files. [📖 Deployment Guide](https://davidahmann.github.io/meridian/local-to-production)
 
 #### 🐚 Shell Completion
 Enable tab completion for Bash, Zsh, Fish, and PowerShell:

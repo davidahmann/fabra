@@ -304,7 +304,7 @@ def render_feature_tab(store: FeatureStore) -> None:
                     )
                 )
 
-                # Display as Metrics Cards
+                # Display as Feature Cards
                 st.subheader("Feature Values")
 
                 # Create 3 columns for grid layout
@@ -314,17 +314,35 @@ def render_feature_tab(store: FeatureStore) -> None:
                     val = values.get(feat.name)
                     col = cols[i % 3]
 
-                    # Determine delta color if relevant (mock logic)
-                    delta = None
-                    if isinstance(val, (int, float)) and val > 50:
-                        delta = "High"
+                    # Build badges
+                    badges = []
+                    if feat.materialize:
+                        badges.append("🔴 Materialized")
+                    if feat.refresh:
+                        badges.append(f"🔄 {feat.refresh}")
+                    if feat.ttl:
+                        badges.append(f"⏱️ TTL: {feat.ttl}")
 
-                    col.metric(
-                        label=feat.name,
-                        value=str(val),
-                        delta=delta,
-                        help=f"Type: {feat.func.__annotations__.get('return', 'Any').__name__ if hasattr(feat.func.__annotations__.get('return'), '__name__') else str(feat.func.__annotations__.get('return', 'Any'))}\nRefresh: {feat.refresh}",
+                    badge_html = " ".join(
+                        [
+                            f'<span style="background:#e3f2fd;padding:2px 6px;border-radius:4px;font-size:11px;margin-right:4px;">{b}</span>'
+                            for b in badges
+                        ]
                     )
+
+                    # Determine value display style
+                    val_str = str(val) if val is not None else "—"
+                    val_color = "#1a73e8" if val is not None else "#999"
+
+                    # Feature Card HTML
+                    card_html = f"""
+                    <div style="background:linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);border:1px solid #e0e0e0;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size:14px;font-weight:600;color:#333;margin-bottom:8px;">{feat.name}</div>
+                        <div style="font-size:28px;font-weight:700;color:{val_color};margin-bottom:10px;">{val_str}</div>
+                        <div>{badge_html}</div>
+                    </div>
+                    """
+                    col.markdown(card_html, unsafe_allow_html=True)
 
                 # Display detailed view below
                 with st.expander("Feature Definition Details"):

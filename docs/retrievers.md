@@ -60,7 +60,7 @@ results = await search_knowledge("How do I configure Redis?")
 Enable caching to reduce vector search latency for repeated queries:
 
 ```python
-@retriever(store, index="docs", top_k=5, cache_ttl=300)
+@retriever(index="docs", top_k=5, cache_ttl=timedelta(seconds=300))
 async def cached_search(query: str) -> list[str]:
     pass
 ```
@@ -77,9 +77,9 @@ async def cached_search(query: str) -> list[str]:
 Filter out low-relevance results:
 
 ```python
-@retriever(store, index="docs", top_k=10, threshold=0.7)
+@retriever(index="docs", top_k=10)
 async def high_quality_search(query: str) -> list[str]:
-    # Only returns documents with similarity >= 0.7
+    # Returns top 10 most relevant documents
     pass
 ```
 
@@ -103,15 +103,10 @@ The `DependencyResolver` automatically:
 Override the default embedding provider:
 
 ```python
-from meridian.embeddings import CohereEmbedding
-
-@retriever(
-    store,
-    index="docs",
-    top_k=5,
-    embedding_provider=CohereEmbedding(model="embed-english-v3.0")
-)
+@retriever(index="docs", top_k=5)
 async def cohere_search(query: str) -> list[str]:
+    # Embedding provider is configured globally via MERIDIAN_EMBEDDING_PROVIDER
+    # or COHERE_API_KEY environment variable
     pass
 ```
 
@@ -120,23 +115,23 @@ async def cohere_search(query: str) -> list[str]:
 Search across different document collections:
 
 ```python
-@retriever(store, index="product_docs", top_k=3)
+@retriever(index="product_docs", top_k=3)
 async def search_products(query: str) -> list[str]:
     pass
 
-@retriever(store, index="support_tickets", top_k=3)
+@retriever(index="support_tickets", top_k=3)
 async def search_tickets(query: str) -> list[str]:
     pass
 
 # Combine in context assembly
 @context(store, max_tokens=4000)
-async def support_context(query: str) -> Context:
+async def support_context(query: str) -> list[ContextItem]:
     products = await search_products(query)
     tickets = await search_tickets(query)
-    return Context(items=[
-        ContextItem(products, priority=1),
-        ContextItem(tickets, priority=2),
-    ])
+    return [
+        ContextItem(content=str(products), priority=1),
+        ContextItem(content=str(tickets), priority=2),
+    ]
 ```
 
 ## Metadata Filtering
@@ -144,7 +139,7 @@ async def support_context(query: str) -> Context:
 Filter results by document metadata:
 
 ```python
-@retriever(store, index="docs", top_k=5)
+@retriever(index="docs", top_k=5)
 async def search_docs(query: str, version: str = None) -> list[str]:
     # Metadata filter applied automatically if version provided
     pass
@@ -158,7 +153,7 @@ results = await search_docs("How to configure?", version="1.2.0")
 Retrievers handle errors gracefully:
 
 ```python
-@retriever(store, index="docs", top_k=5)
+@retriever(index="docs", top_k=5)
 async def safe_search(query: str) -> list[str]:
     pass
 
@@ -166,16 +161,6 @@ async def safe_search(query: str) -> list[str]:
 # - Returns empty list []
 # - Logs warning with details
 # - Does not raise exception
-```
-
-For strict mode (raise on errors):
-
-```python
-@retriever(store, index="docs", top_k=5, strict=True)
-async def strict_search(query: str) -> list[str]:
-    pass
-
-# Raises RetrieverError if search fails
 ```
 
 ## Performance Tips

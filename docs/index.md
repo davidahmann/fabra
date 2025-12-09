@@ -43,10 +43,10 @@ def user_tier(user_id: str) -> str:
     return "premium" if hash(user_id) % 2 == 0 else "free"
 
 # 2. THE CONTEXT STORE (Unstructured Data)
-@retriever(store)
+@retriever(index="docs", top_k=3)
 async def find_docs(query: str):
-    # In production, this uses pgvector.
-    # Here we simulate a semantic search result.
+    # Magic wiring: automatically searches "docs" index via pgvector
+    # Here we simulate a semantic search result for local dev.
     return [{"content": "Meridian bridges the gap between ML features and RAG.", "score": 0.9}]
 
 # 3. THE UNIFICATION (Context Assembly)
@@ -57,8 +57,8 @@ async def build_prompt(user_id: str, query: str):
     docs = await find_docs(query)
 
     return [
-        ContextItem(f"User is {tier}. Adjust tone accordingly.", priority=0),
-        ContextItem(str(docs), priority=1)
+        ContextItem(content=f"User is {tier}. Adjust tone accordingly.", priority=0),
+        ContextItem(content=str(docs), priority=1)
     ]
 ```
 
@@ -68,7 +68,7 @@ meridian serve features.py
 # 🚀 Server running on http://localhost:8000
 ```
 
-[Get Started Now →](quickstart.md)
+[Get Started Now →](quickstart.md) | [Try in Browser →](https://meridian-playground.vercel.app)
 
 ---
 
@@ -124,19 +124,19 @@ from meridian.context import context
 
 store = FeatureStore()
 
-@retriever(store, index="docs", top_k=3)
+@retriever(index="docs", top_k=3)
 async def relevant_docs(query: str) -> list[str]:
     # Automatic vector search via pgvector
     pass
 
 @context(store, max_tokens=4000)
-async def chat_context(user_id: str, query: str):
+async def chat_context(user_id: str, query: str) -> list[ContextItem]:
     docs = await relevant_docs(query)
     user_prefs = await user_preferences(user_id)  # Feature from store
-    return Context(items=[
-        ContextItem(docs, priority=1, required=True),
-        ContextItem(user_prefs, priority=2),
-    ])
+    return [
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content=str(user_prefs), priority=2),
+    ]
 ```
 
 [Learn More About Context Store →](context-store.md)

@@ -61,3 +61,15 @@ Meridian automatically handles the orchestration:
 1.  Computes `name_length` in Python.
 2.  Delegates `user_txn_count` to the database.
 3.  Merges everything into a single DataFrame.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Hybrid Features in Meridian: Mixing Python and SQL",
+  "description": "Learn how to use Hybrid Features in Meridian using Python for complex logic and SQL for heavy data lifting in the same API.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "hybrid features, python feature store, sql feature store, on-demand features",
+  "articleSection": "Documentation"
+}
+</script>

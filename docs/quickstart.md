@@ -48,18 +48,18 @@ store = FeatureStore()
 await store.index("docs", "doc_1", "Meridian is a feature store...")
 
 # Define retriever
-@retriever(store, index="docs", top_k=3)
+@retriever(index="docs", top_k=3)
 async def search_docs(query: str) -> list[str]:
-    pass
+    pass  # Magic wiring: auto-searches "docs" index via pgvector
 
 # Assemble context with token budget
 @context(store, max_tokens=4000)
-async def chat_context(query: str) -> Context:
+async def chat_context(query: str) -> list[ContextItem]:
     docs = await search_docs(query)
-    return Context(items=[
-        ContextItem("You are helpful.", priority=0, required=True),
-        ContextItem(docs, priority=1),
-    ])
+    return [
+        ContextItem(content="You are helpful.", priority=0, required=True),
+        ContextItem(content=str(docs), priority=1),
+    ]
 ```
 
 [Learn more about Context Store →](context-store.md)

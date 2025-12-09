@@ -1,14 +1,14 @@
 ---
-title: "Meridian vs Feast: A Lightweight Python Feature Store Alternative"
-description: "Detailed comparison: Meridian vs Feast. Why you don't need Kubernetes for a feature store. Python decorators vs YAML config."
-keywords: feast alternative, lightweight feature store, python feature store, meridian vs feast
+title: "Meridian vs Feast: A Lightweight Python Feature Store Alternative 2025"
+description: "Detailed comparison: Meridian vs Feast. Why you don't need Kubernetes for a feature store. Python decorators vs YAML config. RAG support comparison."
+keywords: feast alternative, lightweight feature store, python feature store, meridian vs feast, open source feature store, ml feature store, rag feature store
 ---
 
 # Meridian vs Feast: The Lightweight Feature Store Alternative
 
 If you are looking for a **lightweight feature store** that runs on your laptop but scales to production, you have likely found Feast. And you likely found it complicated.
 
-Meridian is the **developer-first alternative to Feast**. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) without the infrastructure tax.
+Meridian is the **developer-first alternative to Feast**. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) without the infrastructure tax—plus built-in RAG/LLM support that Feast doesn't have.
 
 ## Feature Comparison
 
@@ -17,45 +17,120 @@ Meridian is the **developer-first alternative to Feast**. We provide the same co
 | **Setup Time** | Days (Kubernetes, Docker) | Seconds (`pip install`) |
 | **Configuration** | YAML Hell | Python Code (`@feature`) |
 | **Infrastructure** | Spark / Flink / K8s | DuckDB (Local) / Postgres (Prod) |
-| **Point-in-Time Joins** | ✅ Yes | ✅ **Yes (v1.1.0)** |
-| **Async I/O** | ✅ Yes | ✅ **Yes (v1.1.0)** |
-| **Hybrid Features** | ❌ No (Complex) | ✅ **Yes (Python + SQL)** |
-| **Target User** | Platform Teams | ML Engineers |
+| **Point-in-Time Joins** | ✅ Yes | ✅ Yes |
+| **Async I/O** | ✅ Yes | ✅ Yes |
+| **Hybrid Features** | ❌ No (Complex) | ✅ Yes (Python + SQL) |
+| **RAG/LLM Support** | ❌ No | ✅ **Built-in Context Store** |
+| **Vector Search** | ❌ No | ✅ **pgvector integration** |
+| **Token Budgeting** | ❌ No | ✅ **@context decorator** |
+| **Target User** | Platform Teams | ML & AI Engineers |
 
 ## Why Choose Meridian?
 
 ### 1. No Kubernetes Required
+
 Feast assumes you have a platform team managing a Kubernetes cluster. Meridian assumes you are a developer who wants to ship code.
+
 - **Feast:** Requires Docker, K8s, and complex registry syncing.
 - **Meridian:** Runs on your laptop with DuckDB. Deploys to standard Postgres + Redis.
 
 ### 2. Python, Not YAML
-Feast relies heavily on YAML for feature definitions. Meridian uses Python decorators.
-- **Feast:**
-  ```yaml
-  # features.yaml
-  name: user_clicks
-  type: int64
-  ...
-  ```
-- **Meridian:**
-  ```python
-  @feature(entity=User)
-    def click_count(user_id: str) -> int:
-        return random.randint(0, 500)
-  ```
 
-### 3. Feature Parity (Now in v1.1.0)
-With the release of v1.1.0, Meridian matches Feast on the critical "hard" problems of feature engineering:
+Feast relies heavily on YAML for feature definitions. Meridian uses Python decorators.
+
+**Feast:**
+
+```yaml
+# features.yaml
+name: user_clicks
+type: int64
+...
+```
+
+**Meridian:**
+
+```python
+@feature(entity=User)
+def click_count(user_id: str) -> int:
+    return random.randint(0, 500)
+```
+
+### 3. Built-in RAG & LLM Support
+
+Meridian includes a **Context Store** for LLM applications—something Feast doesn't offer at all.
+
+```python
+from meridian.retrieval import retriever
+from meridian.context import context, ContextItem
+
+@retriever(index="docs", top_k=5)
+async def search_docs(query: str):
+    pass  # Magic wiring to pgvector
+
+@context(store, max_tokens=4000)
+async def chat_context(user_id: str, query: str):
+    docs = await search_docs(query)
+    tier = await store.get_feature("user_tier", user_id)
+    return [
+        ContextItem(content=f"User tier: {tier}", priority=0),
+        ContextItem(content=str(docs), priority=1),
+    ]
+```
+
+### 4. One-Command Deployment
+
+Deploy to any cloud with generated configs:
+
+```bash
+meridian deploy fly --name my-app
+# Generates: Dockerfile, fly.toml, requirements.txt
+```
+
+Supported targets: Fly.io, Cloud Run, AWS ECS, Render, Railway.
+
+### 5. Feature Parity on the Hard Problems
+
+Meridian matches Feast on the critical "hard" problems of feature engineering:
+
 - **Point-in-Time Correctness:** We use `ASOF JOIN` (DuckDB) and `LATERAL JOIN` (Postgres) to prevent data leakage, just like Feast.
 - **Async I/O:** Our production serving path uses `asyncpg` and `redis-py` for high-throughput, non-blocking performance.
 
 ## When to Use Feast
+
 Feast is a great tool for massive scale. Use Feast if:
+
 - You have a dedicated platform team of 5+ engineers.
 - You are already running Spark/Flink pipelines.
 - You need to serve 100k+ QPS (though Meridian handles 10k+ easily).
+- You don't need RAG/LLM capabilities.
+
+## Migration from Feast
+
+```bash
+# 1. Install Meridian
+pip install "meridian-oss[ui]"
+
+# 2. Convert feature definitions
+# YAML -> Python decorators
+
+# 3. Serve
+meridian serve features.py
+```
 
 ## Conclusion
+
 If you want "Google Scale" complexity, use Feast.
-If you want **"Heroku for ML Features"**, use Meridian.
+If you want **"Heroku for ML Features + RAG"**, use Meridian.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Meridian vs Feast: Lightweight Feature Store Alternative",
+  "description": "Detailed comparison of Meridian and Feast feature stores. Learn why you don't need Kubernetes for a feature store.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "feast alternative, feature store, python feature store, mlops",
+  "datePublished": "2025-01-01",
+  "dateModified": "2025-12-09"
+}
+</script>

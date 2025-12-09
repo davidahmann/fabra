@@ -90,6 +90,11 @@ target-version = "py39"
 
 [tool.mypy]
 strict = true
+exclude = [
+    "examples/",
+    "playground/",
+    "tests/",
+]
 
 [[tool.mypy.overrides]]
 module = [

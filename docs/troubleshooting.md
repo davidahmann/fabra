@@ -85,3 +85,15 @@ CREATE EXTENSION IF NOT EXISTS vector;
 1. Increase `max_tokens`.
 2. Reduce `top_k` in your `@retriever`.
 3. Use `priority` to allow non-critical items to be dropped.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Troubleshooting Meridian: Common Errors and Fixes",
+  "description": "Resolve common Meridian issues like Point-in-Time Correctness errors, Redis connection failures, and Async loop errors.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "meridian troubleshooting, feature store errors, redis connection error, context budget error",
+  "articleSection": "Support"
+}
+</script>

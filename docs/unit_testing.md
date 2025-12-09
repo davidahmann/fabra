@@ -92,3 +92,15 @@ async def test_high_risk_scenario(store):
 3.  **Portability**: Runs in any CI environment (GitHub Actions) with just `pip install meridian`.
 
 Start small by using Meridian to organize your test data. When you're ready, the exact same code deploys to production with Redis.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Unit Testing ML Features with Meridian",
+  "description": "How to unit test your ML features with Meridian. Use the local in-memory store to mock data and test logic without external dependencies.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "unit testing features, mlops testing, testing feature store, python ml testing",
+  "articleSection": "Testing"
+}
+</script>

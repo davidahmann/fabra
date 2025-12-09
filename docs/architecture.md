@@ -158,12 +158,12 @@ Context assembly uses priority-based truncation to fit within LLM token limits:
 ```python
 @context(store, max_tokens=4000)
 async def chat_context(user_id: str, query: str):
-    return Context(items=[
-        ContextItem(system_prompt, priority=0, required=True),  # Never truncated
-        ContextItem(relevant_docs, priority=1, required=True), # Required, high priority
-        ContextItem(user_history, priority=2),                 # Optional, medium priority
-        ContextItem(suggestions, priority=3),                  # Optional, low priority (truncated first)
-    ])
+    return [
+        ContextItem(content=system_prompt, priority=0, required=True),  # Never truncated
+        ContextItem(content=relevant_docs, priority=1, required=True), # Required, high priority
+        ContextItem(content=user_history, priority=2),                 # Optional, medium priority
+        ContextItem(content=suggestions, priority=3),                  # Optional, low priority (truncated first)
+    ]
 ```
 
 Items are sorted by priority (lowest first), and lower-priority items are truncated when the budget is exceeded. Items marked `required=True` raise `ContextBudgetError` if they cannot fit.

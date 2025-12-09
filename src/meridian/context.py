@@ -59,19 +59,54 @@ class Context(BaseModel):
         )
         content_html = content_preview.replace("\n", "<br>")
 
+        # Token budget bar
+        token_usage = self.meta.get("token_usage", 0)
+        max_tokens = self.meta.get("max_tokens")
+        token_bar_html = ""  # nosec B105 - not a password, HTML content
+
+        if max_tokens and max_tokens > 0:
+            usage_pct = min(100, (token_usage / max_tokens) * 100)
+            # Color gradient: green (<70%), yellow (70-90%), red (>90%)
+            if usage_pct < 70:
+                bar_color = "#1e8e3e"  # green
+            elif usage_pct < 90:
+                bar_color = "#f9ab00"  # yellow
+            else:
+                bar_color = "#d93025"  # red
+
+            token_bar_html = f"""
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-color, #5f6368); margin-bottom: 4px;">
+                    <span><strong>Token Budget</strong></span>
+                    <span>{token_usage:,} / {max_tokens:,} ({usage_pct:.1f}%)</span>
+                </div>
+                <div style="background-color: var(--secondary-background-color, #e0e0e0); border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div style="background: linear-gradient(90deg, {bar_color} 0%, {bar_color} 100%); width: {usage_pct}%; height: 100%; border-radius: 4px; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            """
+
+        # Cost display
+        cost_usd = self.meta.get("cost_usd", 0)
+        cost_html = f"${cost_usd:.6f}" if cost_usd else "N/A"
+
         return f"""
         <div style="font-family: -apple-system, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); background-color: var(--background-color, white); color: var(--text-color, #333);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 style="margin: 0; color: var(--text-color, #202124);">Context Assembly</h3>
-                <span style="background-color: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">{status_text}</span>
-                {'<span style="background-color: #673ab7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">⚡ CACHED</span>' if self.meta.get('is_cached_response') else ''}
+                <div>
+                    <span style="background-color: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">{status_text}</span>
+                    {'<span style="background-color: #673ab7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">⚡ CACHED</span>' if self.meta.get("is_cached_response") else ''}
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: var(--text-color, #5f6368); margin-bottom: 15px; background: var(--secondary-background-color, #f8f9fa); padding: 10px; border-radius: 6px;">
-                <div><strong>ID:</strong> <code>{self.id}</code></div>
-                <div><strong>Timestamp:</strong> {self.meta.get('timestamp', 'N/A')}</div>
-                <div><strong>Dropped Items:</strong> {self.meta.get('dropped_items', 0)}</div>
-                <div><strong>Sources:</strong> {len(self.meta.get('source_ids', []))}</div>
+            {token_bar_html}
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 13px; color: var(--text-color, #5f6368); margin-bottom: 15px; background: var(--secondary-background-color, #f8f9fa); padding: 12px; border-radius: 6px;">
+                <div><strong>ID:</strong><br><code style="font-size: 11px;">{self.id[:12]}...</code></div>
+                <div><strong>Cost:</strong><br>{cost_html}</div>
+                <div><strong>Dropped:</strong><br>{self.meta.get('dropped_items', 0)} items</div>
+                <div><strong>Sources:</strong><br>{len(self.meta.get('source_ids', []))} refs</div>
             </div>
 
             <div style="background-color: var(--secondary-background-color, #f1f3f4); padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; color: var(--text-color, #333); max-height: 300px; overflow-y: auto; border: 1px solid var(--text-color-20, transparent);">
@@ -353,8 +388,10 @@ def context(
                     cache_hit=False,
                 )
 
-                # Add cost to context meta
+                # Add cost and token info to context meta
                 ctx.meta["cost_usd"] = cost_usd
+                ctx.meta["token_usage"] = token_usage
+                ctx.meta["max_tokens"] = max_tokens
 
                 if backend:
                     try:

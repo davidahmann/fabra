@@ -71,3 +71,15 @@ So we gave up.
 We built Meridian in 2 weeks with a simple goal: **"It must run in a Jupyter notebook with `pip install`."**
 
 If you value "works on my laptop" over "scales to exabytes", Meridian is for you.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Meridian Philosophy: The 95% Rule, Local-First Design, and Unified Context",
+  "description": "Why we built Meridian. The 'Heroku for ML Features' philosophy: prioritizing developer experience, simple infrastructure, and unified feature+context over Google-scale complexity.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "meridian philosophy, feature store design, local-first software, mlops",
+  "articleSection": "Philosophy"
+}
+</script>

@@ -151,14 +151,17 @@ def worker_cmd(
 @app.command(name="setup")
 def setup(
     dir: str = typer.Argument(".", help="Directory to create setup files in"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Preview files without creating them"
+    ),
 ) -> None:
     """
     Generate production-ready configuration files (Docker Compose).
+    Usage:
+      meridian setup                # Create files in current directory
+      meridian setup ./prod         # Create files in ./prod
+      meridian setup --dry-run      # Preview what would be created
     """
-    # Ensure directory exists
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-        console.print(f"Created directory: [bold cyan]{dir}[/bold cyan]")
     docker_compose = """
 version: '3.8'
 
@@ -203,9 +206,33 @@ ANTHROPIC_API_KEY=sk-ant-...
 COHERE_API_KEY=...
 """
 
-    # Write files
+    # File paths
     dc_path = os.path.join(dir, "docker-compose.yml")
     env_path = os.path.join(dir, ".env.production")
+
+    if dry_run:
+        # Dry run: show what would be created
+        console.print(
+            Panel(
+                f"[bold]Dry Run:[/bold] Would create the following files:\n\n"
+                f"  [cyan]{dc_path}[/cyan]\n"
+                f"  [cyan]{env_path}[/cyan]\n\n"
+                f"Run without --dry-run to create files.",
+                title="Setup Preview",
+                style="yellow",
+            )
+        )
+        with console.pager():
+            console.print("\n[bold]docker-compose.yml contents:[/bold]")
+            console.print(docker_compose.strip())
+            console.print("\n[bold].env.production contents:[/bold]")
+            console.print(env_example.strip())
+        return
+
+    # Ensure directory exists
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+        console.print(f"Created directory: [bold cyan]{dir}[/bold cyan]")
 
     if os.path.exists(dc_path):
         console.print(f"[yellow]Warning:[/yellow] {dc_path} already exists. Skipping.")
@@ -333,7 +360,7 @@ def engagement_score(user_id: str) -> float:
 # 2. RAG / Context Store
 # We assume there is an index called 'knowledge_base' (created via seed.py)
 
-@retriever(store, index="knowledge_base", top_k=2)
+@retriever(index="knowledge_base", top_k=2)
 async def semantic_search(query: str) -> list[str]:
     # In a real app with pgvector, this searches vectors.
     # For this local demo without Postgres/OpenAI keys, we mock the return
@@ -344,16 +371,16 @@ async def semantic_search(query: str) -> list[str]:
     ]
 
 @context(store, max_tokens=1000)
-async def chatbot_context(user_id: str, query: str) -> Context:
+async def chatbot_context(user_id: str, query: str) -> list[ContextItem]:
     # Fetch data in parallel
     score = await store.get_feature("engagement_score", user_id)
     docs = await semantic_search(query)
 
-    return Context(items=[
-        ContextItem(f"User Engagement: {score}", priority=2),
-        ContextItem(docs, priority=1, required=True),
-        ContextItem("System: You are a helpful assistant.", priority=0, required=True),
-    ])
+    return [
+        ContextItem(content=f"User Engagement: {score}", priority=2),
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content="System: You are a helpful assistant.", priority=0, required=True),
+    ]
 """
         if dry_run:
             console.print(f"[dim][Dry Run] Would create file: {name}/features.py[/dim]")
@@ -434,10 +461,22 @@ def serve(
         None, envvar="MERIDIAN_API_KEY", help="API Key for security"
     ),
     reload: bool = typer.Option(False, help="Enable auto-reload"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
 ) -> None:
     """
-    Starts the Meridian server.
+    Starts the Meridian server with a live TUI dashboard.
+
+    Example:
+        meridian serve features.py
+        meridian serve features.py --port 9000 --verbose
     """
+    import logging
+
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+        console.print("[dim]Verbose mode enabled[/dim]")
     if not os.path.exists(file):
         console.print(f"[bold red]Error:[/bold red] File '{file}' not found.")
         raise typer.Exit(code=1)
@@ -535,16 +574,21 @@ def serve(
         )
 
         def generate_metrics_table() -> Panel:
-            table = Table(title="Live Metrics", expand=True)
-            table.add_column("Metric", style="cyan")
-            table.add_column("Value", style="magenta")
+            table = Table(title="📊 Dashboard", expand=True, show_header=False)
+            table.add_column("Metric", style="cyan", width=20)
+            table.add_column("Value", style="white")
 
-            # Display basic static metrics
-            table.add_row("Status", "Running 🟢")
-            table.add_row("Uptime", datetime.now().strftime("%H:%M:%S"))
-            table.add_row("Entities", str(len(store.registry.entities)))
-            table.add_row("Features", str(len(store.registry.features)))
-            # Count contexts
+            # Status section
+            table.add_row("Status", "[bold green]● Running[/bold green]")
+            table.add_row("Started", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            table.add_row("Environment", os.getenv("MERIDIAN_ENV", "development"))
+
+            table.add_section()
+
+            # Registry counts
+            num_entities = len(store.registry.entities)
+            num_features = len(store.registry.features)
+            num_retrievers = len(store.retriever_registry.retrievers)
             ctx_len = len(
                 [
                     f
@@ -552,28 +596,46 @@ def serve(
                     if getattr(f, "is_context", False)
                 ]
             )
-            table.add_row("Contexts", str(ctx_len))
 
-            # Add demo curl command
+            table.add_row("📦 Entities", f"[bold]{num_entities}[/bold]")
+            table.add_row("⚡ Features", f"[bold]{num_features}[/bold]")
+            table.add_row("🔍 Retrievers", f"[bold]{num_retrievers}[/bold]")
+            table.add_row("📝 Contexts", f"[bold]{ctx_len}[/bold]")
+
             table.add_section()
 
-            # Find a context feature to use for demo
-            demo_ctx = next(
-                (
-                    n
-                    for n, f in store.registry.features.items()
-                    if getattr(f, "is_context", False)
-                ),
-                None,
+            # Endpoints section
+            table.add_row("[dim]API Endpoints:[/dim]", "")
+            table.add_row(
+                "  Health",
+                f"[link=http://{host}:{port}/health]http://{host}:{port}/health[/link]",
+            )
+            table.add_row(
+                "  Docs",
+                f"[link=http://{host}:{port}/docs]http://{host}:{port}/docs[/link]",
+            )
+            table.add_row(
+                "  Metrics",
+                f"[link=http://{host}:{port}/metrics]http://{host}:{port}/metrics[/link]",
             )
 
-            if demo_ctx:
-                curl_cmd = f'curl -X POST http://{host}:{port}/context/{demo_ctx} -d \'{{"entity_id": "test_user", "query": "Hello"}}\''
-                table.add_row("Demo API", f"[dim]{curl_cmd}[/dim]")
-            else:
-                table.add_row("Demo API", f"curl http://{host}:{port}/health")
+            table.add_section()
 
-            return Panel(table, title="System Status", border_style="green")
+            # Quick test commands
+            table.add_row("[dim]Quick Test:[/dim]", "")
+            table.add_row("", f"[dim]curl http://{host}:{port}/health[/dim]")
+
+            # Find a feature to demo
+            if num_features > 0:
+                demo_feature = next(iter(store.registry.features.keys()))
+                table.add_row(
+                    "",
+                    f'[dim]curl -X POST http://{host}:{port}/features -d \'{{"entity_id": "u1", "features": ["{demo_feature}"]}}\' -H \'Content-Type: application/json\'[/dim]',
+                )
+
+            return Panel(
+                table, title="[bold blue]System Status[/bold blue]", border_style="blue"
+            )
 
         layout["main"].update(generate_metrics_table())
 
@@ -720,12 +782,16 @@ def index_cmd(
     postgres_url: str = typer.Option(
         None, envvar="MERIDIAN_POSTGRES_URL", help="Postgres URL Override"
     ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Preview changes without executing"
+    ),
 ) -> None:
     """
     Manage vector indexes.
     Usage:
       meridian index create my_index --dimension=1536
       meridian index status my_index
+      meridian index create my_index --dry-run  # Preview only
     """
     import asyncio
     from .store.postgres import PostgresOfflineStore
@@ -741,6 +807,21 @@ def index_cmd(
             store = PostgresOfflineStore(url)
 
             if action == "create":
+                table_name = f"meridian_index_{name}"
+                if dry_run:
+                    console.print(
+                        Panel(
+                            f"[bold]Dry Run:[/bold] Would create index table\n\n"
+                            f"  Table:     [cyan]{table_name}[/cyan]\n"
+                            f"  Dimension: [cyan]{dimension}[/cyan]\n"
+                            f"  Database:  [dim]{url.split('@')[-1] if '@' in url else url}[/dim]\n\n"
+                            f"Run without --dry-run to execute.",
+                            title="Index Preview",
+                            style="yellow",
+                        )
+                    )
+                    return
+
                 console.print(
                     f"Creating index [bold]{name}[/bold] (dim={dimension})..."
                 )
@@ -777,6 +858,315 @@ def index_cmd(
             raise typer.Exit(1)
 
     asyncio.run(run_action())
+
+
+@app.command(name="deploy")
+def deploy_cmd(
+    target: str = typer.Argument(
+        "fly", help="Deployment target: fly, cloudrun, ecs, render, railway"
+    ),
+    file: str = typer.Option(
+        "features.py", "--file", "-f", help="Feature definition file"
+    ),
+    app_name: str = typer.Option(
+        "meridian-app", "--name", "-n", help="Application name"
+    ),
+    region: str = typer.Option("iad", "--region", "-r", help="Deployment region"),
+    output: str = typer.Option(".", "--output", "-o", help="Output directory"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview generated files without writing"
+    ),
+) -> None:
+    """
+    Generate deployment configuration for cloud platforms.
+
+    Usage:
+      meridian deploy fly --name my-app          # Generate fly.toml
+      meridian deploy cloudrun --name my-app     # Generate Cloud Run config
+      meridian deploy ecs --name my-app          # Generate ECS task definition
+      meridian deploy --dry-run                  # Preview without writing
+    """
+    # Common Dockerfile for all deployments
+    dockerfile = f"""# Auto-generated by Meridian CLI
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY {file} .
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \\
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# Run server
+CMD ["meridian", "serve", "{file}", "--host", "0.0.0.0", "--port", "8000"]
+"""
+
+    requirements_txt = """meridian>=1.2.0
+redis>=4.0.0
+asyncpg>=0.27.0
+"""
+
+    configs: dict[str, dict[str, str]] = {
+        "fly": {
+            "fly.toml": f"""# Auto-generated by Meridian CLI
+app = "{app_name}"
+primary_region = "{region}"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  MERIDIAN_ENV = "production"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  internal_port = 8000
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    path = "/health"
+""",
+        },
+        "cloudrun": {
+            "service.yaml": f"""# Auto-generated by Meridian CLI
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: {app_name}
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      containers:
+        - image: gcr.io/PROJECT_ID/{app_name}:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MERIDIAN_ENV
+              value: production
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+""",
+            "cloudbuild.yaml": f"""# Auto-generated by Meridian CLI
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/{app_name}:$COMMIT_SHA", "."]
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "gcr.io/$PROJECT_ID/{app_name}:$COMMIT_SHA"]
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - {app_name}
+      - --image=gcr.io/$PROJECT_ID/{app_name}:$COMMIT_SHA
+      - --region={region}
+      - --platform=managed
+images:
+  - gcr.io/$PROJECT_ID/{app_name}:$COMMIT_SHA
+""",
+        },
+        "ecs": {
+            "task-definition.json": f"""{{
+  "family": "{app_name}",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {{
+      "name": "{app_name}",
+      "image": "ACCOUNT_ID.dkr.ecr.{region}.amazonaws.com/{app_name}:latest",
+      "essential": true,
+      "portMappings": [
+        {{
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }}
+      ],
+      "environment": [
+        {{"name": "MERIDIAN_ENV", "value": "production"}}
+      ],
+      "healthCheck": {{
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3
+      }},
+      "logConfiguration": {{
+        "logDriver": "awslogs",
+        "options": {{
+          "awslogs-group": "/ecs/{app_name}",
+          "awslogs-region": "{region}",
+          "awslogs-stream-prefix": "ecs"
+        }}
+      }}
+    }}
+  ]
+}}
+""",
+        },
+        "render": {
+            "render.yaml": f"""# Auto-generated by Meridian CLI
+services:
+  - type: web
+    name: {app_name}
+    env: docker
+    region: {region}
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: MERIDIAN_ENV
+        value: production
+      - key: PORT
+        value: 8000
+""",
+        },
+        "railway": {
+            "railway.json": f"""{{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {{
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  }},
+  "deploy": {{
+    "startCommand": "meridian serve {file} --host 0.0.0.0 --port $PORT",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }}
+}}
+""",
+        },
+    }
+
+    if target not in configs:
+        console.print(
+            f"[bold red]Unknown target:[/bold red] {target}\n"
+            f"Available targets: {', '.join(configs.keys())}"
+        )
+        raise typer.Exit(1)
+
+    # Get target-specific files
+    target_files = configs[target]
+
+    # Add common files
+    all_files = {
+        "Dockerfile": dockerfile,
+        "requirements.txt": requirements_txt,
+        **target_files,
+    }
+
+    if dry_run:
+        console.print(
+            Panel(
+                f"[bold]Dry Run:[/bold] Would create {len(all_files)} files for {target}\n\n"
+                + "\n".join(f"  [cyan]{f}[/cyan]" for f in all_files.keys())
+                + "\n\nRun without --dry-run to create files.",
+                title=f"Deploy to {target.title()}",
+                style="yellow",
+            )
+        )
+        # Show a preview of each file
+        for filename, content in all_files.items():
+            console.print(f"\n[bold]{filename}:[/bold]")
+            console.print(
+                Panel(content.strip()[:500] + ("..." if len(content) > 500 else ""))
+            )
+        return
+
+    # Create output directory if needed
+    if not os.path.exists(output):
+        os.makedirs(output)
+        console.print(f"Created directory: [bold cyan]{output}[/bold cyan]")
+
+    # Write files
+    created_files = []
+    for filename, content in all_files.items():
+        filepath = os.path.join(output, filename)
+        if os.path.exists(filepath):
+            console.print(f"[yellow]Warning:[/yellow] {filepath} exists. Skipping.")
+        else:
+            with open(filepath, "w") as f:
+                f.write(content.strip())
+            created_files.append(filename)
+            console.print(f"Created [bold]{filename}[/bold]")
+
+    # Show next steps
+    console.print("\n[green]Deployment files generated![/green]\n")
+
+    next_steps = {
+        "fly": [
+            "fly auth login",
+            "fly launch --no-deploy",
+            "fly secrets set MERIDIAN_REDIS_URL=... MERIDIAN_POSTGRES_URL=...",
+            "fly deploy",
+        ],
+        "cloudrun": [
+            "gcloud auth login",
+            "gcloud config set project YOUR_PROJECT",
+            "gcloud builds submit",
+        ],
+        "ecs": [
+            "aws ecr create-repository --repository-name " + app_name,
+            "docker build -t " + app_name + " .",
+            "docker push ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/" + app_name,
+            "aws ecs register-task-definition --cli-input-json file://task-definition.json",
+        ],
+        "render": [
+            "Connect your GitHub repo to Render",
+            "Render will auto-deploy on push",
+        ],
+        "railway": [
+            "railway login",
+            "railway init",
+            "railway up",
+        ],
+    }
+
+    console.print("[bold]Next steps:[/bold]")
+    for i, step in enumerate(next_steps.get(target, []), 1):
+        console.print(f"  {i}. [dim]{step}[/dim]")
 
 
 if __name__ == "__main__":

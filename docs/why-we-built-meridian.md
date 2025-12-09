@@ -62,3 +62,15 @@ It does three things extremely well:
 If you value **shipping** over **configuring**, Meridian is for you.
 
 [Get Started in 30 Seconds →](quickstart.md)
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Why We Built Meridian: The Heroku for ML Features",
+  "description": "The story behind Meridian. Moving away from the 'Modern Data Tax' to a developer-first, infrastructure-light feature store.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "why meridian, feature store story, mlops tools, developer experience",
+  "articleSection": "About"
+}
+</script>

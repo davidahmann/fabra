@@ -93,3 +93,15 @@ curl -X POST http://localhost:8000/v1/ingest/document_updated \
 ```
 
 The external URL will receive a POST request with the event payload.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Hooks & Extensibility in Meridian",
+  "description": "Extend Meridian with custom hooks for validation, detailed logging, or external integrations. Configure webhooks for event-driven workflows.",
+  "author": {"@type": "Organization", "name": "Meridian Team"},
+  "keywords": "hooks, webhooks, plugins, extensibility, feature store",
+  "articleSection": "Documentation"
+}
+</script>

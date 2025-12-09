@@ -1,7 +1,7 @@
 ---
-title: "Deploying Meridian: From Local Laptop to Production API"
-description: "Guide to deploying Meridian. Move from DuckDB/In-Memory on your laptop to Postgres/Redis in production with zero code changes."
-keywords: deploy feature store, meridian production, postgres redis feature store, mlops deployment
+title: "Deploying Meridian: From Local Laptop to Production API | One-Command Deploy"
+description: "Guide to deploying Meridian. Move from DuckDB/In-Memory on your laptop to Postgres/Redis in production with zero code changes. One-command deploy to Fly.io, Cloud Run, and more."
+keywords: deploy feature store, meridian production, postgres redis feature store, mlops deployment, fly.io deploy, cloud run deploy, ecs deploy, railway deploy
 ---
 
 # From Laptop to Production in 3 Steps
@@ -33,12 +33,14 @@ export MERIDIAN_REDIS_URL="redis://prod-cache:6379"
 ```
 
 And initialize the store without arguments:
+
 ```python
 # features.py
 store = FeatureStore()  # Auto-detects Prod
 ```
 
 Infrastructure needed:
+
 - AWS RDS Postgres ($50/month)
 - AWS ElastiCache Redis ($30/month)
 - Deploy API to Heroku/Railway ($20/month)
@@ -51,6 +53,7 @@ Infrastructure needed:
 No code changes. Just deploy more API pods.
 
 Infrastructure:
+
 - Same Postgres (vertically scale if needed)
 - Redis cluster mode ($200/month)
 - 3-5 API pods behind load balancer
@@ -72,3 +75,87 @@ docker compose up -d
 > Standard Postgres images (`postgres:16`) **will not work** for Vector Search. You must use `pgvector/pgvector:pg16` or install the extension manually. `meridian setup` handles this for you.
 
 This stack mimics a real production environment and is perfect for integration testing.
+
+## Step 5: One-Command Cloud Deploy (New in v1.3.0)
+
+Deploy to any major cloud platform with a single command. Meridian generates all the deployment configs you need.
+
+### Fly.io
+
+```bash
+meridian deploy fly --name my-feature-store
+# Generates: Dockerfile, fly.toml, requirements.txt
+# Then: fly deploy
+```
+
+### Google Cloud Run
+
+```bash
+meridian deploy cloudrun --name my-feature-store --project my-gcp-project
+# Generates: Dockerfile, cloudbuild.yaml, service.yaml
+# Then: gcloud run deploy
+```
+
+### AWS ECS
+
+```bash
+meridian deploy ecs --name my-feature-store --cluster my-cluster
+# Generates: Dockerfile, task-definition.json, ecs-params.yml
+# Then: ecs-cli compose up
+```
+
+### Railway
+
+```bash
+meridian deploy railway --name my-feature-store
+# Generates: Dockerfile, railway.json
+# Then: railway up
+```
+
+### Render
+
+```bash
+meridian deploy render --name my-feature-store
+# Generates: Dockerfile, render.yaml
+# Then: git push (auto-deploys)
+```
+
+### Options
+
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `--name` | Service name | `meridian-app` |
+| `--port` | Port to expose | `8000` |
+| `--dry-run` | Preview files without writing | `false` |
+| `--verbose` | Show detailed output | `false` |
+
+### Preview Mode
+
+Use `--dry-run` to see what would be generated without writing files:
+
+```bash
+meridian deploy fly --name my-app --dry-run
+```
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Deploy Meridian Feature Store to Production",
+  "description": "Step-by-step guide to deploying Meridian from local development to production on Fly.io, Cloud Run, AWS ECS, Railway, or Render.",
+  "totalTime": "PT1H",
+  "step": [{
+    "@type": "HowToStep",
+    "name": "Local Development",
+    "text": "Start with pip install and DuckDB for zero-infrastructure local development."
+  }, {
+    "@type": "HowToStep",
+    "name": "Set Production Environment",
+    "text": "Set MERIDIAN_ENV=production and configure Postgres/Redis URLs."
+  }, {
+    "@type": "HowToStep",
+    "name": "Deploy to Cloud",
+    "text": "Use 'meridian deploy' command to generate deployment configs for your platform."
+  }]
+}
+</script>

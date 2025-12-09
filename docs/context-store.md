@@ -44,9 +44,9 @@ async def chat_context(user_id: str, query: str) -> list[ContextItem]:
     user_prefs = await store.get_feature("user_preferences", user_id)
 
     return [
-        ContextItem("You are a helpful assistant.", priority=0, required=True),
-        ContextItem(str(docs), priority=1, required=True),
-        ContextItem(f"User preferences: {user_prefs}", priority=2),
+        ContextItem(content="You are a helpful assistant.", priority=0, required=True),
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content=f"User preferences: {user_prefs}", priority=2),
     ]
 ```
 
@@ -126,9 +126,9 @@ async def chat_context(user_id: str, query: str) -> list[ContextItem]:
     history = await get_chat_history(user_id)
 
     return [
-        ContextItem(system_prompt, priority=0, required=True),
-        ContextItem(str(docs), priority=1, required=True),
-        ContextItem(history, priority=2),  # Truncated first if over budget
+        ContextItem(content=system_prompt, priority=0, required=True),
+        ContextItem(content=str(docs), priority=1, required=True),
+        ContextItem(content=history, priority=2),  # Truncated first if over budget
     ]
 ```
 
@@ -151,8 +151,8 @@ async def support_context(query: str) -> list[ContextItem]:
     products = await search_products(query)
     tickets = await search_tickets(query)
     return [
-        ContextItem(str(products), priority=1),
-        ContextItem(str(tickets), priority=2),
+        ContextItem(content=str(products), priority=1),
+        ContextItem(content=str(tickets), priority=2),
     ]
 ```
 
