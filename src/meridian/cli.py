@@ -74,10 +74,23 @@ console = Console()
 
 
 @app.callback()
-def callback() -> None:
+def callback(
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+) -> None:
     """
     Meridian CLI
     """
+    if verbose:
+        import logging
+
+        # Configure standard logging to DEBUG
+        logging.basicConfig(level=logging.DEBUG, force=True)
+
+        # Configure structlog to print to console with colors if possible
+        # For now, we assume simple standard logging config suffices for "verbose"
+        console.print("[dim]Verbose output enabled[/dim]")
 
 
 @app.command(name="worker")
@@ -222,16 +235,22 @@ def init(
     name: str = typer.Argument("meridian_project", help="Project name"),
     demo: bool = typer.Option(False, help="Include demo features and data"),
     interactive: bool = typer.Option(True, help="Run in interactive mode"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview file creation without writing"
+    ),
 ) -> None:
     """
     Initialize a new Meridian project.
     """
-    if os.path.exists(name):
+    if os.path.exists(name) and not dry_run:
         console.print(f"[bold red]Error:[/bold red] Directory '{name}' already exists.")
         raise typer.Exit(1)
 
-    os.makedirs(name)
-    console.print(f"Created directory: [bold cyan]{name}[/bold cyan]")
+    if dry_run:
+        console.print(f"[dim][Dry Run] Would create directory: {name}[/dim]")
+    else:
+        os.makedirs(name)
+        console.print(f"Created directory: [bold cyan]{name}[/bold cyan]")
 
     # Interactive Configuration
     api_key_lines = []
@@ -262,23 +281,32 @@ __pycache__/
 .venv
 *.db
     """
-    with open(os.path.join(name, ".gitignore"), "w") as f:
-        f.write(gitignore.strip())
+    if dry_run:
+        console.print(f"[dim][Dry Run] Would create file: {name}/.gitignore[/dim]")
+    else:
+        with open(os.path.join(name, ".gitignore"), "w") as f:
+            f.write(gitignore.strip())
 
     if api_key_lines:
         env_path = os.path.join(name, ".env")
-        # Systemic Fix: Use os.open to set permissions AT CREATION TIME (avoids race condition)
-        # 0o600 = Read/Write by owner only.
-        fd = os.open(env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        try:
-            content = "\n".join(api_key_lines) + "\n"
-            os.write(fd, content.encode("utf-8"))
-        finally:
-            os.close(fd)
+        if dry_run:
+            console.print(
+                f"[dim][Dry Run] Would create file: {name}/.env (permissions 0600)[/dim]"
+            )
+            console.print(f"[dim][Dry Run] Content: keys={len(api_key_lines)}[/dim]")
+        else:
+            # Systemic Fix: Use os.open to set permissions AT CREATION TIME (avoids race condition)
+            # 0o600 = Read/Write by owner only.
+            fd = os.open(env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                content = "\n".join(api_key_lines) + "\n"
+                os.write(fd, content.encode("utf-8"))
+            finally:
+                os.close(fd)
 
-        console.print(
-            "Created [bold].env[/bold] with API key (permissions restricted to 0600)."
-        )
+            console.print(
+                "Created [bold].env[/bold] with API key (permissions restricted to 0600)."
+            )
 
     if demo:
         # Create features.py
@@ -327,8 +355,11 @@ async def chatbot_context(user_id: str, query: str) -> Context:
         ContextItem("System: You are a helpful assistant.", priority=0, required=True),
     ])
 """
-        with open(os.path.join(name, "features.py"), "w") as f:
-            f.write(features_py.strip())
+        if dry_run:
+            console.print(f"[dim][Dry Run] Would create file: {name}/features.py[/dim]")
+        else:
+            with open(os.path.join(name, "features.py"), "w") as f:
+                f.write(features_py.strip())
 
         # Create README
         readme = """
@@ -353,8 +384,11 @@ This is a generated demo project.
    meridian context explain u1 --query "What is Meridian?"
    ```
 """
-        with open(os.path.join(name, "README.md"), "w") as f:
-            f.write(readme.strip())
+        if dry_run:
+            console.print(f"[dim][Dry Run] Would create file: {name}/README.md[/dim]")
+        else:
+            with open(os.path.join(name, "README.md"), "w") as f:
+                f.write(readme.strip())
 
         console.print(f"[green]Initialized demo project in '{name}'[/green]")
         console.print(
@@ -363,10 +397,15 @@ This is a generated demo project.
 
     else:
         # Empty features.py
-        with open(os.path.join(name, "features.py"), "w") as f:
-            f.write(
-                "from meridian.core import FeatureStore\n\nstore = FeatureStore()\n"
+        if dry_run:
+            console.print(
+                f"[dim][Dry Run] Would create file: {name}/features.py (Empty)[/dim]"
             )
+        else:
+            with open(os.path.join(name, "features.py"), "w") as f:
+                f.write(
+                    "from meridian.core import FeatureStore\n\nstore = FeatureStore()\n"
+                )
         console.print(f"[green]Initialized empty project in '{name}'[/green]")
 
 

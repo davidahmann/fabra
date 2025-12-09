@@ -20,7 +20,9 @@ def mock_backend() -> AsyncMock:
     future = AsyncMock(return_value=None)
     pipeline.execute = future
 
-    backend.pipeline.return_value = pipeline
+    # Fix: pipeline() is called synchronously in context.py, so we Mock the method itself
+    backend.pipeline = MagicMock(return_value=pipeline)
+
     backend.get.return_value = None  # Cache miss by default
     backend.set.return_value = None
     return backend

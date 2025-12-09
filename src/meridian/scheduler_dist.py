@@ -18,7 +18,10 @@ class DistributedScheduler:
     def __init__(self, redis_client: Redis[Any]) -> None:
         self.scheduler = BackgroundScheduler()
         self.redis = redis_client
-        self.scheduler.start()
+
+    def start(self) -> None:
+        if not self.scheduler.running:
+            self.scheduler.start()
 
     def schedule_job(
         self, func: Callable[[], None], interval_seconds: int, job_id: str

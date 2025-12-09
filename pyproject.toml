@@ -108,3 +108,7 @@ targets = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "--cov=meridian --cov-report=term-missing --cov-fail-under=80"
+filterwarnings = [
+    "ignore:.*wait_container_is_ready.*:DeprecationWarning",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning"
+]

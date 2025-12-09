@@ -1,6 +1,7 @@
 from typer.testing import CliRunner
 from meridian.cli import app
 from unittest.mock import patch
+import os
 
 from pathlib import Path
 
@@ -67,4 +68,29 @@ def test_ui_command(tmp_path: Path) -> None:
             # Relax assertion to handle wrapping
             assert "Launching Meridian UI" in result.stdout
             assert str(d.name) in result.stdout
+            assert str(d.name) in result.stdout
             mock_st_main.assert_called_once()
+
+
+def test_init_dry_run(tmp_path: Path) -> None:
+    # Use tmp_path as CWD for this test to avoid polluting project root
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(
+            app, ["init", "my_new_project", "--dry-run", "--no-interactive"]
+        )
+
+        assert result.exit_code == 0
+        assert "Would create directory: my_new_project" in result.stdout
+        assert "Would create file: my_new_project/.gitignore" in result.stdout
+
+        # Verify nothing was created
+        assert not os.path.exists("my_new_project")
+
+
+def test_verbose_flag() -> None:
+    # Use 'version' command as it's simple
+    result = runner.invoke(app, ["--verbose", "version"])
+
+    assert result.exit_code == 0
+    assert "Meridian OSS v" in result.stdout
+    assert "Verbose output enabled" in result.stdout

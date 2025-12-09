@@ -131,6 +131,12 @@ Meridian bridges the gap between **AI Engineers** building RAG agents and **ML E
 *   **Hybrid Logic:** Mix **Python** (for complex Pandas/Numpy transformations) and **SQL** (for heavy database aggregations) in the same pipeline.
 *   **Event-Driven:** Trigger feature updates instantly from Redis Streams (`trigger="transaction_event"`).
 
+#### 🐚 Shell Completion
+Enable tab completion for Bash, Zsh, Fish, and PowerShell:
+```bash
+meridian --install-completion
+```
+
 ---
 
 ### 🏗️ Architecture

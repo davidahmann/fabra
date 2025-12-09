@@ -93,20 +93,20 @@ def test_features_non_existent_entity() -> None:
 # 4.4 Missing Tests - Scheduler
 def test_scheduler_deduplication() -> None:
     sched = Scheduler()
-    # Mocking internal scheduler or ensuring it's started if needed
-    # sched.start() # removed if not existing
+    sched.start()
 
-    job_id = "job_1"
-    func = MagicMock()
+    try:
+        job_id = "job_1"
+        func = MagicMock()
 
-    sched.schedule_job(func, interval_seconds=10, job_id=job_id)
-    sched.schedule_job(func, interval_seconds=10, job_id=job_id)  # Should replace
+        sched.schedule_job(func, interval_seconds=10, job_id=job_id)
+        sched.schedule_job(func, interval_seconds=10, job_id=job_id)
 
-    # Check jobs in internal scheduler
-    jobs = sched.scheduler.get_jobs()
-    assert len([j for j in jobs if j.id == job_id]) == 1
-
-    sched.shutdown()
+        # Check jobs in internal scheduler
+        jobs = sched.scheduler.get_jobs()
+        assert len([j for j in jobs if j.id == job_id]) == 1
+    finally:
+        sched.shutdown()
 
 
 # 4.6 Edge Case Tests

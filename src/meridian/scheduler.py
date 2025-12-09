@@ -9,7 +9,10 @@ logger = structlog.get_logger()
 class Scheduler:
     def __init__(self) -> None:
         self.scheduler = BackgroundScheduler()
-        self.scheduler.start()
+
+    def start(self) -> None:
+        if not self.scheduler.running:
+            self.scheduler.start()
 
     def schedule_job(
         self, func: Callable[[], None], interval_seconds: int, job_id: str

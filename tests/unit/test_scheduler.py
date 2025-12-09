@@ -17,11 +17,14 @@ def test_scheduler_integration() -> None:
 
     store.start()
 
-    # Verify schedule_job was called
-    store.scheduler.schedule_job.assert_called_once()
-    call_args = store.scheduler.schedule_job.call_args[1]
-    assert call_args["interval_seconds"] == 1
-    assert call_args["job_id"] == "materialize_user_transaction_count"
+    try:
+        # Verify schedule_job was called
+        store.scheduler.schedule_job.assert_called_once()
+        call_args = store.scheduler.schedule_job.call_args[1]
+        assert call_args["interval_seconds"] == 1
+        assert call_args["job_id"] == "materialize_user_transaction_count"
+    finally:
+        store.stop()
 
 
 def test_scheduler_no_materialize() -> None:
@@ -38,5 +41,8 @@ def test_scheduler_no_materialize() -> None:
 
     store.start()
 
-    # Should not schedule if materialize=False
-    store.scheduler.schedule_job.assert_not_called()
+    try:
+        # Should not schedule if materialize=False
+        store.scheduler.schedule_job.assert_not_called()
+    finally:
+        store.stop()

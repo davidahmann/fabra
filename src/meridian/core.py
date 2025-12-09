@@ -248,6 +248,9 @@ class FeatureStore:
         """
         Starts the scheduler and registers jobs for all materialized features.
         """
+        # Start the scheduler
+        self.scheduler.start()
+
         for name, feature in self.registry.features.items():
             if feature.materialize and feature.refresh:
                 self.scheduler.schedule_job(
@@ -255,6 +258,13 @@ class FeatureStore:
                     interval_seconds=int(feature.refresh.total_seconds()),
                     job_id=f"materialize_{name}",
                 )
+
+    def stop(self) -> None:
+        """
+        Stops the scheduler.
+        """
+        if hasattr(self.scheduler, "shutdown"):
+            self.scheduler.shutdown()
 
     def _materialize_feature(self, feature_name: str) -> None:
         """Sync wrapper for scheduler."""
@@ -314,7 +324,15 @@ class FeatureStore:
         for feature_name in features:
             feature_def = self.registry.features.get(feature_name)
             if not feature_def:
-                raise ValueError(f"Feature '{feature_name}' not found in registry.")
+                import difflib
+
+                matches = difflib.get_close_matches(
+                    feature_name, self.registry.features.keys(), n=3, cutoff=0.6
+                )
+                msg = f"Feature '{feature_name}' not found in registry."
+                if matches:
+                    msg += f" Did you mean: {', '.join(matches)}?"
+                raise ValueError(msg)
 
             if feature_def.sql:
                 sql_features.append(feature_name)
@@ -480,6 +498,27 @@ class FeatureStore:
             "get_online_features_complete", duration=duration, found=len(final_results)
         )
         return final_results
+
+    async def get_feature(self, feature_name: str, entity_id: str) -> Any:
+        """
+        Convenience method to get a single feature value.
+        """
+        feature_def = self.registry.features.get(feature_name)
+        if not feature_def:
+            import difflib
+
+            matches = difflib.get_close_matches(
+                feature_name, self.registry.features.keys(), n=3, cutoff=0.6
+            )
+            msg = f"Feature '{feature_name}' not found."
+            if matches:
+                msg += f" Did you mean: {', '.join(matches)}?"
+            raise ValueError(msg)
+
+        results = await self.get_online_features(
+            feature_def.entity_name, entity_id, [feature_name]
+        )
+        return results.get(feature_name)
 
     def register_entity(
         self, name: str, id_column: str, description: Optional[str] = None
