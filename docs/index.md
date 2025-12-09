@@ -144,6 +144,12 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - **Visual UI:** Dependency graphs, live metrics, context debugging
 - **[Unit Testing](unit_testing.md):** Test features in isolation
 
+### For Compliance & Debugging
+
+- **[Context Accountability](context-accountability.md):** Full lineage tracking for AI decisions
+- **Context Replay:** Reproduce exactly what your AI knew at any point in time
+- **Audit Trails:** UUIDv7-based context IDs with complete data provenance
+
 ---
 
 ## Use Cases
@@ -188,6 +194,8 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - [Token Budget Management for Production RAG](blog/token-budget-management.md)
 - [Python Decorators for ML Feature Engineering](blog/python-decorators-ml.md)
 - [Deploy ML Features Without Kubernetes](blog/deploy-without-kubernetes.md)
+- [What Did Your AI Know? Introducing Context Replay](blog/context-replay.md)
+- [Building an Audit Trail for AI Decisions](blog/ai-audit-trail.md)
 
 ---
 

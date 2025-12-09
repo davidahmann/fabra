@@ -21,6 +21,7 @@ from .store import (
 from .scheduler import Scheduler
 from .scheduler_dist import DistributedScheduler
 from .hooks import Hook, HookManager
+from .context import record_feature_usage
 
 import structlog
 from prometheus_client import Counter, Histogram
@@ -451,6 +452,13 @@ class FeatureStore:
             if feature_name in results:
                 final_results[feature_name] = results[feature_name]
                 FEATURE_REQUESTS.labels(feature=feature_name, status="hit").inc()
+                # Record for lineage tracking (cache hit)
+                record_feature_usage(
+                    feature_name=feature_name,
+                    entity_id=entity_id,
+                    value=results[feature_name],
+                    source="cache",
+                )
             else:
                 missing_features.append(feature_name)
                 FEATURE_REQUESTS.labels(feature=feature_name, status="miss").inc()
@@ -476,6 +484,13 @@ class FeatureStore:
                 FEATURE_REQUESTS.labels(
                     feature=feature_name, status="compute_success"
                 ).inc()
+                # Record for lineage tracking (computed)
+                record_feature_usage(
+                    feature_name=feature_name,
+                    entity_id=entity_id,
+                    value=val,
+                    source="compute",
+                )
 
                 # Optionally write back to cache?
                 # await self.online_store.set_online_features(entity_name, entity_id, {feature_name: val})
@@ -492,6 +507,13 @@ class FeatureStore:
                     FEATURE_REQUESTS.labels(
                         feature=feature_name, status="default"
                     ).inc()
+                    # Record for lineage tracking (fallback)
+                    record_feature_usage(
+                        feature_name=feature_name,
+                        entity_id=entity_id,
+                        value=feature_def.default_value,
+                        source="fallback",
+                    )
                     log.info(
                         "using_default",
                         feature=feature_name,
@@ -700,6 +722,60 @@ class FeatureStore:
             # Inject the online store as the cache backend
             setattr(context_func, "_cache_backend", self.online_store)
             logger.info(f"Registered Context: {context_func.__name__}")
+
+    async def get_context_at(self, context_id: str) -> Optional[Any]:
+        """
+        Retrieve a historical context by ID for replay/audit.
+
+        Args:
+            context_id: The UUIDv7 identifier from a previous context assembly.
+
+        Returns:
+            The exact Context object that was assembled, or None if not found.
+        """
+        from meridian.context import Context
+        from meridian.models import ContextLineage
+
+        row = await self.offline_store.get_context(context_id)
+        if row is None:
+            return None
+
+        # Reconstruct Context object from stored data
+        lineage = None
+        if row.get("lineage"):
+            try:
+                lineage = ContextLineage(**row["lineage"])
+            except Exception as e:
+                logger.warning(
+                    "lineage_parse_failed", context_id=context_id, error=str(e)
+                )
+
+        return Context(
+            id=row["context_id"],
+            content=row["content"],
+            lineage=lineage,
+            meta=row.get("meta", {}),
+            version=row.get("version", "v1"),
+        )
+
+    async def list_contexts(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        List contexts in a time range for debugging/audit.
+
+        Args:
+            start: Start of time range (inclusive)
+            end: End of time range (inclusive)
+            limit: Maximum number of contexts to return
+
+        Returns:
+            List of context summaries (without full content)
+        """
+        return await self.offline_store.list_contexts(start=start, end=end, limit=limit)
 
     async def invalidate_contexts_for_feature(self, feature_id: str) -> int:
         """

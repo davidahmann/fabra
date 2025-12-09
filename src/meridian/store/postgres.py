@@ -370,3 +370,140 @@ class PostgresOfflineStore(OfflineStore):
                 {"content": r.content, "metadata": r.metadata, "score": r.score}
                 for r in rows
             ]
+
+    async def _ensure_context_table(self) -> None:
+        """Create context_log table if it doesn't exist."""
+        async with self.engine.begin() as conn:  # type: ignore[no-untyped-call]
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS context_log (
+                        context_id VARCHAR(36) PRIMARY KEY,
+                        timestamp TIMESTAMPTZ NOT NULL,
+                        content TEXT NOT NULL,
+                        lineage JSONB NOT NULL,
+                        meta JSONB NOT NULL,
+                        version VARCHAR(10) DEFAULT 'v1'
+                    )
+                    """
+                )
+            )
+            # Create index for timestamp-based queries
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_context_log_timestamp ON context_log(timestamp)"
+                )
+            )
+
+    async def log_context(
+        self,
+        context_id: str,
+        timestamp: datetime,
+        content: str,
+        lineage: Dict[str, Any],
+        meta: Dict[str, Any],
+        version: str = "v1",
+    ) -> None:
+        """Persist context to Postgres for replay."""
+        await self._ensure_context_table()
+
+        lineage_json = json.dumps(lineage)
+        meta_json = json.dumps(meta)
+
+        async with self.engine.begin() as conn:  # type: ignore[no-untyped-call]
+            await conn.execute(
+                text(
+                    """
+                    INSERT INTO context_log (context_id, timestamp, content, lineage, meta, version)
+                    VALUES (:context_id, :timestamp, :content, :lineage, :meta, :version)
+                    ON CONFLICT (context_id) DO UPDATE SET
+                        timestamp = EXCLUDED.timestamp,
+                        content = EXCLUDED.content,
+                        lineage = EXCLUDED.lineage,
+                        meta = EXCLUDED.meta,
+                        version = EXCLUDED.version
+                    """
+                ),
+                {
+                    "context_id": context_id,
+                    "timestamp": timestamp,
+                    "content": content,
+                    "lineage": lineage_json,
+                    "meta": meta_json,
+                    "version": version,
+                },
+            )
+
+    async def get_context(self, context_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a context by ID."""
+        await self._ensure_context_table()
+
+        async with self.engine.connect() as conn:  # type: ignore[no-untyped-call]
+            result = await conn.execute(
+                text("SELECT * FROM context_log WHERE context_id = :context_id"),
+                {"context_id": context_id},
+            )
+            row = result.fetchone()
+            if row is None:
+                return None
+
+            return {
+                "context_id": row.context_id,
+                "timestamp": row.timestamp,
+                "content": row.content,
+                "lineage": row.lineage
+                if isinstance(row.lineage, dict)
+                else json.loads(row.lineage),
+                "meta": row.meta
+                if isinstance(row.meta, dict)
+                else json.loads(row.meta),
+                "version": row.version,
+            }
+
+    async def list_contexts(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """List contexts in time range."""
+        await self._ensure_context_table()
+
+        conditions = []
+        params: Dict[str, Any] = {"limit": limit}
+
+        if start:
+            conditions.append("timestamp >= :start")
+            params["start"] = start
+        if end:
+            conditions.append("timestamp <= :end")
+            params["end"] = end
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        query = f"""
+            SELECT context_id, timestamp, meta, version
+            FROM context_log
+            {where_clause}
+            ORDER BY timestamp DESC
+            LIMIT :limit
+        """  # nosec B608 - where_clause built from validated internal conditions
+
+        async with self.engine.connect() as conn:  # type: ignore[no-untyped-call]
+            result = await conn.execute(text(query), params)
+            rows = result.fetchall()
+
+            results = []
+            for row in rows:
+                meta = row.meta if isinstance(row.meta, dict) else json.loads(row.meta)
+                results.append(
+                    {
+                        "context_id": row.context_id,
+                        "timestamp": row.timestamp,
+                        "name": meta.get("name", "unknown"),
+                        "token_usage": meta.get("token_usage", 0),
+                        "freshness_status": meta.get("freshness_status", "unknown"),
+                        "version": row.version,
+                    }
+                )
+            return results

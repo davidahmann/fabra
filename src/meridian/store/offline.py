@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 import duckdb
 import pandas as pd
 import asyncio
@@ -38,6 +38,55 @@ class OfflineStore(ABC):
     ) -> Dict[str, Any]:
         """
         Retrieves feature values as they were at the specified timestamp.
+        """
+        pass
+
+    @abstractmethod
+    async def log_context(
+        self,
+        context_id: str,
+        timestamp: datetime,
+        content: str,
+        lineage: Dict[str, Any],
+        meta: Dict[str, Any],
+        version: str = "v1",
+    ) -> None:
+        """
+        Persists a context assembly for replay and audit.
+
+        Args:
+            context_id: UUIDv7 identifier for the context
+            timestamp: When the context was assembled
+            content: The full assembled context text
+            lineage: Serialized ContextLineage as dict
+            meta: Additional metadata
+            version: Schema version
+        """
+        pass
+
+    @abstractmethod
+    async def get_context(self, context_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves a historical context by ID.
+
+        Returns:
+            Dict with keys: context_id, timestamp, content, lineage, meta, version
+            Or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    async def list_contexts(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        Lists contexts in a time range for debugging.
+
+        Returns:
+            List of context summaries (without full content for efficiency)
         """
         pass
 
@@ -162,3 +211,158 @@ class DuckDBOfflineStore(OfflineStore):
             # Table missing likely
             logger.warning("historical_retrieval_failed", error=str(e))
             return {}
+
+    def _ensure_context_table(self) -> None:
+        """Create context_log table if it doesn't exist."""
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS context_log (
+                context_id VARCHAR PRIMARY KEY,
+                timestamp TIMESTAMP NOT NULL,
+                content TEXT NOT NULL,
+                lineage JSON NOT NULL,
+                meta JSON NOT NULL,
+                version VARCHAR DEFAULT 'v1'
+            )
+        """
+        )
+        # Create index for timestamp-based queries
+        try:
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_context_log_timestamp ON context_log(timestamp)"
+            )
+        except Exception:  # nosec B110 - Index may already exist, safe to ignore
+            pass
+
+    async def log_context(
+        self,
+        context_id: str,
+        timestamp: datetime,
+        content: str,
+        lineage: Dict[str, Any],
+        meta: Dict[str, Any],
+        version: str = "v1",
+    ) -> None:
+        """Persist context to DuckDB for replay."""
+        import json
+
+        self._ensure_context_table()
+
+        lineage_json = json.dumps(lineage)
+        meta_json = json.dumps(meta)
+        ts_str = timestamp.isoformat()
+
+        # Use parameterized query to prevent injection
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(
+                None,
+                lambda: self.conn.execute(
+                    """
+                    INSERT OR REPLACE INTO context_log
+                    (context_id, timestamp, content, lineage, meta, version)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    [context_id, ts_str, content, lineage_json, meta_json, version],
+                ),
+            )
+            logger.info("context_logged", context_id=context_id)
+        except Exception as e:
+            logger.error("context_log_failed", context_id=context_id, error=str(e))
+            raise
+
+    async def get_context(self, context_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a context by ID."""
+        import json
+
+        self._ensure_context_table()
+
+        loop = asyncio.get_running_loop()
+        try:
+            df = await loop.run_in_executor(
+                None,
+                lambda: self.conn.execute(
+                    "SELECT * FROM context_log WHERE context_id = ?", [context_id]
+                ).df(),
+            )
+            if df.empty:
+                return None
+
+            row = df.iloc[0]
+            return {
+                "context_id": row["context_id"],
+                "timestamp": row["timestamp"],
+                "content": row["content"],
+                "lineage": json.loads(row["lineage"])
+                if isinstance(row["lineage"], str)
+                else row["lineage"],
+                "meta": json.loads(row["meta"])
+                if isinstance(row["meta"], str)
+                else row["meta"],
+                "version": row["version"],
+            }
+        except Exception as e:
+            logger.error(
+                "context_retrieval_failed", context_id=context_id, error=str(e)
+            )
+            return None
+
+    async def list_contexts(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """List contexts in time range."""
+        import json
+
+        self._ensure_context_table()
+
+        # Build query with optional time filters
+        conditions = []
+        params: List[Any] = []
+
+        if start:
+            conditions.append("timestamp >= ?")
+            params.append(start.isoformat())
+        if end:
+            conditions.append("timestamp <= ?")
+            params.append(end.isoformat())
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
+
+        query = f"""
+            SELECT context_id, timestamp, meta, version
+            FROM context_log
+            {where_clause}
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """  # nosec B608 - where_clause built from validated internal conditions
+
+        loop = asyncio.get_running_loop()
+        try:
+            df = await loop.run_in_executor(
+                None, lambda: self.conn.execute(query, params).df()
+            )
+            results = []
+            for _, row in df.iterrows():
+                meta = (
+                    json.loads(row["meta"])
+                    if isinstance(row["meta"], str)
+                    else row["meta"]
+                )
+                results.append(
+                    {
+                        "context_id": row["context_id"],
+                        "timestamp": row["timestamp"],
+                        "name": meta.get("name", "unknown"),
+                        "token_usage": meta.get("token_usage", 0),
+                        "freshness_status": meta.get("freshness_status", "unknown"),
+                        "version": row["version"],
+                    }
+                )
+            return results
+        except Exception as e:
+            logger.error("context_list_failed", error=str(e))
+            return []

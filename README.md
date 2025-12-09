@@ -82,6 +82,14 @@ meridian serve features.py
 
 **That's it.** No infrastructure. No config files. Just Python.
 
+**Context Accountability (v1.4+):** Every context assembly is tracked with full lineage:
+
+```python
+ctx = await build_prompt("user_123", "How do I upgrade?")
+print(ctx.id)       # UUIDv7 identifier for replay
+print(ctx.lineage)  # Full audit trail: features, retrievers, freshness
+```
+
 ---
 
 ## Why Meridian?
@@ -138,6 +146,7 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - **Magic Retrievers:** `@retriever` auto-wires to your vector index
 - **Context Assembly:** Token budgets, priority truncation, explainability API
 - **Semantic Cache:** Cache expensive LLM calls and retrieval results
+- **Context Accountability:** Full lineage tracking, context replay, and audit trails for AI decisions
 
 ### For ML Engineers
 - **Hybrid Features:** Mix Python logic and SQL in the same pipeline
@@ -195,7 +204,8 @@ meridian deploy fly --name my-app
 - [x] **v1.0:** Core Feature Store (DuckDB, Postgres, Redis, FastAPI)
 - [x] **v1.2:** Context Store (pgvector, retrievers, token budgets)
 - [x] **v1.3:** UI, Magic Retrievers, One-Command Deploy
-- [ ] **v1.4:** Drift detection, RBAC, multi-region
+- [x] **v1.4:** Context Accountability (lineage tracking, context replay, audit trails)
+- [ ] **v1.5:** Drift detection, RBAC, multi-region
 
 ---
 

@@ -718,6 +718,254 @@ context_app = typer.Typer(help="Manage and inspect Context Store assemblies.")
 app.add_typer(context_app, name="context")
 
 
+@context_app.command(name="show")
+def context_show_cmd(
+    context_id: str = typer.Argument(..., help="The Context ID to retrieve"),
+    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
+    port: int = typer.Option(8000, help="Meridian server port"),
+    lineage: bool = typer.Option(
+        False, "--lineage", "-l", help="Show only lineage info"
+    ),
+) -> None:
+    """
+    Retrieve and display a historical context by ID.
+
+    Example:
+      meridian context show 01912345-6789-7abc-def0-123456789abc
+      meridian context show <context_id> --lineage
+    """
+    import urllib.request
+    import urllib.error
+    import json
+
+    endpoint = "lineage" if lineage else ""
+    url = f"http://{host}:{port}/v1/context/{context_id}" + (
+        f"/{endpoint}" if endpoint else ""
+    )
+    console.print(f"Fetching context [bold cyan]{context_id}[/bold cyan] from {url}...")
+
+    if not url.lower().startswith(("http://", "https://")):
+        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
+        raise typer.Exit(1)
+
+    try:
+        req = urllib.request.Request(url)
+        api_key = os.getenv("MERIDIAN_API_KEY")
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                console.print(
+                    f"[bold red]Error:[/bold red] Server returned {response.status}"
+                )
+                raise typer.Exit(1)
+
+            data = json.loads(response.read().decode())
+
+            # Pretty print with Rich
+            if lineage:
+                title = f"Lineage: {context_id}"
+            else:
+                title = f"Context: {context_id}"
+
+            console.print(
+                Panel(
+                    json.dumps(data, indent=2, default=str),
+                    title=title,
+                    border_style="green",
+                )
+            )
+
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            console.print(
+                f"[bold red]Not Found:[/bold red] Context '{context_id}' does not exist."
+            )
+        else:
+            console.print(f"[bold red]Error:[/bold red] HTTP {e.code}: {e.reason}")
+        raise typer.Exit(1)
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@context_app.command(name="list")
+def context_list_cmd(
+    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
+    port: int = typer.Option(8000, help="Meridian server port"),
+    limit: int = typer.Option(10, "--limit", "-n", help="Number of contexts to list"),
+    start: str = typer.Option(None, "--start", "-s", help="Start time (ISO format)"),
+    end: str = typer.Option(None, "--end", "-e", help="End time (ISO format)"),
+) -> None:
+    """
+    List recent contexts for debugging/audit.
+
+    Example:
+      meridian context list --limit 10
+      meridian context list --start 2024-01-01T00:00:00Z --end 2024-01-02T00:00:00Z
+    """
+    import urllib.request
+    import urllib.error
+    import json
+    from urllib.parse import urlencode
+    from typing import Dict, Union
+
+    params: Dict[str, Union[int, str]] = {"limit": limit}
+    if start:
+        params["start"] = start
+    if end:
+        params["end"] = end
+
+    url = f"http://{host}:{port}/v1/contexts?{urlencode(params)}"
+    console.print(f"Fetching contexts from {url}...")
+
+    if not url.lower().startswith(("http://", "https://")):
+        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
+        raise typer.Exit(1)
+
+    try:
+        req = urllib.request.Request(url)
+        api_key = os.getenv("MERIDIAN_API_KEY")
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                console.print(
+                    f"[bold red]Error:[/bold red] Server returned {response.status}"
+                )
+                raise typer.Exit(1)
+
+            data = json.loads(response.read().decode())
+
+            # Display as a table
+            table = Table(title=f"Contexts (limit={limit})", expand=True)
+            table.add_column("Context ID", style="cyan", no_wrap=True)
+            table.add_column("Timestamp", style="green")
+            table.add_column("Version", style="dim")
+            table.add_column("Content Preview", style="white", max_width=40)
+
+            contexts = data.get("contexts", [])
+            for ctx in contexts:
+                content_preview = (
+                    ctx.get("content", "")[:40] + "..."
+                    if len(ctx.get("content", "")) > 40
+                    else ctx.get("content", "")
+                )
+                table.add_row(
+                    ctx.get("context_id", ""),
+                    ctx.get("timestamp", ""),
+                    ctx.get("version", ""),
+                    content_preview,
+                )
+
+            console.print(table)
+            console.print(f"\n[dim]Total: {len(contexts)} contexts[/dim]")
+
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@context_app.command(name="export")
+def context_export_cmd(
+    context_id: str = typer.Argument(..., help="The Context ID to export"),
+    host: str = typer.Option("127.0.0.1", help="Meridian server host"),
+    port: int = typer.Option(8000, help="Meridian server port"),
+    format: str = typer.Option(
+        "json", "--format", "-f", help="Export format: json, yaml"
+    ),
+    output: str = typer.Option(
+        None, "--output", "-o", help="Output file (default: stdout)"
+    ),
+) -> None:
+    """
+    Export a context for audit/debugging.
+
+    Example:
+      meridian context export <context_id> --format json
+      meridian context export <context_id> --output context.json
+      meridian context export <context_id> --format yaml -o context.yaml
+    """
+    import urllib.request
+    import urllib.error
+    import json
+
+    url = f"http://{host}:{port}/v1/context/{context_id}"
+    console.print(f"Exporting context [bold cyan]{context_id}[/bold cyan]...")
+
+    if not url.lower().startswith(("http://", "https://")):
+        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
+        raise typer.Exit(1)
+
+    try:
+        req = urllib.request.Request(url)
+        api_key = os.getenv("MERIDIAN_API_KEY")
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                console.print(
+                    f"[bold red]Error:[/bold red] Server returned {response.status}"
+                )
+                raise typer.Exit(1)
+
+            data = json.loads(response.read().decode())
+
+            # Format output
+            if format == "yaml":
+                try:
+                    import yaml  # type: ignore[import-untyped]
+
+                    formatted = yaml.dump(
+                        data, default_flow_style=False, allow_unicode=True
+                    )
+                except ImportError:
+                    console.print(
+                        "[yellow]Warning:[/yellow] PyYAML not installed. Falling back to JSON."
+                    )
+                    formatted = json.dumps(data, indent=2, default=str)
+            else:
+                formatted = json.dumps(data, indent=2, default=str)
+
+            # Output to file or stdout
+            if output:
+                with open(output, "w") as f:
+                    f.write(formatted)
+                console.print(f"[green]Exported to {output}[/green]")
+            else:
+                console.print(formatted)
+
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            console.print(
+                f"[bold red]Not Found:[/bold red] Context '{context_id}' does not exist."
+            )
+        else:
+            console.print(f"[bold red]Error:[/bold red] HTTP {e.code}: {e.reason}")
+        raise typer.Exit(1)
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]meridian doctor[/bold] to check connectivity."
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
 @context_app.command(name="explain")
 def explain_cmd(
     ctx_id: str = typer.Argument(..., help="The Context ID to trace"),

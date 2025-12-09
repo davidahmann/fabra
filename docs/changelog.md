@@ -8,6 +8,40 @@ keywords: meridian changelog, release notes, feature store updates, context stor
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.0] - 2025-12-09
+
+### 🚀 Major Features: Context Accountability
+
+*   **Context Lineage Tracking:** Automatically track exactly what data was used in every context assembly.
+    *   `FeatureLineage` records which features were retrieved, their values, timestamps, and freshness.
+    *   `RetrieverLineage` records which retrievers were called, queries, result counts, and latencies.
+    *   `ContextLineage` provides full assembly statistics including items dropped, token usage, and cost.
+*   **UUIDv7 Context Identifiers:** Time-sortable unique IDs for efficient querying and debugging.
+*   **Context Replay API:** Retrieve any historical context by ID for debugging and compliance.
+    *   `store.get_context_at(context_id)` - Get full context with lineage.
+    *   `store.list_contexts(start, end, limit)` - List contexts in a time range.
+*   **REST API Endpoints:**
+    *   `GET /v1/contexts` - List contexts with time filtering.
+    *   `GET /v1/context/{id}` - Retrieve full context by ID.
+    *   `GET /v1/context/{id}/lineage` - Get just the lineage data.
+*   **CLI Commands:**
+    *   `meridian context show <id>` - Display context details.
+    *   `meridian context list` - List recent contexts.
+    *   `meridian context export <id>` - Export context for audit (JSON/YAML).
+
+### 🔧 Improvements
+
+*   `AssemblyTracker` uses contextvars for clean lineage tracking without API changes.
+*   Graceful degradation: context logging failures don't fail assembly.
+*   Context table auto-created in both DuckDB and Postgres offline stores.
+
+### 📚 Documentation
+
+*   Added [Context Accountability](context-accountability.md) guide.
+*   22 new unit tests for lineage models, tracking, and API endpoints.
+
+---
+
 ## [v1.2.0] - 2025-12-07
 
 ### 🚀 Major Features: Context Store for LLMs

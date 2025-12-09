@@ -11,13 +11,14 @@ from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
-from typing import List, Dict, Any, cast, AsyncGenerator
+from typing import List, Dict, Any, cast, AsyncGenerator, Optional
 import time
 import os
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from .core import FeatureStore
 from .models import ContextTrace
 import structlog
+from datetime import datetime
 import json
 import html
 
@@ -242,6 +243,85 @@ def create_app(store: FeatureStore) -> FastAPI:
     @app.get("/health")
     async def health() -> Dict[str, str]:
         return {"status": "ok"}
+
+    @v1_router.get("/contexts")
+    async def list_contexts(
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+        limit: int = 100,
+        api_key: str = Depends(get_api_key),
+    ) -> List[Dict[str, Any]]:
+        """
+        List contexts in a time range for debugging/audit.
+        Query params:
+            - start: ISO format timestamp (optional)
+            - end: ISO format timestamp (optional)
+            - limit: max results (default 100)
+        """
+        start_dt = datetime.fromisoformat(start) if start else None
+        end_dt = datetime.fromisoformat(end) if end else None
+
+        try:
+            contexts = await store.list_contexts(
+                start=start_dt, end=end_dt, limit=limit
+            )
+            return contexts
+        except Exception as e:
+            logger.error("list_contexts_failed", error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @v1_router.get("/context/{context_id}")
+    async def get_context_by_id(
+        context_id: str, api_key: str = Depends(get_api_key)
+    ) -> Dict[str, Any]:
+        """
+        Retrieve a historical context by ID for replay/audit.
+        Returns the full context including content and lineage.
+        """
+        try:
+            ctx = await store.get_context_at(context_id)
+            if not ctx:
+                raise HTTPException(status_code=404, detail="Context not found")
+
+            # Return serialized context
+            return {
+                "context_id": ctx.id,
+                "content": ctx.content,
+                "lineage": ctx.lineage.model_dump() if ctx.lineage else None,
+                "meta": ctx.meta,
+                "version": ctx.version,
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("get_context_failed", context_id=context_id, error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @v1_router.get("/context/{context_id}/lineage")
+    async def get_context_lineage(
+        context_id: str, api_key: str = Depends(get_api_key)
+    ) -> Dict[str, Any]:
+        """
+        Retrieve just the lineage for a context.
+        Shows what data sources were used in the context assembly.
+        """
+        try:
+            ctx = await store.get_context_at(context_id)
+            if not ctx:
+                raise HTTPException(status_code=404, detail="Context not found")
+
+            if not ctx.lineage:
+                return {"context_id": context_id, "lineage": None}
+
+            return {
+                "context_id": context_id,
+                "lineage": ctx.lineage.model_dump(),
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("get_lineage_failed", context_id=context_id, error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
 
     @v1_router.get("/context/{context_id}/explain", response_model=ContextTrace)
     async def explain_context(

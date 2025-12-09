@@ -1,19 +1,145 @@
 from __future__ import annotations
 import functools
 import structlog
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Literal
 from pydantic import BaseModel, Field
 import uuid6
 import hashlib
 import json
 from datetime import datetime, timezone, timedelta
+from contextvars import ContextVar
 from meridian.utils.tokens import TokenCounter, OpenAITokenCounter
 from meridian.utils.pricing import estimate_cost
-from meridian.models import ContextTrace
+from meridian.models import (
+    ContextTrace,
+    ContextLineage,
+    FeatureLineage,
+    RetrieverLineage,
+)
 from meridian.observability import ContextMetrics
 import time
 
+# Type for freshness status
+FreshnessStatus = Literal["guaranteed", "degraded", "unknown"]
+
 logger = structlog.get_logger()
+
+
+# Assembly Tracking using contextvars
+# This allows us to track feature/retriever calls within a @context decorated function
+_assembly_tracker: ContextVar[Optional["AssemblyTracker"]] = ContextVar(
+    "meridian_assembly_tracker", default=None
+)
+
+
+class AssemblyTracker:
+    """
+    Tracks feature and retriever usage during context assembly.
+    Used internally by the @context decorator to build lineage.
+    """
+
+    def __init__(self, context_id: str) -> None:
+        self.context_id = context_id
+        self.features: List[FeatureLineage] = []
+        self.retrievers: List[RetrieverLineage] = []
+        self.start_time = datetime.now(timezone.utc)
+
+    def record_feature(
+        self,
+        feature_name: str,
+        entity_id: str,
+        value: Any,
+        timestamp: datetime,
+        source: str,
+    ) -> None:
+        """Record a feature retrieval during assembly."""
+        freshness_ms = int(
+            (datetime.now(timezone.utc) - timestamp).total_seconds() * 1000
+        )
+        self.features.append(
+            FeatureLineage(
+                feature_name=feature_name,
+                entity_id=entity_id,
+                value=value,
+                timestamp=timestamp,
+                freshness_ms=freshness_ms,
+                source=source,  # type: ignore
+            )
+        )
+
+    def record_retriever(
+        self,
+        retriever_name: str,
+        query: str,
+        results_count: int,
+        latency_ms: float,
+        index_name: Optional[str] = None,
+    ) -> None:
+        """Record a retriever call during assembly."""
+        self.retrievers.append(
+            RetrieverLineage(
+                retriever_name=retriever_name,
+                query=query,
+                results_count=results_count,
+                latency_ms=latency_ms,
+                index_name=index_name,
+            )
+        )
+
+    def get_stalest_feature_ms(self) -> int:
+        """Return the age in ms of the oldest feature used."""
+        if not self.features:
+            return 0
+        return max(f.freshness_ms for f in self.features)
+
+
+def get_current_tracker() -> Optional[AssemblyTracker]:
+    """Get the current assembly tracker if within a @context call."""
+    return _assembly_tracker.get()
+
+
+def record_feature_usage(
+    feature_name: str,
+    entity_id: str,
+    value: Any,
+    timestamp: Optional[datetime] = None,
+    source: str = "compute",
+) -> None:
+    """
+    Record feature usage for lineage tracking.
+    Call this from get_feature/get_online_features to track usage.
+    """
+    tracker = _assembly_tracker.get()
+    if tracker:
+        tracker.record_feature(
+            feature_name=feature_name,
+            entity_id=entity_id,
+            value=value,
+            timestamp=timestamp or datetime.now(timezone.utc),
+            source=source,
+        )
+
+
+def record_retriever_usage(
+    retriever_name: str,
+    query: str,
+    results_count: int,
+    latency_ms: float,
+    index_name: Optional[str] = None,
+) -> None:
+    """
+    Record retriever usage for lineage tracking.
+    Call this from retriever execution to track usage.
+    """
+    tracker = _assembly_tracker.get()
+    if tracker:
+        tracker.record_retriever(
+            retriever_name=retriever_name,
+            query=query,
+            results_count=results_count,
+            latency_ms=latency_ms,
+            index_name=index_name,
+        )
 
 
 class ContextBudgetError(Exception):
@@ -42,6 +168,9 @@ class Context(BaseModel):
     meta: Dict[str, Any] = Field(
         default_factory=dict,
         description="Metadata including timestamp, source_ids, and freshness_status",
+    )
+    lineage: Optional[ContextLineage] = Field(
+        None, description="Full lineage tracking what data sources were used"
     )
     version: str = Field("v1", description="Schema version of this context")
 
@@ -199,6 +328,10 @@ def context(
             ctx_id = str(uuid6.uuid7())
             logger.info("context_assembly_start", context_id=ctx_id, name=context_name)
 
+            # 1.5 Create Assembly Tracker for lineage collection
+            tracker = AssemblyTracker(context_id=ctx_id)
+            tracker_token = _assembly_tracker.set(tracker)
+
             # 2. Execute
             start_time = time.time()
             try:
@@ -304,11 +437,11 @@ def context(
                 # Since we are in the re-compute block, this is guaranteed fresh *execution*.
                 # BUT if input sources were stale, is it "degraded"?
                 # Plan says: "Result includes stale_sources".
-                freshness_status = "guaranteed"
+                freshness_status: FreshnessStatus = "guaranteed"
                 if stale_sources:
                     freshness_status = "degraded"
 
-                # 4. Construct Context
+                # 4. Construct Context (lineage will be attached later if offline_store available)
                 ctx = Context(
                     id=ctx_id,
                     content=final_content,
@@ -324,6 +457,7 @@ def context(
                         if max_tokens
                         else False,
                     },
+                    lineage=None,
                     version=version,
                 )
 
@@ -402,6 +536,55 @@ def context(
                     except Exception as e:
                         logger.warning("context_trace_write_error", error=str(e))
 
+                # 7. Log context to offline store for replay/audit
+                # Get offline store from the FeatureStore if available
+                offline_store = None
+                if store and hasattr(store, "offline_store"):
+                    offline_store = store.offline_store
+
+                if offline_store and hasattr(offline_store, "log_context"):
+                    try:
+                        # Build full lineage using tracker data
+                        lineage_data = ContextLineage(
+                            context_id=ctx_id,
+                            timestamp=datetime.now(timezone.utc),
+                            # Include tracked features and retrievers
+                            features_used=tracker.features,
+                            retrievers_used=tracker.retrievers,
+                            # Assembly statistics
+                            items_provided=len(result)
+                            if isinstance(result, list)
+                            else 1,
+                            items_included=len(result) - dropped_items
+                            if isinstance(result, list)
+                            else 1,
+                            items_dropped=dropped_items,
+                            # Freshness tracking
+                            freshness_status=freshness_status,
+                            stalest_feature_ms=tracker.get_stalest_feature_ms(),
+                            # Token economics
+                            token_usage=token_usage,
+                            max_tokens=max_tokens,
+                            estimated_cost_usd=cost_usd,
+                        )
+
+                        # Attach lineage to context
+                        ctx.lineage = lineage_data
+
+                        await offline_store.log_context(
+                            context_id=ctx_id,
+                            timestamp=datetime.fromisoformat(ctx.meta["timestamp"]),
+                            content=final_content,
+                            lineage=lineage_data.model_dump(),
+                            meta=ctx.meta,
+                            version=version,
+                        )
+                    except Exception as e:
+                        # Log but don't fail assembly - graceful degradation
+                        logger.warning(
+                            "context_log_failed", context_id=ctx_id, error=str(e)
+                        )
+
                 logger.info(
                     "context_assembly_complete",
                     context_id=ctx_id,
@@ -413,6 +596,9 @@ def context(
             except Exception as e:
                 logger.error("context_assembly_failed", context_id=ctx_id, error=str(e))
                 raise e
+            finally:
+                # Always reset the tracker token
+                _assembly_tracker.reset(tracker_token)
 
         # Mark it so we can find it in the registry if needed
         wrapper._is_context = True  # type: ignore[attr-defined]
