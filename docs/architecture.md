@@ -83,14 +83,14 @@ Fabra supports a unique hybrid architecture:
 
 ```mermaid
 graph TD
-    User[User/Data Scientist] -->|Defines| Code[Feature Definitions]
-    Code -->|Registers| Registry[Feature Registry]
-    Registry -->|Configures| Scheduler
-    Scheduler -->|Triggers| Materialization[Materialization Job]
-    Materialization -->|Reads| Offline[Offline Store (DuckDB/Postgres)]
-    Materialization -->|Writes| Online[Online Store (Redis/Memory)]
-    API[FastAPI Server] -->|Reads| Online
-    API -->|Returns| Client[Client App]
+    User["User/Data Scientist"] -->|Defines| Code["Feature Definitions"]
+    Code -->|Registers| Registry["Feature Registry"]
+    Registry -->|Configures| Scheduler["Scheduler"]
+    Scheduler -->|Triggers| Materialization["Materialization Job"]
+    Materialization -->|Reads| Offline["Offline Store - DuckDB/Postgres"]
+    Materialization -->|Writes| Online["Online Store - Redis/Memory"]
+    API["FastAPI Server"] -->|Reads| Online
+    API -->|Returns| Client["Client App"]
 ```
 
 ## Context Store Architecture (New in v1.2.0)

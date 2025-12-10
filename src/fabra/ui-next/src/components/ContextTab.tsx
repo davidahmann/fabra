@@ -5,6 +5,7 @@ import type { ContextDefinition, ContextResult } from '@/types/api';
 import { assembleContext } from '@/lib/api';
 import ContextResultCard from './ContextResultCard';
 import JsonViewer from './JsonViewer';
+import LineagePanel from './LineagePanel';
 
 interface ContextTabProps {
   contexts: ContextDefinition[];
@@ -32,6 +33,7 @@ export default function ContextTab({ contexts }: ContextTabProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
+  const [showLineage, setShowLineage] = useState(true);
 
   const handleParamChange = (paramName: string, value: string) => {
     setParams((prev) => ({ ...prev, [paramName]: value }));
@@ -52,8 +54,16 @@ export default function ContextTab({ contexts }: ContextTabProps) {
 
   if (contexts.length === 0) {
     return (
-      <div className="bg-blue-500/10 border border-blue-500 rounded-lg p-4 text-blue-500">
-        No @context functions found in this file.
+      <div className="bg-blue-500/10 border border-blue-500 rounded-lg p-6 text-blue-400">
+        <div className="font-semibold mb-2">No @context functions found</div>
+        <p className="text-sm text-gray-400 mb-3">
+          This file doesn&apos;t define any context assemblies. To use the Context tab, add a
+          <code className="mx-1 px-1.5 py-0.5 bg-gray-800 rounded text-green-400">@context</code>
+          decorated function to your feature file.
+        </p>
+        <p className="text-xs text-gray-500">
+          Try: <code className="px-1.5 py-0.5 bg-gray-800 rounded">fabra ui examples/rag_chatbot.py</code>
+        </p>
       </div>
     );
   }
@@ -180,6 +190,53 @@ export default function ContextTab({ contexts }: ContextTabProps) {
       {result && (
         <>
           <ContextResultCard result={result} />
+
+          {/* Lineage Panel */}
+          {result.lineage && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowLineage(!showLineage)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-700/50 transition"
+              >
+                <span className="text-gray-200 font-medium flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  Lineage & Traceability
+                </span>
+                <svg
+                  className={`w-5 h-5 text-gray-400 transform transition-transform ${
+                    showLineage ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {showLineage && (
+                <div className="border-t border-gray-700 p-4">
+                  <LineagePanel lineage={result.lineage} />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Raw JSON Expander */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">

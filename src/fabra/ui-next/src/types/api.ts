@@ -33,6 +33,38 @@ export interface ContextParameter {
   required: boolean;
 }
 
+export interface FeatureLineage {
+  feature_name: string;
+  entity_id: string;
+  value: unknown;
+  timestamp: string;
+  freshness_ms: number;
+  source: 'cache' | 'compute' | 'fallback';
+}
+
+export interface RetrieverLineage {
+  retriever_name: string;
+  query: string;
+  results_count: number;
+  latency_ms: number;
+  index_name?: string;
+}
+
+export interface ContextLineage {
+  context_id: string;
+  timestamp: string;
+  features_used: FeatureLineage[];
+  retrievers_used: RetrieverLineage[];
+  items_provided: number;
+  items_included: number;
+  items_dropped: number;
+  freshness_status: 'guaranteed' | 'degraded' | 'unknown';
+  stalest_feature_ms: number;
+  token_usage: number;
+  max_tokens?: number;
+  estimated_cost_usd: number;
+}
+
 export interface ContextResult {
   id: string;
   items: ContextItem[];
@@ -42,6 +74,7 @@ export interface ContextResult {
     latency_ms?: number;
     freshness_status?: string;
   };
+  lineage?: ContextLineage;
 }
 
 export interface ContextItem {

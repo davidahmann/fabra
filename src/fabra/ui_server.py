@@ -24,9 +24,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://localhost:8501",
         "http://localhost:8502",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
         "http://127.0.0.1:8501",
         "http://127.0.0.1:8502",
     ],
@@ -108,10 +110,43 @@ class ContextResultMeta(BaseModel):
     freshness_status: Optional[str] = None
 
 
+class FeatureLineageResponse(BaseModel):
+    feature_name: str
+    entity_id: str
+    value: Any
+    timestamp: str
+    freshness_ms: int
+    source: str
+
+
+class RetrieverLineageResponse(BaseModel):
+    retriever_name: str
+    query: str
+    results_count: int
+    latency_ms: float
+    index_name: Optional[str] = None
+
+
+class ContextLineageResponse(BaseModel):
+    context_id: str
+    timestamp: str
+    features_used: List[FeatureLineageResponse]
+    retrievers_used: List[RetrieverLineageResponse]
+    items_provided: int
+    items_included: int
+    items_dropped: int
+    freshness_status: str
+    stalest_feature_ms: int
+    token_usage: int
+    max_tokens: Optional[int] = None
+    estimated_cost_usd: float
+
+
 class ContextResult(BaseModel):
     id: str
     items: List[ContextResultItem]
     meta: ContextResultMeta
+    lineage: Optional[ContextLineageResponse] = None
 
 
 # =============================================================================
@@ -325,10 +360,55 @@ async def assemble_context(context_name: str, params: Dict[str, str]) -> Context
             freshness_status=result.meta.get("freshness_status"),
         )
 
+        # Build lineage response if available
+        lineage_response = None
+        if hasattr(result, "lineage") and result.lineage:
+            lineage = result.lineage
+            features_used = [
+                FeatureLineageResponse(
+                    feature_name=f.feature_name,
+                    entity_id=f.entity_id,
+                    value=f.value,
+                    timestamp=f.timestamp.isoformat()
+                    if hasattr(f.timestamp, "isoformat")
+                    else str(f.timestamp),
+                    freshness_ms=f.freshness_ms,
+                    source=f.source,
+                )
+                for f in lineage.features_used
+            ]
+            retrievers_used = [
+                RetrieverLineageResponse(
+                    retriever_name=r.retriever_name,
+                    query=r.query,
+                    results_count=r.results_count,
+                    latency_ms=r.latency_ms,
+                    index_name=r.index_name,
+                )
+                for r in lineage.retrievers_used
+            ]
+            lineage_response = ContextLineageResponse(
+                context_id=lineage.context_id,
+                timestamp=lineage.timestamp.isoformat()
+                if hasattr(lineage.timestamp, "isoformat")
+                else str(lineage.timestamp),
+                features_used=features_used,
+                retrievers_used=retrievers_used,
+                items_provided=lineage.items_provided,
+                items_included=lineage.items_included,
+                items_dropped=lineage.items_dropped,
+                freshness_status=lineage.freshness_status,
+                stalest_feature_ms=lineage.stalest_feature_ms,
+                token_usage=lineage.token_usage,
+                max_tokens=lineage.max_tokens,
+                estimated_cost_usd=lineage.estimated_cost_usd,
+            )
+
         return ContextResult(
             id=result.id,
             items=items,
             meta=meta,
+            lineage=lineage_response,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

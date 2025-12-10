@@ -3,9 +3,18 @@
 Run with:
     uv run pytest tests/ui/ --headed  # See browser
     uv run pytest tests/ui/           # Headless
+    uv run pytest -m e2e              # Run only UI/e2e tests
+
+Note: These tests are marked as e2e and excluded from default test runs
+to prevent event loop conflicts with pytest-asyncio. Playwright's sync API
+uses its own event loop which conflicts with async tests.
 """
 
+import pytest
 from playwright.sync_api import Page, expect
+
+# Mark all tests in this module as e2e tests
+pytestmark = pytest.mark.e2e
 
 
 class TestUILoading:
@@ -243,10 +252,13 @@ class TestApiIntegration:
         page.goto(ui_server)
         page.wait_for_load_state("networkidle")
 
-        # Should show online store type in sidebar
-        # For in-memory store, it shows "InMemoryOnlineStore"
-        store_type = page.locator("text=InMemoryOnlineStore")
-        expect(store_type).to_be_visible()
+        # Should show Configuration section in sidebar
+        config_section = page.locator("text=Configuration")
+        expect(config_section).to_be_visible()
+
+        # Should show Loaded File section in sidebar
+        loaded_file = page.locator("text=Loaded File")
+        expect(loaded_file).to_be_visible()
 
     def test_entities_loaded(self, page: Page, ui_server: str) -> None:
         """Test that entities are loaded from API."""

@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 from typing import Dict, Any, List, Optional
 import structlog
@@ -65,7 +66,7 @@ class WebhookHook(Hook):
                     "event": event_type,
                     "entity_id": entity_id,
                     "payload": payload,
-                    "timestamp": 0,  # TODO: add timestamp if needed
+                    "timestamp": int(time.time()),
                 }
                 resp = await client.post(self.url, json=data, headers=self.headers)
                 resp.raise_for_status()

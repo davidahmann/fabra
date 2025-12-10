@@ -3,6 +3,9 @@
 Run with:
     uv run pytest tests/ui/ --headed  # See browser
     uv run pytest tests/ui/           # Headless
+
+Note: UI tests use Playwright which has its own event loop management.
+These tests are isolated from other async tests to prevent event loop pollution.
 """
 
 import pytest
@@ -11,7 +14,25 @@ import time
 import socket
 import os
 import signal
+import asyncio
 from typing import Generator
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reset_event_loop():
+    """Reset the event loop after UI tests to prevent pollution of subsequent tests."""
+    yield
+    # After UI tests complete, try to reset any loop state
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.stop()
+        if not loop.is_closed():
+            loop.close()
+    except Exception:
+        pass
+    # Force creation of a new event loop for subsequent tests
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 
 def is_port_in_use(port: int) -> bool:
