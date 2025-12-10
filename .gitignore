@@ -53,6 +53,8 @@ gtm/
 # Generated Artifacts
 *.html
 !docs-site/public/google*.html
+!docs-site/public/sitemap.xml
+!docs-site/public/robots.txt
 fixes.txt
 
 # Testing Artifacts
