@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { navigation, NavItem } from '@/lib/navigation';
+import SearchButton from './SearchButton';
 
 function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname();
@@ -53,12 +54,17 @@ export default function Sidebar() {
     <aside className="w-64 flex-shrink-0 hidden lg:block">
       <div className="sticky top-0 h-screen overflow-y-auto py-8 pr-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 px-3 mb-8">
+        <Link href="/" className="flex items-center gap-2 px-3 mb-6">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center">
             <span className="text-white font-bold text-sm">F</span>
           </div>
           <span className="text-xl font-bold text-white">Fabra</span>
         </Link>
+
+        {/* Search */}
+        <div className="px-3 mb-6">
+          <SearchButton />
+        </div>
 
         {/* Navigation */}
         <nav>

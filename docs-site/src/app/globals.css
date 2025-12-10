@@ -386,3 +386,17 @@ tr:hover {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ============================================
+   Search Modal - Ensure proper z-index stacking
+   ============================================ */
+
+/* Reset stacking context for code blocks when modal is open */
+body:has(.search-modal-overlay) pre {
+  position: static;
+}
+
+/* Ensure search modal overlay is always on top */
+.search-modal-overlay {
+  isolation: isolate;
+}
