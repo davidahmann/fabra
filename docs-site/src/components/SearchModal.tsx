@@ -10,6 +10,9 @@ interface SearchResult {
   similarity: number;
 }
 
+// Supabase URL - hardcoded as fallback since env vars can be flaky with static export
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://okwvjfgvqghnogymebla.supabase.co';
+
 const POPULAR_QUERIES = [
   // AI Engineers
   { query: 'How to build a RAG chatbot?', href: '/docs/rag-chatbot' },
@@ -80,8 +83,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
     try {
       // Call Supabase Edge Function for semantic search
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/search`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: searchQuery }),
