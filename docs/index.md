@@ -1,14 +1,14 @@
 ---
-title: "Fabra - Craft ML Features & LLM Context"
-description: "Unify RAG pipelines and ML features in a single Python decorator. From notebook to production in 30 seconds."
-keywords: context store, rag pipeline, llm memory, feature store, python features, mlops, pgvector, vector search
+title: "Fabra - Context Infrastructure for AI Applications"
+description: "What did your AI know when it decided? Context infrastructure that owns the write path. From notebook to production in 30 seconds."
+keywords: context infrastructure, context store, rag pipeline, llm memory, feature store, python features, mlops, pgvector, vector search, ai audit trail
 ---
 
-# Fabra: Craft ML Features & LLM Context
+# Fabra: Context Infrastructure for AI
 
-> **Unify RAG pipelines and ML features in a single Python decorator.**
+> **What did your AI know when it decided?**
 
-From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No YAML.
+Context infrastructure that owns the write path. From notebook to production in 30 seconds.
 
 [Get Started →](quickstart.md) | [Try in Browser →](https://fabraoss.vercel.app)
 
@@ -16,7 +16,7 @@ From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No
 
 | | |
 |:---|:---|
-| **What** | Unified Feature Store + Context Store for AI applications |
+| **What** | Context infrastructure for AI — we own the write path |
 | **Install** | `pip install "fabra-ai[ui]"` |
 | **Features** | `@feature` decorator for ML features |
 | **RAG** | `@retriever` + `@context` for LLM context assembly |
@@ -38,7 +38,7 @@ You're building an AI app. You need:
 
 Today, this means stitching together LangChain, Pinecone, a feature store, Redis, and prayer.
 
-**Fabra unifies all of this in one Python decorator.**
+**Fabra is context infrastructure that owns the write path.** We ingest, index, track freshness, and serve — not just query. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
 
 ---
 
@@ -96,9 +96,13 @@ fabra serve features.py
 | **Feature Serving** | Separate feature store | Same `@feature` decorator |
 | **Time to Production** | Weeks | 30 seconds |
 
-### One Decorator for Everything
+### We Own the Write Path
 
-Other tools make you choose: LangChain for RAG, Feast for features, a separate vector DB. Fabra gives you `@feature`, `@retriever`, and `@context` — all wired together, all in Python.
+LangChain and other frameworks are read-only wrappers — they query your data but don't manage it. Fabra ingests, indexes, and serves context data. This enables freshness guarantees, point-in-time replay, and full lineage that read-only tools cannot provide.
+
+### Infrastructure, Not a Framework
+
+Fabra is not an orchestration layer. It's the system of record for what your AI knows. Features, retrievers, and context assembly in one infrastructure layer with production reliability.
 
 ### Local-First, Production-Ready
 
@@ -157,11 +161,11 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - **Visual UI:** Dependency graphs, live metrics, context debugging
 - **[Unit Testing](unit_testing.md):** Test features in isolation
 
-### For Compliance & Debugging
+### For Compliance & Auditability
 
-- **[Context Accountability](context-accountability.md):** Full lineage tracking for AI decisions
-- **Context Replay:** Reproduce exactly what your AI knew at any point in time
-- **Audit Trails:** UUIDv7-based context IDs with complete data provenance
+- **[Context Accountability](context-accountability.md):** Full lineage tracking — every AI decision traces back through the data that informed it
+- **Context Replay:** Reproduce exactly what your AI knew at any point in time for regulators and auditors
+- **Audit Trails:** UUIDv7-based context IDs with complete data provenance for compliance requirements
 - **[Freshness SLAs](freshness-sla.md):** Ensure data freshness with configurable thresholds and degraded mode
 
 ---
@@ -218,16 +222,16 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 ## Quick FAQ
 
 **Q: What is Fabra?**
-A: Fabra is a unified Context Store (for LLMs) and Feature Store (for ML) that lets you define features and RAG pipelines with Python decorators. Zero infrastructure to start.
+A: Fabra is context infrastructure for AI applications. It answers the question: what did your AI know when it decided? We own the write path — ingesting, indexing, tracking freshness, and serving context data with full lineage.
+
+**Q: How is Fabra different from LangChain?**
+A: LangChain is a framework (orchestration). Fabra is infrastructure (storage + serving). LangChain queries external stores; Fabra owns the write path with freshness tracking, replay, and audit trails. You can use both together.
+
+**Q: How is Fabra different from Feast?**
+A: Fabra is a lightweight alternative with Python decorators instead of YAML, plus built-in context/RAG support (vector search, token budgeting, lineage) that Feast doesn't have.
 
 **Q: Do I need Kubernetes or Docker?**
 A: No. Fabra runs locally with DuckDB and in-memory cache. For production, set `FABRA_ENV=production` with Postgres and Redis.
-
-**Q: How is Fabra different from Feast?**
-A: Fabra is a lightweight alternative with Python decorators instead of YAML, plus built-in RAG/LLM support (vector search, token budgeting) that Feast doesn't have.
-
-**Q: How is Fabra different from LangChain?**
-A: LangChain is a framework for building LLM apps. Fabra is infrastructure—it provides vector storage, token budgets, and ML features that LangChain apps can use.
 
 **Q: What vector database does Fabra use?**
 A: pgvector (Postgres extension). Your vectors live alongside your relational data—no separate vector database required.
@@ -245,7 +249,7 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabr
   "name": "Fabra",
   "operatingSystem": "Linux, macOS, Windows",
   "applicationCategory": "DeveloperApplication",
-  "description": "Unify RAG pipelines and ML features in a single Python decorator. From notebook to production in 30 seconds.",
+  "description": "What did your AI know when it decided? Context infrastructure that owns the write path. From notebook to production in 30 seconds.",
   "offers": {
     "@type": "Offer",
     "price": "0",
@@ -253,13 +257,13 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabr
   },
   "url": "https://davidahmann.github.io/fabra/",
   "featureList": [
-    "Unified RAG and ML Feature Store",
+    "Context Infrastructure with Write Path Ownership",
+    "Full Lineage and Audit Trails",
     "Vector Search with pgvector",
     "Token Budget Management",
     "Point-in-Time Correctness",
-    "One-Command Cloud Deploy",
-    "Context Accountability (v1.4)",
-    "Freshness SLAs (v1.5)"
+    "Context Replay for Compliance",
+    "Freshness SLAs"
   ],
   "softwareVersion": "2.0.3",
   "license": "https://opensource.org/licenses/Apache-2.0"

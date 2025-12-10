@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Fabra</h1>
-  <h3>The Context Store for LLMs & ML Features</h3>
+  <h3>Context Infrastructure for AI Applications</h3>
 
   <p>
     <a href="https://pypi.org/project/fabra-ai/"><img src="https://img.shields.io/pypi/v/fabra-ai?color=blue&label=pypi" alt="PyPI version" /></a>
@@ -12,8 +12,8 @@
 
   <br />
 
-  <p><b>Unify RAG pipelines and ML features in a single Python decorator.</b></p>
-  <p><i>From notebook prototype to production in 30 seconds. No Kubernetes. No Spark. No YAML.</i></p>
+  <p><b>What did your AI know when it decided?</b></p>
+  <p><i>Context infrastructure that owns the write path. From notebook to production in 30 seconds.</i></p>
 
   <br />
 
@@ -36,7 +36,7 @@ You're building an AI app. You need:
 
 Today, this means stitching together LangChain, Pinecone, a feature store, Redis, and prayer.
 
-**Fabra unifies all of this in one Python decorator.**
+**Fabra is context infrastructure that owns the write path.** We ingest, index, track freshness, and serve — not just query. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
 
 ---
 
@@ -82,13 +82,15 @@ fabra serve features.py
 
 **That's it.** No infrastructure. No config files. Just Python.
 
-**Context Accountability (v1.4+):** Every context assembly is tracked with full lineage:
+**Context Accountability (v1.4+):** Full audit trail for compliance and debugging:
 
 ```python
 ctx = await build_prompt("user_123", "How do I upgrade?")
-print(ctx.id)       # UUIDv7 identifier for replay
-print(ctx.lineage)  # Full audit trail: features, retrievers, freshness
+print(ctx.id)       # UUIDv7 identifier — replay exactly what the AI knew
+print(ctx.lineage)  # Complete provenance: features, retrievers, freshness timestamps
 ```
+
+Every AI decision traces back through the data that informed it. Regulators and auditors see exactly what the model knew, when it knew it.
 
 **Freshness SLAs (v1.5+):** Ensure your AI decisions are based on fresh data:
 
@@ -117,11 +119,15 @@ print(ctx.meta["freshness_violations"])  # Details on any stale features
 
 ### What Makes Fabra Different
 
-**1. One Decorator for Everything**
+**1. We Own the Write Path**
 
-Other tools make you choose: LangChain for RAG, Feast for features, separate vector DB. Fabra gives you `@feature`, `@retriever`, and `@context` — all wired together, all in Python.
+LangChain and other frameworks are read-only wrappers — they query your data but don't manage it. Fabra ingests, indexes, and serves context data. This enables freshness guarantees, point-in-time replay, and full lineage that read-only tools cannot provide.
 
-**2. Local-First, Production-Ready**
+**2. Infrastructure, Not a Framework**
+
+Fabra is not an orchestration layer. It's the system of record for what your AI knows. Features, retrievers, and context assembly in one infrastructure layer with production reliability.
+
+**3. Local-First, Production-Ready**
 
 ```bash
 # Development (default): DuckDB + In-Memory
@@ -133,11 +139,11 @@ FABRA_ENV=production
 
 Same code. Zero changes. Just flip an environment variable.
 
-**3. Point-in-Time Correctness**
+**4. Point-in-Time Correctness**
 
 Training ML models? We use `ASOF JOIN` (DuckDB) and `LATERAL JOIN` (Postgres) to ensure your training data reflects the world exactly as it was — no data leakage, ever.
 
-**4. Token Budget Management**
+**5. Token Budget Management**
 
 ```python
 @context(store, max_tokens=4000)
@@ -172,6 +178,15 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 - **One-Command Deploy:** `fabra deploy fly|cloudrun|ecs|railway|render`
 - **Visual UI:** Dependency graphs, live metrics, context debugging
 - **Shell Completion:** `fabra --install-completion`
+
+### What Fabra Is NOT
+
+| We Are | We Are NOT |
+|:-------|:-----------|
+| **Infrastructure** — storage, indexing, serving | Framework — orchestration, chains, agents |
+| **Write path owner** — ingest, index, track freshness | Read-only wrapper — query external stores |
+| **Self-hosted first** — your data stays yours | Managed SaaS only |
+| **Context layer** — what the AI knows | Agent framework — how the AI acts |
 
 ---
 

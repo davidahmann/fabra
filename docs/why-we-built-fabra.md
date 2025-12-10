@@ -1,39 +1,42 @@
 ---
-title: "Why We Built Fabra: The Heroku for ML Features"
-description: "The story behind Fabra. Moving away from the 'Modern Data Tax' to a developer-first, infrastructure-light feature store."
-keywords: why fabra, feature store story, mlops tools, developer experience
+title: "Why We Built Fabra: Context Infrastructure That Owns the Write Path"
+description: "The story behind Fabra. Why we built context infrastructure that owns the write path — enabling lineage, replay, and auditability that read-only frameworks cannot provide."
+keywords: why fabra, context infrastructure, write path ownership, ai audit trail, mlops tools, developer experience
 ---
 
-# Why We Built Fabra: The "Heroku for ML Features"
+# Why We Built Fabra: Context Infrastructure That Owns the Write Path
 
-**Stop paying the infrastructure tax. Start shipping models.**
+**What did your AI know when it decided?**
 
-We built Fabra because we were tired.
+We built Fabra because we saw a gap in the market.
 
-Tired of spending 6 weeks setting up "Google-scale" infrastructure for Series B problems. Tired of debugging Docker networking instead of training models. Tired of writing YAML configurations for tools that should just be Python libraries.
+Every AI tool was either a framework (LangChain — orchestration but no data ownership) or a database (Pinecone — storage but no lineage). Nobody owned the write path. Nobody could answer: "What did the AI know when it made this decision?"
 
-We realized that for 99% of teams, the "Modern Data Stack" had become a **Modern Data Tax**.
+We realized that for regulated industries, this wasn't just inconvenient — it was a compliance nightmare.
 
-## The Epiphany: It's Just Python and SQL
+## The Epiphany: Own the Write Path
 
-Most feature stores are built for the 1% of companies (Uber, DoorDash, Airbnb) that have exabytes of data and thousands of engineers. They are built on Spark, Java, Kubernetes, and complex microservices.
+Most AI tooling is read-only. LangChain queries your vector DB. Orchestration frameworks call your APIs. They don't own your data.
 
-But what if you aren't Uber?
+This creates a fundamental problem: **you can't audit what you don't control.**
+
+When regulators ask "what did your AI know when it made this decision?", read-only wrappers have no answer. They never saw the data — they just passed it through.
 
 What if you just want to:
-1.  Write a Python function to calculate a feature.
-2.  Cache it in Redis so your API is fast.
-3.  Join it correctly for training data.
+1.  Ingest and index your context data.
+2.  Track what was retrieved and when.
+3.  Replay any AI decision for compliance or debugging.
 
-That shouldn't require a Platform Team. It should require `pip install`.
+That shouldn't require stitching together 5 different systems. It should require `pip install`.
 
 ## Enter Fabra
 
-Fabra is the **"Heroku for ML Features"**. It is designed to be:
+Fabra is **context infrastructure that owns the write path**. It is designed to be:
 
-*   **Developer-First:** No YAML. No DSLs. Just Python decorators (`@feature`).
+*   **Write Path Owner:** We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability.
+*   **Developer-First:** No YAML. No DSLs. Just Python decorators (`@feature`, `@context`).
 *   **Infrastructure-Light:** Runs on your laptop with DuckDB. Scales to production with standard Postgres and Redis.
-*   **Boring Technology:** We use the tools you already know and trust. No new distributed systems to learn.
+*   **Compliance-Ready:** Full audit trail for AI decisions. Know exactly what your AI knew when it decided.
 
 ## The Honest Comparison
 
@@ -50,16 +53,17 @@ If you are asking **"What is the best feature store for small teams?"** or **"Fa
 
 ## The "No-Magic" Promise
 
-Fabra doesn't do magic. It doesn't auto-scale your K8s cluster (because you don't need one). It doesn't auto-discover your data lineage (because you explicitly defined it).
+Fabra doesn't do magic. It doesn't auto-scale your K8s cluster (because you don't need one). It doesn't pretend to own data it only queries.
 
 It does three things extremely well:
-1.  **Hybrid Retrieval:** Mixes Python logic and SQL power seamlessly.
+
+1.  **Own the Write Path:** Ingest, index, track freshness, serve. Full lineage and replay.
 2.  **Reliable Serving:** Circuit breakers and fallbacks built-in.
 3.  **Instant Developer Experience:** From `pip install` to serving in under a minute.
 
 ## Join the Rebellion
 
-If you value **shipping** over **configuring**, Fabra is for you.
+If you value **owning your data** over **wrapping external stores**, Fabra is for you.
 
 [Get Started in 30 Seconds →](quickstart.md)
 
@@ -67,10 +71,10 @@ If you value **shipping** over **configuring**, Fabra is for you.
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "Why We Built Fabra: The Heroku for ML Features",
-  "description": "The story behind Fabra. Moving away from the 'Modern Data Tax' to a developer-first, infrastructure-light feature store.",
+  "headline": "Why We Built Fabra: Context Infrastructure That Owns the Write Path",
+  "description": "The story behind Fabra. Why we built context infrastructure that owns the write path — enabling lineage, replay, and auditability that read-only frameworks cannot provide.",
   "author": {"@type": "Organization", "name": "Fabra Team"},
-  "keywords": "why fabra, feature store story, mlops tools, developer experience",
+  "keywords": "why fabra, context infrastructure, write path ownership, ai audit trail, mlops tools",
   "articleSection": "About"
 }
 </script>

@@ -1,12 +1,12 @@
 ---
-title: "Fabra Architecture: Local-First Feature Store & Context Store Design | DuckDB + Redis + pgvector"
-description: "Deep dive into Fabra's architecture. Learn how it uses DuckDB for local development and scales to Postgres, Redis, and pgvector for production ML features and LLM context."
-keywords: feature store architecture, context store architecture, duckdb feature store, feature store design, postgres redis mlops, pgvector vector search, rag architecture, llm context assembly
+title: "Fabra Architecture: Context Infrastructure That Owns the Write Path"
+description: "Deep dive into Fabra's architecture. Learn how we own the write path for context data, enabling lineage, replay, and auditability that read-only frameworks cannot provide."
+keywords: context infrastructure architecture, write path ownership, duckdb feature store, feature store design, postgres redis mlops, pgvector vector search, ai audit trail, context lineage
 ---
 
 # Fabra Architecture: Boring Technology, Properly Applied
 
-> **TL;DR:** Fabra uses DuckDB and in-memory dicts for local development (no deps) and standard Postgres + Redis + pgvector for production. It guarantees point-in-time correctness for ML features and intelligent context assembly for LLMs—all without Kubernetes.
+> **TL;DR:** Fabra is context infrastructure that owns the write path. We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability that read-only wrappers cannot provide. DuckDB for local, Postgres + Redis + pgvector for production.
 
 ## Design Philosophy
 

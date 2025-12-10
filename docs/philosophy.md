@@ -1,12 +1,14 @@
 ---
-title: "Fabra Philosophy: The 95% Rule, Local-First Design, and Unified Context"
-description: "Why we built Fabra. The 'Heroku for ML Features' philosophy: prioritizing developer experience, simple infrastructure, and unified feature+context over Google-scale complexity."
-keywords: fabra philosophy, feature store design, context store design, mlops philosophy, local-first software, rag philosophy
+title: "Fabra Philosophy: Own the Write Path, Infrastructure Not Framework"
+description: "Why we built Fabra as context infrastructure that owns the write path. The philosophy behind prioritizing lineage, auditability, and compliance over orchestration complexity."
+keywords: fabra philosophy, context infrastructure, write path ownership, ai audit trail, context store design, mlops philosophy, local-first software
 ---
 
 # Philosophy & Trade-offs
 
-We built Fabra because we were tired of "Google-scale" tools for Series B problems. Here is the honest truth about why we made these design choices and who they are for.
+We built Fabra because we were tired of "Google-scale" tools for Series B problems — and because we saw a gap in the market for context infrastructure that actually owns the data lifecycle.
+
+Here is the honest truth about why we made these design choices and who they are for.
 
 ## The 95% Rule
 
@@ -40,6 +42,23 @@ dbt is fantastic for batch transformations. We love dbt. But dbt stops at the da
 *   **Fabra** serves **rows** (e.g., `user_id: 123`).
 
 If you only need features refreshed once a day, dbt is enough. But if you need to serve those features to a live API with <10ms latency, you need a serving layer. Fabra bridges that gap.
+
+## Why Own the Write Path?
+
+Most AI tooling is read-only. LangChain queries your vector DB. Orchestration frameworks call your APIs. They don't own your data.
+
+This creates a fundamental problem: **you can't audit what you don't control.**
+
+When regulators ask "what did your AI know when it made this decision?", read-only wrappers have no answer. They don't track freshness. They don't log what context was assembled. They don't enable replay.
+
+**Fabra owns the write path:**
+
+*   **Ingest:** We store your documents and features, not just query them.
+*   **Index:** We manage embeddings with freshness timestamps.
+*   **Track:** Every context assembly is logged with full lineage.
+*   **Replay:** Reproduce exactly what your AI knew at any point in time.
+
+This is the difference between infrastructure and a framework.
 
 ## Why Context Store?
 

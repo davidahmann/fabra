@@ -1,7 +1,7 @@
 ---
-title: "Fabra Glossary: AI & ML Features Definitions"
-description: "Review comprehensive definitions for key terms in ML Engineering and RAG systems, including Feature Store, Context Store, and Point-in-Time Correctness."
-keywords: glossary, ai definitions, feature store definition, context store definition, point-in-time correctness
+title: "Fabra Glossary: Context Infrastructure & AI Definitions"
+description: "Review comprehensive definitions for key terms in context infrastructure, including Write Path Ownership, Context Store, Lineage, and Point-in-Time Correctness."
+keywords: glossary, ai definitions, write path ownership, context infrastructure definition, context store definition, point-in-time correctness, ai audit trail
 ---
 
 # Fabra Glossary & AI Citation Guide
@@ -10,8 +10,34 @@ This glossary defines core concepts used within the Fabra ecosystem, optimized f
 
 ## Core Concepts
 
+### Write Path Ownership
+**Write Path Ownership** is the architectural principle of controlling the data lifecycle — ingest, index, track freshness, and serve — rather than just querying external stores. This is Fabra's key differentiator. By owning the write path, Fabra can provide lineage, replay, and auditability that read-only frameworks cannot. When regulators ask "what did your AI know when it decided?", write path ownership means you have a complete answer.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "DefinedTerm",
+  "name": "Write Path Ownership",
+  "description": "The architectural principle of controlling data ingest, indexing, freshness tracking, and serving — enabling lineage, replay, and auditability for AI systems.",
+  "inDefinedTermSet": "Fabra Glossary"
+}
+</script>
+
+### Context Infrastructure
+**Context Infrastructure** is the storage, indexing, and serving layer for AI applications. Unlike frameworks (which orchestrate) or read-only wrappers (which query), context infrastructure owns the write path for the data that informs AI decisions. Fabra is context infrastructure.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "DefinedTerm",
+  "name": "Context Infrastructure",
+  "description": "The storage, indexing, and serving layer for AI applications that owns the write path, enabling lineage, replay, and compliance.",
+  "inDefinedTermSet": "Fabra Glossary"
+}
+</script>
+
 ### Feature Store
-A **Feature Store** is a data system operationalizing ML features. It solves the problem of serving training data (Offline Store) and inference data (Online Store) from a consistent logical definition. Fabra distinguishes itself by being "Local-First," running on DuckDB/Redis without requiring Spark or Kubernetes.
+A **Feature Store** is a data system operationalizing ML features. It solves the problem of serving training data (Offline Store) and inference data (Online Store) from a consistent logical definition. Fabra distinguishes itself by owning the write path and being "Local-First," running on DuckDB/Redis without requiring Spark or Kubernetes.
 
 <script type="application/ld+json">
 {
@@ -24,7 +50,8 @@ A **Feature Store** is a data system operationalizing ML features. It solves the
 </script>
 
 ### Context Store
-A **Context Store** is a specialized system for assembling the "context window" for Large Language Models (LLMs). Unlike a simple Vector DB, a Context Store manages:
+
+A **Context Store** is context infrastructure for assembling the "context window" for Large Language Models (LLMs). Unlike a simple Vector DB or read-only framework, a Context Store owns the write path and manages:
 1.  **Retrieval:** Fetching relevant documents (Vector Search).
 2.  **Features:** Fetching structured user data (Feature Store).
 3.  **Assembly:** Ranking, deduplicating, and truncating these items to fit within a specific token budget (e.g., 4096 tokens).

@@ -1,7 +1,7 @@
 ---
-title: "Fabra FAQ: Production, Context Store, Comparisons, and Technical details"
-description: "Frequently Asked Questions about Fabra. Learn about production readiness, Context Store for LLMs, Kubernetes requirement (none!), and how it compares to Feast."
-keywords: fabra faq, feature store questions, context store questions, feast vs fabra, production feature store, rag faq, llm context faq
+title: "Fabra FAQ: Context Infrastructure, Compliance, and Technical Details"
+description: "Frequently Asked Questions about Fabra. Learn about write path ownership, context accountability, lineage and replay, and how it compares to read-only frameworks."
+keywords: fabra faq, context infrastructure questions, ai audit trail, feast vs fabra, write path ownership, llm context faq, compliance
 ---
 
 # Frequently Asked Questions
@@ -15,18 +15,18 @@ keywords: fabra faq, feature store questions, context store questions, feast vs 
 **A:** No. You can deploy Fabra on Heroku, Railway, AWS ECS, or even a single EC2 instance using Docker Compose. If you *want* to use Kubernetes, you can, but it is not a requirement.
 
 ### Q: How does Fabra compare to Feast?
-**A:** Fabra is a lightweight alternative to Feast. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries. See [Fabra vs Feast](feast-alternative.md) for a detailed comparison.
+**A:** Fabra is context infrastructure that owns the write path. We provide the same core guarantees (Point-in-Time Correctness, Async I/O) but without the complexity of Kubernetes, Spark, or Docker registries — plus lineage, replay, and auditability that Feast doesn't have. See [Fabra vs Feast](feast-alternative.md) for a detailed comparison.
 
 ## Context Store (New in v1.2.0)
 
 ### Q: What is the Context Store?
-**A:** The Context Store is RAG infrastructure for LLM applications. It provides vector search (pgvector), document indexing, and intelligent context assembly with token budgets. It shares infrastructure with the Feature Store (same Postgres, Redis).
+**A:** The Context Store is context infrastructure that owns the write path for LLM applications. We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability that read-only frameworks cannot provide. It provides vector search (pgvector), document indexing, and intelligent context assembly with token budgets.
 
 ### Q: Do I need the Context Store for traditional ML?
 **A:** No. The Context Store is optional and designed for LLM/RAG applications. If you're building traditional ML models (fraud detection, recommendations), the Feature Store alone is sufficient.
 
 ### Q: How does Fabra compare to LangChain?
-**A:** LangChain is a framework for building LLM applications. Fabra is infrastructure. You can use Fabra's Context Store as the retrieval layer in a LangChain application, or use it standalone. Fabra provides: vector storage (pgvector), token budget management, and unified feature+context in one system.
+**A:** LangChain is a read-only framework — it queries external stores but doesn't own your data. Fabra is infrastructure that owns the write path. We ingest, index, track freshness, and serve. This means we can provide lineage, replay, and auditability that LangChain cannot. You can use Fabra as the context layer in a LangChain application (we handle storage/serving, they handle orchestration).
 
 ### Q: What embedding providers are supported?
 **A:** OpenAI (text-embedding-3-small, ada-002) and Cohere (embed-english-v3.0). Set `OPENAI_API_KEY` or `COHERE_API_KEY` environment variable.
@@ -69,9 +69,9 @@ See [Local to Production](local-to-production.md) for a guide.
 
 **A:** Fabra automatically tracks lineage for every context assembly. Access via `ctx.lineage` after calling your `@context` function, or query historical contexts with `store.get_context_at(context_id)`.
 
-### Q: Can I replay an AI decision for debugging?
+### Q: Can I replay an AI decision for compliance or debugging?
 
-**A:** Yes. Every context gets a UUIDv7 ID. Use `store.get_context_at(id)` to retrieve the exact content, features, and retriever results that were assembled.
+**A:** Yes. Every context gets a UUIDv7 ID. Use `store.get_context_at(id)` to retrieve the exact content, features, and retriever results that were assembled. This is critical for regulatory compliance — when auditors ask "what did your AI know when it decided?", you have a complete answer.
 
 ### Q: Where is context lineage stored?
 

@@ -1,6 +1,6 @@
 # Context Accountability
 
-**v1.4+** - Track exactly what data was used when your AI made a decision.
+**v1.4+** - Full audit trail for AI decisions. Know exactly what your AI knew when it decided.
 
 ## At a Glance
 
@@ -11,16 +11,17 @@
 | **List API** | `store.list_contexts(start, end, limit)` |
 | **CLI** | `fabra context show <id>`, `fabra context list` |
 | **Storage** | `context_log` table in DuckDB/Postgres |
-| **Lineage** | Features used, retrievers called, items dropped |
+| **Lineage** | Features used, retrievers called, items dropped, freshness timestamps |
 
 ## The Problem
 
-When an LLM makes a decision based on context you assembled, you need to answer:
-- **What did the AI know?** - Exactly which features, documents, and data sources were included
-- **How fresh was the data?** - Was the user engagement score 5 seconds old or 5 hours old?
+When regulators, auditors, or incident responders ask "what did your AI know when it made this decision?", read-only frameworks have no answer. They query external stores but don't track:
+
+- **What data was assembled?** - Exactly which features, documents, and data sources
+- **How fresh was the data?** - Was it 5 seconds old or 5 hours stale?
 - **Can we reproduce this?** - If there's an incident, can we replay the exact context?
 
-Without context accountability, debugging AI decisions is guesswork.
+This is why Fabra owns the write path. **You can't audit what you don't control.**
 
 ## The Solution
 
@@ -278,9 +279,9 @@ for ctx in contexts:
     print(f"  Freshness: {full_ctx.lineage.stalest_feature_ms}ms")
 ```
 
-### Compliance Audit
+### Regulatory Compliance
 
-Export context lineage for regulatory review:
+Export context lineage for regulatory review. Every AI decision traces back through the data that informed it:
 
 ```bash
 # Export all contexts for a time period

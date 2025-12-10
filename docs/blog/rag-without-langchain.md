@@ -1,7 +1,7 @@
 ---
 title: "RAG Without LangChain: Building Retrieval Pipelines in Plain Python"
-description: "How to build production RAG applications without LangChain's complexity. Using Python decorators for vector search, context assembly, and token budgets."
-keywords: rag without langchain, langchain alternative, simple rag pipeline, python rag, vector search python, retrieval augmented generation
+description: "How to build production RAG applications without LangChain's complexity. Using Python decorators for vector search, context assembly, and token budgets. Own the write path."
+keywords: rag without langchain, langchain alternative, simple rag pipeline, python rag, vector search python, retrieval augmented generation, write path ownership
 date: 2025-01-13
 ---
 
@@ -12,13 +12,16 @@ LangChain promised to simplify LLM development. Instead, it gave us:
 - 47 different chain types
 - Nested abstractions you can't debug
 - Breaking changes every minor version
-- Documentation that doesn't match the code
+- No audit trail of what the AI knew when it decided
 
-You don't need LangChain to build RAG. You need three things:
+The fundamental problem? **LangChain is a read-only wrapper.** It queries your data but doesn't own it. When regulators ask "what did your AI know?", LangChain has no answer.
 
-1. **Vector search** — find relevant documents
-2. **Context assembly** — fit them in the token budget
-3. **LLM call** — get the response
+You don't need LangChain to build RAG. You need context infrastructure that owns the write path:
+
+1. **Ingest & index** — own your data
+2. **Vector search** — find relevant documents
+3. **Context assembly** — fit them in the token budget with full lineage
+4. **Replay** — answer "what did the AI know?" at any point in time
 
 That's it. Let's build it.
 

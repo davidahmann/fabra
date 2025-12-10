@@ -1,12 +1,12 @@
 ---
-title: "Context Store for LLMs: RAG Infrastructure | Fabra"
-description: "Build production RAG applications with Fabra's Context Store. Vector search with pgvector, automatic chunking, token budgets, and priority-based context assembly."
-keywords: context store, rag infrastructure, llm context, pgvector, vector search, token budget, context assembly, retrieval augmented generation
+title: "Context Store for LLMs: Infrastructure That Owns the Write Path | Fabra"
+description: "Build production RAG applications with Fabra's Context Store. We own the write path — ingesting, indexing, and tracking freshness — enabling lineage, replay, and auditability."
+keywords: context store, context infrastructure, llm context, pgvector, vector search, token budget, context assembly, ai audit trail, context lineage
 ---
 
 # Context Store for LLMs
 
-> **TL;DR:** Fabra's Context Store is RAG infrastructure that actually works. Index documents, search with pgvector, and assemble context with token budgets—all with Python decorators.
+> **TL;DR:** Fabra's Context Store is context infrastructure that owns the write path. We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability that read-only frameworks cannot provide.
 
 ## Why Context Store?
 
@@ -16,8 +16,9 @@ Building LLM applications requires more than just features. You need:
 2. **Vector Search:** Find semantically relevant content.
 3. **Context Assembly:** Combine retrieved docs with user data under token limits.
 4. **Freshness:** Update context when documents change.
+5. **Auditability:** Know exactly what your AI knew when it decided.
 
-Most teams cobble together Pinecone + LangChain + custom glue code. Fabra provides all of this in one unified system that shares infrastructure with your Feature Store.
+Most teams cobble together Pinecone + LangChain + custom glue code. These are read-only wrappers — they query external stores but don't own the data lifecycle. Fabra owns the write path, enabling lineage, replay, and compliance that read-only tools cannot provide.
 
 ## Quick Example
 

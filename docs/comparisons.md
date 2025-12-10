@@ -1,12 +1,12 @@
 ---
-title: "Fabra vs Feast vs Tecton vs LangChain | Feature Store & RAG Comparison 2025"
-description: "Compare Fabra with Feast, Tecton, LangChain, and Pinecone. Find the best feature store and RAG infrastructure for your team. Updated for 2025."
-keywords: fabra vs feast, tecton alternative, feature store comparison, langchain alternative, rag infrastructure, mlops tools, vector database comparison, context store, llm infrastructure
+title: "Fabra vs Feast vs Tecton vs LangChain | Context Infrastructure Comparison 2025"
+description: "Compare Fabra with Feast, Tecton, LangChain, and Pinecone. Why write path ownership matters for AI infrastructure. Updated for 2025."
+keywords: fabra vs feast, tecton alternative, feature store comparison, langchain alternative, context infrastructure, mlops tools, vector database comparison, ai audit trail, write path ownership
 ---
 
-# Feature Store & RAG Comparison: Fabra vs The World
+# Context Infrastructure Comparison: Fabra vs The World
 
-> **TL;DR:** Fabra is the only tool that unifies **Feature Store** (for ML) and **Context Store** (for LLMs) in one system. No Kubernetes required.
+> **TL;DR:** Fabra is context infrastructure that owns the write path. We ingest, index, track freshness, and serve — enabling lineage, replay, and auditability that read-only frameworks cannot provide.
 
 ## Quick Comparison Table
 
@@ -92,13 +92,14 @@ def click_count(user_id: str) -> int:
 
 - Abstractions for chains, agents, tools
 - Integrations with 100+ services
-- Steep learning curve
+- Read-only wrappers over external stores
 
 **Fabra** is infrastructure, not a framework:
 
+- We **own the write path** — ingest, index, track freshness
+- Full lineage and replay for compliance
 - Vector storage (pgvector) built-in
 - Token budget management (`@context(max_tokens=4000)`)
-- Unified features + context in one system
 
 ```python
 # LangChain: Multiple imports, chain setup, retriever config...
@@ -117,8 +118,8 @@ async def build_prompt(user_id: str, query: str):
     ]
 ```
 
-**When to use LangChain:** You need complex agent workflows.
-**When to use Fabra:** You need reliable RAG infrastructure.
+**When to use LangChain:** You need complex agent workflows and orchestration.
+**When to use Fabra:** You need context infrastructure with lineage, replay, and compliance. (You can use both together — Fabra for storage/serving, LangChain for orchestration.)
 
 ---
 
@@ -127,18 +128,18 @@ async def build_prompt(user_id: str, query: str):
 **Pinecone** is a managed vector database. It's great for vector search, but:
 
 - SaaS only (no self-hosting)
+- No lineage or replay — you can't audit what context was assembled
 - No ML features integration
 - No token budgeting
-- Requires custom glue code for RAG
 
 **Fabra** uses pgvector (runs in your existing Postgres):
 
 - Self-hosted or managed Postgres
-- Unified with Feature Store
+- We **own the write path** — full lineage and context replay
 - Built-in token budgets and caching
 
 **When to use Pinecone:** You only need vector search and prefer SaaS.
-**When to use Fabra:** You want vector search + ML features + token budgets in one system.
+**When to use Fabra:** You need context infrastructure with auditability, lineage, and ML features.
 
 ---
 
