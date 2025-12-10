@@ -12,8 +12,8 @@
 
   <br />
 
-  <p><b>What did your AI know when it decided?</b></p>
-  <p><i>Context infrastructure that owns the write path. From notebook to production in 30 seconds.</i></p>
+  <p><b>Know what your AI knew.</b></p>
+  <p><i>The audit trail for AI decisions. From notebook to production in 30 seconds.</i></p>
 
   <br />
 
@@ -36,7 +36,9 @@ You're building an AI app. You need:
 
 Today, this means stitching together LangChain, Pinecone, a feature store, Redis, and prayer.
 
-**Fabra is context infrastructure that owns the write path.** We ingest, index, track freshness, and serve — not just query. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
+**Fabra stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision.**
+
+This is "write path ownership": we ingest and manage your context data, not just query it. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
 
 ---
 
@@ -183,10 +185,10 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 
 | We Are | We Are NOT |
 |:-------|:-----------|
-| **Infrastructure** — storage, indexing, serving | Framework — orchestration, chains, agents |
+| **Audit-ready** — replay any AI decision | Black box — hope your logs are enough |
 | **Write path owner** — ingest, index, track freshness | Read-only wrapper — query external stores |
+| **Infrastructure** — storage, indexing, serving | Framework — orchestration, chains, agents |
 | **Self-hosted first** — your data stays yours | Managed SaaS only |
-| **Context layer** — what the AI knows | Agent framework — how the AI acts |
 
 ---
 

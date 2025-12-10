@@ -1,14 +1,14 @@
 ---
-title: "Fabra - Context Infrastructure for AI Applications"
-description: "What did your AI know when it decided? Context infrastructure that owns the write path. From notebook to production in 30 seconds."
+title: "Fabra - The Audit Trail for AI Decisions"
+description: "Know what your AI knew. Fabra stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision."
 keywords: context infrastructure, context store, rag pipeline, llm memory, feature store, python features, mlops, pgvector, vector search, ai audit trail
 ---
 
-# Fabra: Context Infrastructure for AI
+# Fabra: The Audit Trail for AI Decisions
 
-> **What did your AI know when it decided?**
+> **Know what your AI knew.**
 
-Context infrastructure that owns the write path. From notebook to production in 30 seconds.
+Fabra stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision. From notebook to production in 30 seconds.
 
 [Get Started →](quickstart.md) | [Try in Browser →](https://fabraoss.vercel.app)
 
@@ -16,7 +16,7 @@ Context infrastructure that owns the write path. From notebook to production in 
 
 | | |
 |:---|:---|
-| **What** | Context infrastructure for AI — we own the write path |
+| **What** | The audit trail for AI decisions — we own the write path |
 | **Install** | `pip install "fabra-ai[ui]"` |
 | **Features** | `@feature` decorator for ML features |
 | **RAG** | `@retriever` + `@context` for LLM context assembly |
@@ -38,7 +38,9 @@ You're building an AI app. You need:
 
 Today, this means stitching together LangChain, Pinecone, a feature store, Redis, and prayer.
 
-**Fabra is context infrastructure that owns the write path.** We ingest, index, track freshness, and serve — not just query. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
+**Fabra stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision.**
+
+This is "write path ownership": we ingest and manage your context data, not just query it. This enables replay, lineage, and auditability that read-only wrappers cannot provide.
 
 ---
 
@@ -222,7 +224,7 @@ Automatically assembles context that fits your LLM's window. Priority-based trun
 ## Quick FAQ
 
 **Q: What is Fabra?**
-A: Fabra is context infrastructure for AI applications. It answers the question: what did your AI know when it decided? We own the write path — ingesting, indexing, tracking freshness, and serving context data with full lineage.
+A: Fabra is the audit trail for AI decisions. It stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision. We call this "write path ownership": we manage your context data, not just query it.
 
 **Q: How is Fabra different from LangChain?**
 A: LangChain is a framework (orchestration). Fabra is infrastructure (storage + serving). LangChain queries external stores; Fabra owns the write path with freshness tracking, replay, and audit trails. You can use both together.
@@ -249,7 +251,7 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabr
   "name": "Fabra",
   "operatingSystem": "Linux, macOS, Windows",
   "applicationCategory": "DeveloperApplication",
-  "description": "What did your AI know when it decided? Context infrastructure that owns the write path. From notebook to production in 30 seconds.",
+  "description": "Know what your AI knew. Fabra stores, indexes, and serves the data your AI uses — and tracks exactly what was retrieved for every decision.",
   "offers": {
     "@type": "Offer",
     "price": "0",
