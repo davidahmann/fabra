@@ -94,6 +94,7 @@ exclude = [
     "examples/",
     "playground/",
     "tests/",
+    "scripts/",
 ]
 
 [[tool.mypy.overrides]]
