@@ -91,13 +91,14 @@ class TestDemoFeaturesExample:
         assert spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
-        sys.modules["demo_features_test"] = module
+        # Must use the same name as the spec for Python 3.9 get_type_hints compatibility
+        sys.modules["demo_features"] = module
 
         # Should not raise any exceptions
         spec.loader.exec_module(module)
 
         # Cleanup
-        del sys.modules["demo_features_test"]
+        del sys.modules["demo_features"]
 
     def test_demo_features_has_store(self, demo_features_path: Path) -> None:
         """Test that demo_features.py defines a FeatureStore."""
@@ -110,6 +111,7 @@ class TestDemoFeaturesExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_features"] = module
         spec.loader.exec_module(module)
 
         from fabra.core import FeatureStore
@@ -137,6 +139,7 @@ class TestDemoFeaturesExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_features"] = module
         spec.loader.exec_module(module)
 
         # Test determinism - same input should give same output
@@ -160,6 +163,7 @@ class TestDemoFeaturesExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_features"] = module
         spec.loader.exec_module(module)
 
         result1 = module.user_tier("user_123")
@@ -196,13 +200,14 @@ class TestDemoContextExample:
         assert spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
-        sys.modules["demo_context_test"] = module
+        # Must use the same name as the spec for Python 3.9 get_type_hints compatibility
+        sys.modules["demo_context"] = module
 
         # Should not raise any exceptions
         spec.loader.exec_module(module)
 
         # Cleanup
-        del sys.modules["demo_context_test"]
+        del sys.modules["demo_context"]
 
     def test_demo_context_has_store(self, demo_context_path: Path) -> None:
         """Test that demo_context.py defines a FeatureStore."""
@@ -213,6 +218,7 @@ class TestDemoContextExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_context"] = module
         spec.loader.exec_module(module)
 
         from fabra.core import FeatureStore
@@ -235,6 +241,7 @@ class TestDemoContextExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_context"] = module
         spec.loader.exec_module(module)
 
         # Check for search_docs function
@@ -254,6 +261,7 @@ class TestDemoContextExample:
         assert spec is not None and spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["demo_context"] = module
         spec.loader.exec_module(module)
 
         # Should work without OPENAI_API_KEY or any other API key
