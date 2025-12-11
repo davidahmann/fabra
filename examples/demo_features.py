@@ -13,7 +13,6 @@ Expected Response:
     {"value": 87.5, "freshness_ms": 0, "served_from": "online"}
 """
 
-import hashlib
 from datetime import timedelta
 
 from fabra.core import FeatureStore, entity, feature
@@ -39,7 +38,8 @@ def user_engagement(user_id: str) -> float:
 
     This is a deterministic feature - same user_id always returns same score.
     """
-    h = int(hashlib.md5(user_id.encode()).hexdigest()[:8], 16)  # nosec
+    # Use built-in hash for deterministic demo values (not cryptographic)
+    h = abs(hash(user_id + "engagement"))
     return round((h % 10000) / 100, 2)
 
 

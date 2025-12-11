@@ -197,10 +197,10 @@ fabra context diff <a> <b>   # Compare two contexts
 fabra context list           # List recent contexts
 fabra context export <id>    # Export for audit
 fabra deploy fly|railway     # Generate deployment config
-fabra ui features.py         # Launch the dashboard (requires [ui] extra)
+fabra ui features.py         # Launch the dashboard (requires Node.js)
 ```
 
-> **Note:** `fabra ui` requires `pip install "fabra-ai[ui]"` for Streamlit dependencies.
+> **Note:** `fabra ui` requires Node.js. Run `npm install` in `src/fabra/ui-next/` if dependencies aren't installed.
 
 ---
 

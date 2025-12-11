@@ -1,15 +1,15 @@
 from unittest.mock import patch
 from typer.testing import CliRunner
 from fabra.cli import app
+from fabra import __version__
 
 runner = CliRunner()
 
 
 def test_version() -> None:
-    with patch("importlib.metadata.version", return_value="1.2.3"):
-        result = runner.invoke(app, ["version"])
-        assert result.exit_code == 0
-        assert "Fabra v1.2.3" in result.stdout
+    result = runner.invoke(app, ["version"])
+    assert result.exit_code == 0
+    assert f"Fabra v{__version__}" in result.stdout
 
 
 def test_doctor_cmd() -> None:

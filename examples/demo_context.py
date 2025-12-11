@@ -31,7 +31,6 @@ Expected Response:
     }
 """
 
-import hashlib
 from datetime import timedelta
 from typing import List
 
@@ -66,7 +65,8 @@ def user_tier(user_id: str) -> str:
 @feature(entity=User, refresh=timedelta(minutes=5))
 def user_engagement_score(user_id: str) -> float:
     """Engagement score (0-100) based on user ID hash."""
-    h = int(hashlib.md5(user_id.encode()).hexdigest()[:8], 16)  # nosec
+    # Use built-in hash for deterministic demo values (not cryptographic)
+    h = abs(hash(user_id + "engagement"))
     return round((h % 10000) / 100, 2)
 
 

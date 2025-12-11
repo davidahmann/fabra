@@ -231,7 +231,6 @@ print("\\n✨ Demo complete!")
 
 from dataclasses import dataclass
 from typing import List, Dict, Optional
-import hashlib
 import random
 
 # Simulated vector store
@@ -277,7 +276,8 @@ class RetrieverCache:
         self.misses = 0
 
     def _hash_query(self, query: str, top_k: int) -> str:
-        return hashlib.md5(f"{query}:{top_k}".encode()).hexdigest()
+        # Simple hash for cache key (not cryptographic)
+        return f"{hash(query)}:{top_k}"
 
     def get(self, query: str, top_k: int) -> Optional[List[dict]]:
         key = self._hash_query(query, top_k)

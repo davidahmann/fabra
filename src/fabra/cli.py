@@ -438,17 +438,13 @@ This is a generated demo project.
 
 
 @app.command(name="version")
-def version() -> None:
+def version_cmd() -> None:
     """
     Prints the Fabra version.
     """
-    try:
-        from importlib.metadata import version
+    from fabra import __version__
 
-        v = version("fabra")
-    except Exception:
-        v = "unknown"
-    console.print(f"Fabra v{v}")
+    console.print(f"Fabra v{__version__}")
 
 
 @app.command(name="serve")
@@ -958,22 +954,20 @@ def context_list_cmd(
             # Display as a table
             table = Table(title=f"Contexts (limit={limit})", expand=True)
             table.add_column("Context ID", style="cyan", no_wrap=True)
+            table.add_column("Name", style="magenta")
             table.add_column("Timestamp", style="green")
-            table.add_column("Version", style="dim")
-            table.add_column("Content Preview", style="white", max_width=40)
+            table.add_column("Tokens", style="yellow")
+            table.add_column("Freshness", style="dim")
 
-            contexts = data.get("contexts", [])
+            # API returns a list directly, not a dict with "contexts" key
+            contexts = data if isinstance(data, list) else data.get("contexts", [])
             for ctx in contexts:
-                content_preview = (
-                    ctx.get("content", "")[:40] + "..."
-                    if len(ctx.get("content", "")) > 40
-                    else ctx.get("content", "")
-                )
                 table.add_row(
                     ctx.get("context_id", ""),
+                    ctx.get("name", ""),
                     ctx.get("timestamp", ""),
-                    ctx.get("version", ""),
-                    content_preview,
+                    str(ctx.get("token_usage", "")),
+                    ctx.get("freshness_status", ""),
                 )
 
             console.print(table)

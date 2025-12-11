@@ -17,7 +17,7 @@ Fabra stores, indexes, and serves the data your AI uses — and tracks exactly w
 | | |
 |:---|:---|
 | **What** | Context infrastructure — we own the write path |
-| **Install** | `pip install "fabra-ai[ui]"` |
+| **Install** | `pip install fabra-ai` |
 | **Features** | `@feature` decorator for ML features |
 | **RAG** | `@retriever` + `@context` for LLM context assembly |
 | **Vector DB** | pgvector (Postgres extension) |
@@ -57,7 +57,7 @@ That's it. Server starts, makes a test request, shows you the result. No Docker.
 ### Build Your Own
 
 ```bash
-pip install "fabra-ai[ui]"
+pip install fabra-ai
 ```
 
 ```python
@@ -304,7 +304,7 @@ We love contributions! See [CONTRIBUTING.md](https://github.com/davidahmann/fabr
     "Context Replay for Compliance",
     "Freshness SLAs"
   ],
-  "softwareVersion": "2.0.4",
+  "softwareVersion": "2.0.6",
   "license": "https://opensource.org/licenses/Apache-2.0"
 }
 </script>

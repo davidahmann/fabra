@@ -33,12 +33,16 @@ import structlog
 logger = structlog.get_logger()
 
 class AuditLogHook(Hook):
-    async def before_feature_retrieval(self, entity_id: str, feature_names: List[str]) -> None:
-        logger.info("audit_access", user="system", entity=entity_id, features=feature_names)
+    async def before_feature_retrieval(
+        self, entity_name: str, entity_id: str, features: List[str]
+    ) -> None:
+        logger.info("audit_access", user="system", entity=entity_name, entity_id=entity_id, features=features)
 
-    async def after_feature_retrieval(self, entity_id: str, features: Dict[str, Any]) -> None:
+    async def after_feature_retrieval(
+        self, entity_name: str, entity_id: str, features: List[str], result: Dict[str, Any]
+    ) -> None:
         # Inspect values
-        for k, v in features.items():
+        for k, v in result.items():
             if v is None:
                 logger.warning("null_feature_detected", feature=k, entity=entity_id)
 
