@@ -204,6 +204,28 @@ fabra ui features.py         # Launch the dashboard (requires [ui] extra)
 
 ---
 
+## How Fabra Fits in Your Stack
+
+Fabra is **not** a replacement for:
+
+| Tool | Purpose | Relationship to Fabra |
+|:-----|:--------|:---------------------|
+| **Airflow / Dagster** | Batch workflow orchestration | Use for pipelines that *feed* Fabra |
+| **MLflow / W&B** | Model training & experiment tracking | Use for training; Fabra handles inference-time context |
+| **LangChain / LlamaIndex** | LLM orchestration & chains | Use for orchestration; Fabra provides the data layer |
+
+Fabra **replaces or complements**:
+
+| Tool | Fabra Advantage |
+|:-----|:----------------|
+| **Feast** | Simpler setup, built-in context assembly |
+| **Custom feature serving** | Production-ready out of the box |
+| **Ad-hoc RAG pipelines** | Lineage, freshness SLAs, token budgets |
+
+> **See [full comparison guide](docs/comparisons.md)** for detailed breakdowns vs Feast, Tecton, LangChain, and Pinecone.
+
+---
+
 ## Honest Comparison
 
 ### vs Feast
@@ -227,6 +249,8 @@ fabra ui features.py         # Launch the dashboard (requires [ui] extra)
 | Token management | DIY | Built-in budgets |
 
 **Choose LangChain if:** You need agent chains and don't need compliance.
+
+> **Note:** You can use Fabra + LangChain together — Fabra for storage/serving, LangChain for orchestration.
 
 ---
 

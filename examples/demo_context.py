@@ -282,7 +282,7 @@ async def support_context(user_id: str, issue: str) -> List[ContextItem]:
 
 async def _seed_demo_data() -> None:
     """Pre-seed the online store with demo data."""
-    demo_users = ["user_123", "user_456", "alice", "bob"]
+    demo_users = ["user_123", "user_456", "user_789", "alice", "bob"]
 
     for uid in demo_users:
         features = {

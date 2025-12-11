@@ -257,8 +257,16 @@ class DuckDBOfflineStore(OfflineStore):
 
         self._ensure_context_table()
 
-        lineage_json = json.dumps(lineage)
-        meta_json = json.dumps(meta)
+        def json_serializer(obj: Any) -> str:
+            """Handle datetime and other non-serializable types."""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(
+                f"Object of type {type(obj).__name__} is not JSON serializable"
+            )
+
+        lineage_json = json.dumps(lineage, default=json_serializer)
+        meta_json = json.dumps(meta, default=json_serializer)
         ts_str = timestamp.isoformat()
 
         # Use parameterized query to prevent injection

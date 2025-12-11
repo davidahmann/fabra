@@ -407,8 +407,16 @@ class PostgresOfflineStore(OfflineStore):
         """Persist context to Postgres for replay."""
         await self._ensure_context_table()
 
-        lineage_json = json.dumps(lineage)
-        meta_json = json.dumps(meta)
+        def json_serializer(obj: Any) -> str:
+            """Handle datetime and other non-serializable types."""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(
+                f"Object of type {type(obj).__name__} is not JSON serializable"
+            )
+
+        lineage_json = json.dumps(lineage, default=json_serializer)
+        meta_json = json.dumps(meta, default=json_serializer)
 
         async with self.engine.begin() as conn:  # type: ignore[no-untyped-call]
             await conn.execute(
