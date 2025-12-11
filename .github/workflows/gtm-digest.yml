@@ -21,4 +21,4 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_PROVIDER: resend
         run: |
-          uv run python -m gtm.content_agent.cli digest
+          uv run python gtm/content_agent/cli.py digest
