@@ -45,7 +45,9 @@ After talking to dozens of ML teams at startups, we found the common requirement
 Your ML engineers write Python. Your feature definitions should be Python.
 
 ```python
-@feature(entity=User, refresh="5m")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(minutes=5))
 def transaction_count_1h(user_id: str) -> int:
     return db.query(
         "SELECT COUNT(*) FROM transactions "
@@ -109,7 +111,9 @@ When you hit these problems, you'll have the engineering team (and budget) to so
 ### Fraud Detection (Fintech)
 
 ```python
-@feature(entity=Transaction, refresh="realtime")
+from datetime import timedelta
+
+@feature(entity=Transaction, refresh=timedelta(seconds=0))  # realtime
 async def user_velocity_1h(user_id: str) -> int:
     """Number of transactions in last hour."""
     return await db.fetchval(
@@ -118,7 +122,7 @@ async def user_velocity_1h(user_id: str) -> int:
         user_id
     )
 
-@feature(entity=Transaction, refresh="5m")
+@feature(entity=Transaction, refresh=timedelta(minutes=5))
 def avg_transaction_amount(user_id: str) -> float:
     """30-day average transaction amount."""
     return calculate_average(user_id, days=30)
@@ -127,12 +131,14 @@ def avg_transaction_amount(user_id: str) -> float:
 ### Recommendations (E-commerce)
 
 ```python
-@feature(entity=User, refresh="1h")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(hours=1))
 def recent_categories(user_id: str) -> list:
     """Categories user browsed in last 24h."""
     return get_browse_history(user_id, hours=24)
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def purchase_affinity(user_id: str) -> dict:
     """Category purchase scores."""
     return calculate_affinity_scores(user_id)
@@ -141,12 +147,14 @@ def purchase_affinity(user_id: str) -> dict:
 ### Personalization (SaaS)
 
 ```python
-@feature(entity=User, refresh="5m")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(minutes=5))
 def active_session(user_id: str) -> bool:
     """Is user currently active?"""
     return check_session(user_id)
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def user_segment(user_id: str) -> str:
     """Power user, regular, or churning."""
     return classify_user(user_id)

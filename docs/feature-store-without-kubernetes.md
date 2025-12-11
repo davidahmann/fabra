@@ -23,11 +23,20 @@ You want to serve ML features. Every tutorial says:
 ## The Alternative
 
 ```bash
+pip install fabra-ai && fabra demo
+```
+
+That's it. Server starts, makes a test request, shows you the result. No Docker. No config files.
+
+Or build your own:
+
+```bash
 pip install "fabra-ai[ui]"
 ```
 
 ```python
 from fabra.core import FeatureStore, entity, feature
+from datetime import timedelta
 
 store = FeatureStore()
 
@@ -35,11 +44,11 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="hourly")
+@feature(entity=User, refresh=timedelta(hours=1))
 def purchase_count(user_id: str) -> int:
     return db.query("SELECT COUNT(*) FROM purchases WHERE user_id = ?", user_id)
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def user_tier(user_id: str) -> str:
     return "premium" if is_premium(user_id) else "free"
 ```
@@ -48,8 +57,8 @@ def user_tier(user_id: str) -> str:
 fabra serve features.py
 # Server running on http://localhost:8000
 
-curl http://localhost:8000/features/purchase_count?user_id=user123
-# {"value": 42, "timestamp": "2024-01-15T10:30:00Z"}
+curl localhost:8000/features/purchase_count?entity_id=user123
+# {"value": 42, "freshness_ms": 0, "served_from": "online"}
 ```
 
 **That's it.** No containers. No orchestration. Just Python.
@@ -144,9 +153,9 @@ Production serving uses non-blocking I/O:
 ### Refresh Scheduling
 
 ```python
-@feature(entity=User, refresh="5m")      # Every 5 minutes
-@feature(entity=User, refresh="hourly")  # Every hour
-@feature(entity=User, refresh="daily")   # Daily at midnight
+@feature(entity=User, refresh=timedelta(minutes=5))  # Every 5 minutes
+@feature(entity=User, refresh=timedelta(hours=1))    # Every hour
+@feature(entity=User, refresh=timedelta(days=1))     # Daily
 ```
 
 Schedules run in-process locally, distributed in production.
@@ -191,6 +200,7 @@ pip install "fabra-ai[ui]"
 # Create features file
 cat > features.py << 'EOF'
 from fabra.core import FeatureStore, entity, feature
+from datetime import timedelta
 
 store = FeatureStore()
 
@@ -198,7 +208,7 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="5m")
+@feature(entity=User, refresh=timedelta(minutes=5))
 def login_count(user_id: str) -> int:
     return abs(hash(user_id)) % 100
 EOF
@@ -207,7 +217,8 @@ EOF
 fabra serve features.py
 
 # Test
-curl http://localhost:8000/features/login_count?user_id=test123
+curl localhost:8000/features/login_count?entity_id=test123
+# {"value": 42, "freshness_ms": 0, "served_from": "online"}
 ```
 
 ## FAQ

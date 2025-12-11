@@ -3,6 +3,7 @@ import type {
   FeatureValues,
   ContextResult,
   MermaidGraph,
+  ContextDiff,
 } from '@/types/api';
 
 const API_BASE = '/api';
@@ -49,4 +50,13 @@ export async function assembleContext(
 
 export async function getMermaidGraph(): Promise<MermaidGraph> {
   return fetchAPI<MermaidGraph>('/graph');
+}
+
+export async function getContextDiff(
+  baseId: string,
+  comparisonId: string
+): Promise<ContextDiff> {
+  return fetchAPI<ContextDiff>(
+    `/context/diff/${encodeURIComponent(baseId)}/${encodeURIComponent(comparisonId)}`
+  );
 }

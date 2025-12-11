@@ -78,7 +78,7 @@ from datetime import timedelta
 
 store = FeatureStore()
 
-@feature(entity=User, refresh="5m", max_staleness=timedelta(minutes=10))
+@feature(entity=User, refresh=timedelta(minutes=5), max_staleness=timedelta(minutes=10))
 def user_risk_score(user_id: str) -> float:
     return calculate_risk(user_id)
 ```

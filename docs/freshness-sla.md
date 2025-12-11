@@ -277,7 +277,7 @@ class FreshnessSLAError(FabraError):
 **Solution**: Ensure your features record timestamps when computed:
 
 ```python
-@feature(entity=User, refresh="1h")
+@feature(entity=User, refresh=timedelta(hours=1))
 def user_tier(user_id: str) -> str:
     # Timestamp is automatically recorded by @feature decorator
     return compute_tier(user_id)
@@ -294,7 +294,7 @@ def user_tier(user_id: str) -> str:
 @context(store, freshness_sla="15m", freshness_strict=True)
 
 # Option 2: Refresh features more frequently
-@feature(entity=User, refresh="5m")  # Was "1h"
+@feature(entity=User, refresh=timedelta(minutes=5))  # Was timedelta(hours=1)
 ```
 
 ### Missing Metrics

@@ -41,6 +41,7 @@ That's it. We don't need Spark. We don't need Kubernetes. We don't need a 47-fil
 So we built Fabra.
 
 ```python
+from datetime import timedelta
 from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
@@ -49,12 +50,12 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="5m")
+@feature(entity=User, refresh=timedelta(minutes=5))
 def transaction_count_1h(user_id: str) -> int:
     # Your logic here - SQL, API call, whatever
     return query_transactions(user_id, hours=1)
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def avg_purchase_amount(user_id: str) -> float:
     return calculate_average(user_id)
 ```

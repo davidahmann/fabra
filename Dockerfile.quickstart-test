@@ -1,0 +1,73 @@
+# Dockerfile.quickstart-test
+#
+# This Dockerfile validates the Fabra quickstart experience in a clean environment.
+# It simulates what a new user would experience when installing from PyPI.
+#
+# Build:
+#   docker build -t fabra-quickstart-test -f Dockerfile.quickstart-test .
+#
+# Run (Feature Store demo):
+#   docker run -d -p 8000:8000 fabra-quickstart-test
+#   curl localhost:8000/features/user_engagement?entity_id=user_123
+#
+# Run (Context Store demo):
+#   docker run -d -p 8000:8000 -e DEMO_MODE=context fabra-quickstart-test
+#   curl -X POST localhost:8000/v1/context/chat_context -H "Content-Type: application/json" -d '{"user_id":"user_123","query":"test"}'
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies (minimal)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Fabra from source (for testing) or from PyPI
+# Option 1: From source (for testing)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+COPY examples/ ./examples/
+
+RUN pip install --no-cache-dir -e .
+
+# Option 2: From PyPI (uncomment for production validation)
+# RUN pip install --no-cache-dir fabra-ai
+# COPY examples/demo_features.py examples/demo_context.py ./examples/
+
+# Environment variables
+ENV DEMO_MODE=features
+ENV PORT=8000
+
+# Health check
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Expose port
+EXPOSE ${PORT}
+
+# Entry point script that chooses demo based on DEMO_MODE
+COPY <<'ENTRYPOINT_SCRIPT' /app/entrypoint.sh
+#!/bin/bash
+set -e
+
+echo "=== Fabra Quickstart Demo ==="
+echo "Mode: ${DEMO_MODE:-features}"
+echo "Port: ${PORT:-8000}"
+echo ""
+
+if [ "${DEMO_MODE}" = "context" ]; then
+    echo "Starting Context Store demo..."
+    echo "Test with: curl -X POST http://localhost:${PORT}/v1/context/chat_context -H 'Content-Type: application/json' -d '{\"user_id\":\"user_123\",\"query\":\"test\"}'"
+    exec fabra serve examples/demo_context.py --host 0.0.0.0 --port ${PORT:-8000}
+else
+    echo "Starting Feature Store demo..."
+    echo "Test with: curl http://localhost:${PORT}/features/user_engagement?entity_id=user_123"
+    exec fabra serve examples/demo_features.py --host 0.0.0.0 --port ${PORT:-8000}
+fi
+ENTRYPOINT_SCRIPT
+
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]

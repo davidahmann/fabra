@@ -90,6 +90,7 @@ target-version = "py39"
 
 [tool.mypy]
 strict = true
+plugins = ["pydantic.mypy"]
 exclude = [
     "examples/",
     "playground/",
@@ -103,7 +104,8 @@ module = [
     "testcontainers.*",
     "duckdb.*",
     "prometheus_client.*",
-    "streamlit.*"
+    "streamlit.*",
+    "asyncpg.*"
 ]
 ignore_missing_imports = true
 

@@ -131,6 +131,7 @@ class FeatureRegistry:
     def __init__(self) -> None:
         self.entities: Dict[str, Entity] = {}
         self.features: Dict[str, Feature] = {}
+        self.contexts: Dict[str, Callable[..., Any]] = {}
 
     def register_entity(self, entity: Entity) -> None:
         self.entities[entity.name] = entity
@@ -143,6 +144,10 @@ class FeatureRegistry:
 
     def get_features_by_trigger(self, trigger: str) -> List[Feature]:
         return [f for f in self.features.values() if f.trigger == trigger]
+
+    def register_context(self, name: str, func: Callable[..., Any]) -> None:
+        """Register a context function for replay support."""
+        self.contexts[name] = func
 
 
 class FeatureStore:
@@ -758,11 +763,98 @@ class FeatureStore:
             version=row.get("version", "v1"),
         )
 
+    async def replay_context(
+        self,
+        context_id: str,
+        timestamp: Optional[datetime] = None,
+    ) -> Optional[Any]:
+        """
+        Replay a context assembly, optionally with time-travel to historical feature values.
+
+        If timestamp is None, returns the stored context as-is.
+        If timestamp is provided, re-executes the context function with feature values
+        as they existed at that point in time.
+
+        Args:
+            context_id: The UUIDv7 identifier from a previous context assembly.
+            timestamp: Optional historical timestamp to replay with time-traveled features.
+
+        Returns:
+            The replayed Context object, or None if not found or replay not possible.
+        """
+
+        # Get the original context
+        stored = await self.get_context_at(context_id)
+        if not stored:
+            return None
+
+        # If no timestamp, just return stored context
+        if not timestamp:
+            return stored
+
+        # Check if we have enough info to replay
+        if not stored.lineage:
+            logger.warning(
+                "replay_no_lineage",
+                context_id=context_id,
+                message="Cannot replay: no lineage information stored",
+            )
+            return stored
+
+        context_name = stored.lineage.context_name
+        context_args = stored.lineage.context_args
+
+        if not context_name or not context_args:
+            logger.warning(
+                "replay_missing_info",
+                context_id=context_id,
+                message="Cannot replay: context_name or context_args not stored",
+            )
+            return stored
+
+        # Find the registered context function
+        if context_name not in self.registry.contexts:
+            logger.warning(
+                "replay_context_not_found",
+                context_id=context_id,
+                context_name=context_name,
+                message="Cannot replay: context function not registered",
+            )
+            return stored
+
+        context_func = self.registry.contexts[context_name]
+
+        # Re-execute with time travel
+        # The context function will use the timestamp for point-in-time feature retrieval
+        try:
+            from fabra.context import set_time_travel_context, clear_time_travel_context
+
+            set_time_travel_context(timestamp)
+            try:
+                replayed = await context_func(**context_args)
+                # Mark as replayed in meta
+                if hasattr(replayed, "meta"):
+                    replayed.meta["replayed_from"] = context_id
+                    replayed.meta["replay_timestamp"] = timestamp.isoformat()
+                return replayed
+            finally:
+                clear_time_travel_context()
+
+        except Exception as e:
+            logger.error(
+                "replay_failed",
+                context_id=context_id,
+                error=str(e),
+            )
+            return stored
+
     async def list_contexts(
         self,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         limit: int = 100,
+        name: Optional[str] = None,
+        freshness_status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         List contexts in a time range for debugging/audit.
@@ -771,11 +863,19 @@ class FeatureStore:
             start: Start of time range (inclusive)
             end: End of time range (inclusive)
             limit: Maximum number of contexts to return
+            name: Filter by context name (from meta.name)
+            freshness_status: Filter by status - "guaranteed" or "degraded"
 
         Returns:
             List of context summaries (without full content)
         """
-        return await self.offline_store.list_contexts(start=start, end=end, limit=limit)
+        return await self.offline_store.list_contexts(
+            start=start,
+            end=end,
+            limit=limit,
+            name=name,
+            freshness_status=freshness_status,
+        )
 
     async def invalidate_contexts_for_feature(self, feature_id: str) -> int:
         """

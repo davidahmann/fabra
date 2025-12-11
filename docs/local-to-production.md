@@ -21,9 +21,11 @@ Your laptop is your feature store:
 
 ```python
 # features.py - works locally, no setup
+from datetime import timedelta
+
 store = FeatureStore()  # DuckDB + In-Memory
 
-@feature(entity=User, refresh="5m", materialize=True)
+@feature(entity=User, refresh=timedelta(minutes=5), materialize=True)
 def fraud_score(user_id: str) -> float:
     # In reality, this would query your data warehouse
     return 0.85

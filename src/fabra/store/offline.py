@@ -81,9 +81,18 @@ class OfflineStore(ABC):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         limit: int = 100,
+        name: Optional[str] = None,
+        freshness_status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Lists contexts in a time range for debugging.
+
+        Args:
+            start: Filter contexts created after this time
+            end: Filter contexts created before this time
+            limit: Maximum number of results
+            name: Filter by context name (from meta.name)
+            freshness_status: Filter by freshness status ("guaranteed" or "degraded")
 
         Returns:
             List of context summaries (without full content for efficiency)
@@ -312,8 +321,18 @@ class DuckDBOfflineStore(OfflineStore):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         limit: int = 100,
+        name: Optional[str] = None,
+        freshness_status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """List contexts in time range."""
+        """List contexts in time range with optional filters.
+
+        Args:
+            start: Filter contexts created after this time
+            end: Filter contexts created before this time
+            limit: Maximum number of results
+            name: Filter by context name (from meta.name)
+            freshness_status: Filter by freshness status ("guaranteed" or "degraded")
+        """
         import json
 
         self._ensure_context_table()
@@ -328,6 +347,16 @@ class DuckDBOfflineStore(OfflineStore):
         if end:
             conditions.append("timestamp <= ?")
             params.append(end.isoformat())
+
+        # Filter by name (stored in meta JSON)
+        if name:
+            conditions.append("json_extract(meta, '$.name') = ?")
+            params.append(name)
+
+        # Filter by freshness_status (stored in meta JSON)
+        if freshness_status:
+            conditions.append("json_extract(meta, '$.freshness_status') = ?")
+            params.append(freshness_status)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.append(limit)

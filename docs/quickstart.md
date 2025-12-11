@@ -47,6 +47,16 @@ You're building LLM apps and need:
 
 > **For ML Engineers** — Serve features without Kubernetes, Spark, or YAML.
 
+### Fastest Path: `fabra demo`
+
+```bash
+pip install fabra-ai && fabra demo
+```
+
+That's it. Server starts, makes a test request, shows you the result. No Docker. No config files. No API keys.
+
+### Build Your Own Features
+
 ```bash
 pip install "fabra-ai[ui]"
 ```
@@ -54,6 +64,7 @@ pip install "fabra-ai[ui]"
 ```python
 # features.py
 from fabra.core import FeatureStore, entity, feature
+from datetime import timedelta
 
 store = FeatureStore()
 
@@ -61,11 +72,11 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="hourly")
+@feature(entity=User, refresh=timedelta(hours=1))
 def purchase_count(user_id: str) -> int:
     return db.query("SELECT COUNT(*) FROM purchases WHERE user_id = ?", user_id)
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def user_tier(user_id: str) -> str:
     return "premium" if is_premium(user_id) else "free"
 ```
@@ -74,7 +85,8 @@ def user_tier(user_id: str) -> str:
 fabra serve features.py
 # Server running on http://localhost:8000
 
-curl http://localhost:8000/features/purchase_count?user_id=user123
+curl localhost:8000/features/purchase_count?entity_id=user123
+# {"value": 47, "freshness_ms": 0, "served_from": "online"}
 ```
 
 **Done.** No Docker. No Kubernetes. No YAML.

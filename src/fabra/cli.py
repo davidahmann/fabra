@@ -3,6 +3,7 @@ import uvicorn
 import os
 import sys
 import importlib.util
+from typing import Any
 from rich.console import Console
 from rich.panel import Panel
 from rich.layout import Layout
@@ -621,17 +622,46 @@ def serve(
 
             table.add_section()
 
-            # Quick test commands
-            table.add_row("[dim]Quick Test:[/dim]", "")
-            table.add_row("", f"[dim]curl http://{host}:{port}/health[/dim]")
+            # Quick test commands - simpler and more prominent
+            table.add_row("[bold cyan]Try This:[/bold cyan]", "")
 
-            # Find a feature to demo
+            # Find a feature to demo with simpler GET endpoint
             if num_features > 0:
                 demo_feature = next(iter(store.registry.features.keys()))
+                simple_curl = f"curl http://{host}:{port}/features/{demo_feature}?entity_id=user_123"
+                table.add_row("", f"[cyan]{simple_curl}[/cyan]")
+                table.add_row(
+                    "[dim]Expected:[/dim]",
+                    '[dim]{"value": ..., "freshness_ms": 0}[/dim]',
+                )
+            else:
+                table.add_row("", f"[dim]curl http://{host}:{port}/health[/dim]")
+
+            # Show context endpoint if contexts exist
+            if ctx_len > 0:
+                table.add_row("", "")
+                table.add_row("[dim]Or try context:[/dim]", "")
+                ctx_name = next(
+                    (
+                        f.name
+                        for f in store.registry.features.values()
+                        if getattr(f, "is_context", False)
+                    ),
+                    "chat_context",
+                )
                 table.add_row(
                     "",
-                    f'[dim]curl -X POST http://{host}:{port}/features -d \'{{"entity_id": "u1", "features": ["{demo_feature}"]}}\' -H \'Content-Type: application/json\'[/dim]',
+                    f'[dim]curl -X POST http://{host}:{port}/v1/context/{ctx_name} -d \'{{"user_id":"u1"}}\' -H "Content-Type: application/json"[/dim]',
                 )
+
+            table.add_section()
+
+            # Links
+            table.add_row("[dim]Learn More:[/dim]", "")
+            table.add_row(
+                "  Playground",
+                "[link=https://fabraoss.vercel.app]https://fabraoss.vercel.app[/link]",
+            )
 
             return Panel(
                 table, title="[bold blue]System Status[/bold blue]", border_style="blue"
@@ -670,6 +700,9 @@ def ui(
     ),
     port: int = typer.Option(8501, help="Port to run the UI on"),
     api_port: int = typer.Option(8502, help="Port for API backend"),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Don't auto-open browser"
+    ),
 ) -> None:
     """
     Launches the Fabra UI.
@@ -765,13 +798,16 @@ def ui(
     # Start Next.js dev server
     console.print("[green]Starting UI server...[/green]")
     try:
-        # Open browser after a short delay
-        def open_browser() -> None:
-            time.sleep(3)
-            webbrowser.open(f"http://localhost:{port}")
+        # Open browser after a short delay (unless --no-browser)
+        if not no_browser:
 
-        browser_thread = threading.Thread(target=open_browser, daemon=True)
-        browser_thread.start()
+            def open_browser() -> None:
+                time.sleep(3)
+                webbrowser.open(f"http://localhost:{port}")
+
+            browser_thread = threading.Thread(target=open_browser, daemon=True)
+            browser_thread.start()
+            console.print(f"[dim]Opening http://localhost:{port} in browser...[/dim]")
 
         # Run Next.js dev server
         subprocess.run(  # nosec B603 B607
@@ -787,16 +823,6 @@ def ui(
         raise typer.Exit(code=1)
     except KeyboardInterrupt:
         console.print("\nUI stopped.")
-
-
-@app.command(name="doctor")
-def doctor() -> None:
-    """
-    Diagnose configuration and connectivity issues.
-    """
-    from .doctor import run_doctor
-
-    run_doctor()
 
 
 context_app = typer.Typer(help="Manage and inspect Context Store assemblies.")
@@ -1051,6 +1077,180 @@ def context_export_cmd(
         raise typer.Exit(1)
 
 
+@context_app.command(name="replay")
+def context_replay_cmd(
+    context_id: str = typer.Argument(..., help="Context ID to replay"),
+    output: str = typer.Option(
+        "pretty", "--output", "-o", help="Output format: json, pretty, html"
+    ),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
+) -> None:
+    """
+    Replay a historical context assembly.
+
+    This command retrieves a stored context and displays it in various formats,
+    allowing you to inspect exactly what data was used in a past LLM call.
+
+    Examples:
+      fabra context replay ctx_018f1234-5678-7abc-def0-123456789abc
+      fabra context replay <context_id> --output json
+      fabra context replay <context_id> --output html  # Opens in browser
+    """
+    import urllib.request
+    import urllib.error
+    import json
+    import webbrowser
+
+    # Fetch the context
+    url = f"http://{host}:{port}/v1/context/{context_id}"
+
+    if not url.lower().startswith(("http://", "https://")):
+        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
+        raise typer.Exit(1)
+
+    try:
+        req = urllib.request.Request(url)
+        api_key = os.getenv("FABRA_API_KEY")
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+
+        console.print(f"Replaying context [bold cyan]{context_id}[/bold cyan]...\n")
+
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                console.print(
+                    f"[bold red]Error:[/bold red] Server returned {response.status}"
+                )
+                raise typer.Exit(1)
+
+            data = json.loads(response.read().decode())
+
+            if output == "json":
+                # Raw JSON output
+                console.print(json.dumps(data, indent=2, default=str))
+
+            elif output == "html":
+                # Open visualization in browser
+                viz_url = f"http://{host}:{port}/v1/context/{context_id}/visualize"
+                console.print(f"Opening visualization in browser: {viz_url}")
+                webbrowser.open(viz_url)
+
+            else:  # pretty (default)
+                # Rich formatted output
+                ctx_id_short = data.get("context_id", context_id)[:12]
+                meta = data.get("meta", {})
+                lineage = data.get("lineage", {})
+                content = data.get("content", "")
+
+                # Header with status
+                freshness = meta.get("freshness_status", "unknown")
+                status_color = "green" if freshness == "guaranteed" else "yellow"
+                status_icon = "✓" if freshness == "guaranteed" else "⚠"
+
+                console.print(
+                    Panel(
+                        f"[bold]Context ID:[/bold] {ctx_id_short}...\n"
+                        f"[bold]Timestamp:[/bold] {meta.get('timestamp', 'N/A')}\n"
+                        f"[bold]Status:[/bold] [{status_color}]{status_icon} {freshness.upper()}[/{status_color}]",
+                        title="[bold blue]Context Replay[/bold blue]",
+                        border_style="blue",
+                    )
+                )
+
+                # Token usage
+                token_usage = meta.get("token_usage", 0)
+                max_tokens = meta.get("max_tokens")
+                if max_tokens:
+                    pct = (token_usage / max_tokens) * 100
+                    bar_width = 30
+                    filled = int(bar_width * pct / 100)
+                    bar = "█" * filled + "░" * (bar_width - filled)
+                    console.print(
+                        f"\n[bold]Token Budget:[/bold] [{bar}] {token_usage:,}/{max_tokens:,} ({pct:.1f}%)"
+                    )
+
+                # Lineage summary
+                if lineage:
+                    features_used = lineage.get("features_used", [])
+                    retrievers_used = lineage.get("retrievers_used", [])
+                    items_dropped = lineage.get("items_dropped", 0)
+
+                    console.print("\n[bold]Lineage:[/bold]")
+                    console.print(f"  Features:   {len(features_used)}")
+                    console.print(f"  Retrievers: {len(retrievers_used)}")
+                    console.print(f"  Dropped:    {items_dropped} items")
+
+                    # Show features
+                    if features_used:
+                        console.print("\n[dim]Features Used:[/dim]")
+                        for f in features_used[:5]:  # Limit display
+                            name = f.get("feature_name", "unknown")
+                            value = f.get("value", "N/A")
+                            age_ms = f.get("freshness_ms", 0)
+                            source = f.get("source", "compute")
+                            console.print(
+                                f"  • {name}: {value} [dim]({source}, {age_ms}ms old)[/dim]"
+                            )
+                        if len(features_used) > 5:
+                            console.print(
+                                f"  [dim]... and {len(features_used) - 5} more[/dim]"
+                            )
+
+                    # Show retrievers
+                    if retrievers_used:
+                        console.print("\n[dim]Retrievers Used:[/dim]")
+                        for r in retrievers_used[:3]:
+                            name = r.get("retriever_name", "unknown")
+                            query = r.get("query", "")[:30]
+                            count = r.get("results_count", 0)
+                            latency = r.get("latency_ms", 0)
+                            console.print(
+                                f'  • {name}: "{query}..." → {count} results [dim]({latency:.1f}ms)[/dim]'
+                            )
+
+                # Content preview
+                content_preview = (
+                    content[:500] + "..." if len(content) > 500 else content
+                )
+                console.print(
+                    Panel(
+                        content_preview,
+                        title="[bold]Content Preview[/bold]",
+                        border_style="dim",
+                    )
+                )
+
+                # Cost
+                cost = meta.get("cost_usd", 0)
+                if cost:
+                    console.print(f"\n[dim]Estimated Cost: ${cost:.6f}[/dim]")
+
+                # Tip
+                console.print(
+                    "\n[dim]Tip: Use --output json for full data, --output html for visualization[/dim]"
+                )
+
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            console.print(
+                f"[bold red]Not Found:[/bold red] Context '{context_id}' does not exist.\n"
+                f"[dim]Contexts are stored for 24 hours by default.[/dim]"
+            )
+        else:
+            console.print(f"[bold red]Error:[/bold red] HTTP {e.code}: {e.reason}")
+        raise typer.Exit(1)
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}\n"
+            f"[dim]Make sure the Fabra server is running: fabra serve <file>[/dim]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
 @context_app.command(name="explain")
 def explain_cmd(
     ctx_id: str = typer.Argument(..., help="The Context ID to trace"),
@@ -1096,6 +1296,143 @@ def explain_cmd(
                     border_style="green",
                 )
             )
+
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@context_app.command(name="diff")
+def context_diff_cmd(
+    base_id: str = typer.Argument(..., help="Base (older) context ID"),
+    comparison_id: str = typer.Argument(..., help="Comparison (newer) context ID"),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed per-item changes"
+    ),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+) -> None:
+    """
+    Compare two context assemblies and show what changed.
+
+    Examples:
+        fabra context diff ctx_abc123 ctx_def456
+        fabra context diff ctx_abc123 ctx_def456 --verbose
+        fabra context diff ctx_abc123 ctx_def456 --json
+    """
+    import urllib.request
+    import urllib.error
+    import json
+
+    # Fetch both contexts
+    api_key = os.getenv("FABRA_API_KEY")
+
+    def fetch_context(ctx_id: str) -> dict[str, Any]:
+        url = f"http://{host}:{port}/v1/context/{ctx_id}"
+        if not url.lower().startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL scheme: {url}")
+        req = urllib.request.Request(url)
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                raise Exception(f"Server returned {response.status}")
+            result: dict[str, Any] = json.loads(response.read().decode())
+            return result
+
+    try:
+        console.print(f"Fetching context [cyan]{base_id[:12]}...[/cyan]")
+        base_ctx = fetch_context(base_id)
+
+        console.print(f"Fetching context [cyan]{comparison_id[:12]}...[/cyan]")
+        comp_ctx = fetch_context(comparison_id)
+
+        # Import comparison utilities
+        from fabra.utils.compare import compare_contexts, format_diff_report
+        from fabra.models import ContextLineage
+
+        # Extract lineage from contexts
+        base_lineage_data = base_ctx.get("lineage")
+        comp_lineage_data = comp_ctx.get("lineage")
+
+        if not base_lineage_data:
+            console.print(
+                f"[yellow]Warning: Base context {base_id} has no lineage data[/yellow]"
+            )
+            base_lineage_data = {
+                "context_id": base_id,
+                "timestamp": base_ctx.get("meta", {}).get(
+                    "timestamp", datetime.now().isoformat()
+                ),
+                "features_used": [],
+                "retrievers_used": [],
+                "token_usage": base_ctx.get("meta", {}).get("token_usage", 0),
+                "estimated_cost_usd": base_ctx.get("meta", {}).get("cost_usd", 0.0),
+                "freshness_status": base_ctx.get("meta", {}).get(
+                    "freshness_status", "unknown"
+                ),
+            }
+
+        if not comp_lineage_data:
+            console.print(
+                f"[yellow]Warning: Comparison context {comparison_id} has no lineage data[/yellow]"
+            )
+            comp_lineage_data = {
+                "context_id": comparison_id,
+                "timestamp": comp_ctx.get("meta", {}).get(
+                    "timestamp", datetime.now().isoformat()
+                ),
+                "features_used": [],
+                "retrievers_used": [],
+                "token_usage": comp_ctx.get("meta", {}).get("token_usage", 0),
+                "estimated_cost_usd": comp_ctx.get("meta", {}).get("cost_usd", 0.0),
+                "freshness_status": comp_ctx.get("meta", {}).get(
+                    "freshness_status", "unknown"
+                ),
+            }
+
+        base_lineage = ContextLineage(**base_lineage_data)
+        comp_lineage = ContextLineage(**comp_lineage_data)
+
+        # Compare
+        diff = compare_contexts(
+            base_lineage,
+            comp_lineage,
+            base_content=base_ctx.get("content"),
+            comparison_content=comp_ctx.get("content"),
+        )
+
+        if json_output:
+            console.print(diff.model_dump_json(indent=2))
+        else:
+            report = format_diff_report(diff, verbose=verbose)
+            console.print(report)
+
+            # Add color summary
+            if diff.has_changes:
+                console.print()
+                if diff.features_added > 0:
+                    console.print(
+                        f"  [green]+{diff.features_added} features added[/green]"
+                    )
+                if diff.features_removed > 0:
+                    console.print(
+                        f"  [red]-{diff.features_removed} features removed[/red]"
+                    )
+                if diff.features_modified > 0:
+                    console.print(
+                        f"  [yellow]~{diff.features_modified} features modified[/yellow]"
+                    )
+                if diff.freshness_improved:
+                    console.print("  [green]Freshness improved[/green]")
+            else:
+                console.print("\n[dim]No meaningful changes detected[/dim]")
 
     except urllib.error.URLError as e:
         console.print(
@@ -1498,6 +1835,528 @@ services:
     console.print("[bold]Next steps:[/bold]")
     for i, step in enumerate(next_steps.get(target, []), 1):
         console.print(f"  {i}. [dim]{step}[/dim]")
+
+
+@app.command(name="demo")
+def demo_cmd(
+    mode: str = typer.Option(
+        "features",
+        "--mode",
+        "-m",
+        help="Demo mode: 'features' (Feature Store) or 'context' (Context Store)",
+    ),
+    port: int = typer.Option(8000, help="Port to run demo server on"),
+) -> None:
+    """
+    Run an interactive demo of Fabra.
+
+    This command starts a demo server with pre-seeded data and automatically
+    tests an endpoint to show you a working response. No API keys required!
+
+    Examples:
+        fabra demo                    # Feature Store demo
+        fabra demo --mode features    # Explicit Feature Store demo
+        fabra demo --mode context     # Context Store demo (RAG without API keys)
+    """
+    import threading
+    import time
+    import urllib.request
+    import urllib.error
+    import json
+
+    # Determine which demo file to use
+    demo_files = {
+        "features": "examples/demo_features.py",
+        "context": "examples/demo_context.py",
+    }
+
+    if mode not in demo_files:
+        console.print(
+            f"[bold red]Error:[/bold red] Unknown mode '{mode}'. Use 'features' or 'context'."
+        )
+        raise typer.Exit(1)
+
+    demo_file = demo_files[mode]
+
+    # Check if demo file exists (try package location and current dir)
+    import fabra
+
+    package_dir = os.path.dirname(fabra.__file__)
+    possible_paths = [
+        demo_file,  # Current directory
+        os.path.join(os.path.dirname(package_dir), demo_file),  # Package parent
+        os.path.join(package_dir, "..", "..", demo_file),  # Development layout
+    ]
+
+    file_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            file_path = os.path.abspath(path)
+            break
+
+    if not file_path:
+        console.print(
+            f"[bold red]Error:[/bold red] Demo file '{demo_file}' not found.\n"
+            "[dim]Make sure you're in the project root or the package is installed correctly.[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Print startup banner
+    console.print(
+        Panel(
+            "[bold blue]Fabra Demo[/bold blue]\n\n"
+            f"[dim]Mode:[/dim] {mode.upper()}\n"
+            f"[dim]File:[/dim] {file_path}",
+            border_style="blue",
+        )
+    )
+
+    console.print("\n[dim]Starting demo server...[/dim]\n")
+
+    # Load the module to get the store
+    sys.path.append(os.getcwd())
+    sys.path.append(os.path.dirname(file_path))
+
+    try:
+        module_name = os.path.splitext(os.path.basename(file_path))[0]
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load spec for {file_path}")
+
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        store = None
+        for attr_name in dir(module):
+            attr = getattr(module, attr_name)
+            if isinstance(attr, FeatureStore):
+                store = attr
+                break
+
+        if not store:
+            console.print(
+                "[bold red]Error:[/bold red] No FeatureStore instance found in demo file."
+            )
+            raise typer.Exit(1)
+
+        # Start the server in a background thread
+        app_instance = create_app(store)
+        store.start()
+
+        def run_server() -> None:
+            import uvicorn
+
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server = uvicorn.Server(config)
+            server.run()
+
+        server_thread = threading.Thread(target=run_server, daemon=True)
+        server_thread.start()
+
+        # Wait for server to be ready by polling health endpoint
+        console.print("[dim]Waiting for server to start...[/dim]")
+        health_url = f"http://127.0.0.1:{port}/health"
+        for _ in range(20):  # Try for up to 10 seconds
+            try:
+                with urllib.request.urlopen(health_url, timeout=1):  # nosec B310
+                    break
+            except (urllib.error.URLError, OSError):
+                time.sleep(0.5)
+
+        # Make a test request based on mode
+        if mode == "features":
+            test_url = (
+                f"http://127.0.0.1:{port}/features/user_engagement?entity_id=user_123"
+            )
+            curl_cmd = f"curl {test_url}"
+        else:  # context
+            test_url = f"http://127.0.0.1:{port}/v1/context/chat_context"
+            curl_cmd = (
+                f'curl -X POST {test_url} -H "Content-Type: application/json" '
+                '-d \'{"user_id":"user_123","query":"how do features work?"}\''
+            )
+
+        console.print(
+            Panel(
+                f"[bold green]Server is running at http://127.0.0.1:{port}[/bold green]\n\n"
+                "[bold]Testing endpoint...[/bold]",
+                border_style="green",
+            )
+        )
+
+        # Show the curl command
+        console.print(f"\n[bold]Try this:[/bold]\n  [cyan]{curl_cmd}[/cyan]\n")
+
+        # Make the test request
+        try:
+            if mode == "features":
+                req = urllib.request.Request(test_url)
+            else:
+                data = json.dumps(
+                    {"user_id": "user_123", "query": "how do features work?"}
+                ).encode()
+                req = urllib.request.Request(
+                    test_url,
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                )
+
+            with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
+                result = json.loads(response.read().decode())
+                console.print("[bold]Response:[/bold]")
+                console.print(
+                    Panel(
+                        json.dumps(result, indent=2, default=str)[:500],
+                        border_style="dim",
+                    )
+                )
+
+                if mode == "features":
+                    console.print(
+                        "\n[green]✓[/green] Feature Store working! "
+                        f"Got value: [bold]{result.get('value')}[/bold]"
+                    )
+                else:
+                    console.print(
+                        "\n[green]✓[/green] Context Store working! "
+                        f"Context ID: [bold]{result.get('id', 'N/A')[:12]}...[/bold]"
+                    )
+
+        except urllib.error.URLError as e:
+            console.print(f"[yellow]Warning:[/yellow] Could not test endpoint: {e}")
+
+        # Print help for next steps
+        console.print(
+            Panel(
+                "[bold]Explore:[/bold]\n"
+                f"  • API Docs: http://127.0.0.1:{port}/docs\n"
+                f"  • Health: http://127.0.0.1:{port}/health\n"
+                f"  • Metrics: http://127.0.0.1:{port}/metrics\n\n"
+                "[bold]Learn more:[/bold]\n"
+                "  • Docs: https://davidahmann.github.io/fabra/docs/\n"
+                "  • Playground: https://fabraoss.vercel.app\n\n"
+                "[dim]Press Ctrl+C to stop the server[/dim]",
+                title="[bold blue]What's Next?[/bold blue]",
+                border_style="blue",
+            )
+        )
+
+        # Keep running until interrupted
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            console.print("\n[dim]Stopping demo server...[/dim]")
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@app.command(name="doctor")
+def doctor_cmd(
+    host: str = typer.Option("127.0.0.1", help="Fabra server host to check"),
+    port: int = typer.Option(8000, help="Fabra server port to check"),
+    redis_url: str = typer.Option(
+        None, envvar="FABRA_REDIS_URL", help="Redis URL to check"
+    ),
+    postgres_url: str = typer.Option(
+        None, envvar="FABRA_POSTGRES_URL", help="PostgreSQL URL to check"
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+) -> None:
+    """
+    Diagnose and troubleshoot Fabra setup issues.
+
+    Checks connectivity to services, validates configuration, and provides
+    actionable recommendations for fixing issues.
+
+    Examples:
+        fabra doctor                           # Check local setup
+        fabra doctor --host fabra.example.com  # Check remote server
+        fabra doctor --verbose                 # Show detailed diagnostics
+    """
+    import socket
+    import urllib.request
+    import urllib.error
+    import platform
+    import json
+
+    console.print(
+        Panel(
+            "[bold blue]Fabra Doctor[/bold blue]\n"
+            "[dim]Diagnosing your Fabra setup...[/dim]",
+            border_style="blue",
+        )
+    )
+
+    checks_passed = 0
+    checks_failed = 0
+    warnings = 0
+
+    def check_pass(msg: str) -> None:
+        nonlocal checks_passed
+        checks_passed += 1
+        console.print(f"  [green]✓[/green] {msg}")
+
+    def check_fail(msg: str, fix: str = "") -> None:
+        nonlocal checks_failed
+        checks_failed += 1
+        console.print(f"  [red]✗[/red] {msg}")
+        if fix:
+            console.print(f"    [dim]→ Fix: {fix}[/dim]")
+
+    def check_warn(msg: str, suggestion: str = "") -> None:
+        nonlocal warnings
+        warnings += 1
+        console.print(f"  [yellow]![/yellow] {msg}")
+        if suggestion:
+            console.print(f"    [dim]→ {suggestion}[/dim]")
+
+    # 1. System Information
+    console.print("\n[bold]System Information[/bold]")
+    console.print(f"  OS: {platform.system()} {platform.release()}")
+    console.print(f"  Python: {platform.python_version()}")
+
+    # 2. Check Python dependencies
+    console.print("\n[bold]Python Dependencies[/bold]")
+    required_packages = [
+        ("fabra", "fabra"),
+        ("fastapi", "fastapi"),
+        ("uvicorn", "uvicorn"),
+        ("redis", "redis"),
+        ("pydantic", "pydantic"),
+        ("structlog", "structlog"),
+    ]
+
+    for display_name, import_name in required_packages:
+        try:
+            module = __import__(import_name)
+            version = getattr(module, "__version__", "installed")
+            check_pass(f"{display_name} ({version})")
+        except ImportError:
+            check_fail(f"{display_name} not installed", f"pip install {import_name}")
+
+    # 3. Check environment variables
+    console.print("\n[bold]Environment Variables[/bold]")
+    env_vars = [
+        ("FABRA_API_KEY", False, "API key for authentication"),
+        ("FABRA_REDIS_URL", False, "Redis connection URL"),
+        ("FABRA_POSTGRES_URL", False, "PostgreSQL connection URL"),
+        ("FABRA_ENV", False, "Environment (development/production)"),
+    ]
+
+    for var, required, description in env_vars:
+        value = os.getenv(var)
+        if value:
+            # Mask sensitive values
+            masked = value[:4] + "..." if len(value) > 8 else "***"
+            check_pass(f"{var} = {masked}")
+        elif required:
+            check_fail(f"{var} not set", f"export {var}=<value>")
+        else:
+            check_warn(f"{var} not set", f"{description}")
+
+    # 4. Check Fabra server connectivity
+    console.print("\n[bold]Fabra Server[/bold]")
+    server_url = f"http://{host}:{port}"
+
+    try:
+        health_url = f"{server_url}/health"
+        req = urllib.request.Request(health_url, method="GET")
+        with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                check_pass(f"Server responding at {server_url}")
+                if verbose:
+                    console.print(f"    [dim]Health response: {data}[/dim]")
+            else:
+                check_fail(
+                    f"Server returned {response.status}",
+                    "Check server logs for errors",
+                )
+    except urllib.error.URLError as e:
+        check_fail(
+            f"Cannot connect to {server_url}",
+            f"Start server with: fabra serve <file> --port {port}",
+        )
+        if verbose:
+            console.print(f"    [dim]Error: {e}[/dim]")
+    except Exception as e:
+        check_fail(f"Error checking server: {e}")
+
+    # 5. Check Redis connectivity
+    console.print("\n[bold]Redis Connection[/bold]")
+    redis_url_to_check = redis_url or os.getenv("FABRA_REDIS_URL")
+
+    if redis_url_to_check:
+        try:
+            from redis import Redis
+            from urllib.parse import urlparse
+
+            parsed = urlparse(redis_url_to_check)
+            redis_host = parsed.hostname or "localhost"
+            redis_port = parsed.port or 6379
+
+            r = Redis(host=redis_host, port=redis_port, socket_timeout=3)
+            info = r.ping()
+            if info:
+                check_pass(f"Redis connected at {redis_host}:{redis_port}")
+                if verbose:
+                    redis_info = r.info()
+                    console.print(
+                        f"    [dim]Redis version: {redis_info.get('redis_version', 'unknown')}[/dim]"
+                    )
+                    console.print(
+                        f"    [dim]Memory used: {redis_info.get('used_memory_human', 'unknown')}[/dim]"
+                    )
+            r.close()
+        except ImportError:
+            check_fail("redis package not installed", "pip install redis")
+        except Exception as e:
+            check_fail(f"Redis connection failed: {e}", "Check Redis is running")
+    else:
+        check_warn(
+            "Redis URL not configured",
+            "Using in-memory store (data won't persist)",
+        )
+
+    # 6. Check PostgreSQL connectivity
+    console.print("\n[bold]PostgreSQL Connection[/bold]")
+    postgres_url_to_check = postgres_url or os.getenv("FABRA_POSTGRES_URL")
+
+    if postgres_url_to_check:
+        try:
+            import asyncpg
+            import asyncio
+
+            async def check_postgres() -> bool:
+                try:
+                    conn = await asyncio.wait_for(
+                        asyncpg.connect(postgres_url_to_check), timeout=5
+                    )
+                    version = await conn.fetchval("SELECT version()")
+                    await conn.close()
+                    check_pass("PostgreSQL connected")
+                    if verbose:
+                        console.print(f"    [dim]{version[:60]}...[/dim]")
+                    return True
+                except Exception as e:
+                    check_fail(
+                        f"PostgreSQL connection failed: {e}",
+                        "Check PostgreSQL is running and credentials are correct",
+                    )
+                    return False
+
+            asyncio.run(check_postgres())
+        except ImportError:
+            check_fail("asyncpg package not installed", "pip install asyncpg")
+    else:
+        check_warn(
+            "PostgreSQL URL not configured",
+            "Offline store features unavailable (context replay, lineage)",
+        )
+
+    # 7. Check common ports
+    console.print("\n[bold]Port Availability[/bold]")
+    ports_to_check = [
+        (8000, "Fabra API"),
+        (8501, "Fabra UI"),
+        (6379, "Redis"),
+        (5432, "PostgreSQL"),
+    ]
+
+    for check_port, service in ports_to_check:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(("127.0.0.1", check_port))
+        sock.close()
+
+        if result == 0:
+            if check_port == port:
+                check_pass(f"Port {check_port} ({service}) - in use (expected)")
+            else:
+                check_warn(f"Port {check_port} ({service}) - in use")
+        else:
+            if check_port == port:
+                check_warn(
+                    f"Port {check_port} ({service}) - not listening",
+                    f"Start with: fabra serve <file> --port {check_port}",
+                )
+
+    # 8. Check API endpoints (if server is running)
+    if checks_failed == 0 or server_url:
+        console.print("\n[bold]API Endpoints[/bold]")
+        endpoints = [
+            ("/health", "GET", "Health check"),
+            ("/metrics", "GET", "Prometheus metrics"),
+            ("/docs", "GET", "OpenAPI documentation"),
+        ]
+
+        for endpoint, method, description in endpoints:
+            try:
+                url = f"{server_url}{endpoint}"
+                req = urllib.request.Request(url, method=method)
+                with urllib.request.urlopen(req, timeout=3) as response:  # nosec B310
+                    if response.status == 200:
+                        check_pass(f"{method} {endpoint} - {description}")
+                    else:
+                        check_warn(f"{method} {endpoint} returned {response.status}")
+            except urllib.error.HTTPError as e:
+                if e.code == 401:
+                    check_pass(f"{method} {endpoint} - requires auth (OK)")
+                else:
+                    check_warn(f"{method} {endpoint} - HTTP {e.code}")
+            except Exception:  # noqa: S110  # nosec B110
+                pass  # Server not running, already reported above
+
+    # Summary
+    console.print("\n" + "─" * 50)
+
+    if checks_failed == 0 and warnings == 0:
+        console.print(
+            Panel(
+                f"[bold green]All {checks_passed} checks passed![/bold green]\n"
+                "Your Fabra setup looks healthy.",
+                border_style="green",
+            )
+        )
+    elif checks_failed == 0:
+        console.print(
+            Panel(
+                f"[bold yellow]{checks_passed} passed, {warnings} warnings[/bold yellow]\n"
+                "Fabra should work, but some features may be limited.",
+                border_style="yellow",
+            )
+        )
+    else:
+        console.print(
+            Panel(
+                f"[bold red]{checks_failed} failed[/bold red], {checks_passed} passed, {warnings} warnings\n"
+                "Please fix the issues above to ensure Fabra works correctly.",
+                border_style="red",
+            )
+        )
+
+    # Recommendations
+    if checks_failed > 0 or warnings > 0:
+        console.print("\n[bold]Recommendations:[/bold]")
+        if not redis_url_to_check:
+            console.print(
+                "  1. [dim]Set up Redis for caching: docker run -d -p 6379:6379 redis[/dim]"
+            )
+        if not postgres_url_to_check:
+            console.print(
+                "  2. [dim]Set up PostgreSQL for offline store: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres[/dim]"
+            )
+        console.print(
+            "\n[dim]Run 'fabra doctor --verbose' for more detailed diagnostics[/dim]"
+        )
+
+    raise typer.Exit(1 if checks_failed > 0 else 0)
 
 
 if __name__ == "__main__":

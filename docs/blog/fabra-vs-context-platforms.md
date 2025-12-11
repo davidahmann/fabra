@@ -43,6 +43,7 @@ Fabra is a **unified feature and context store** for ML engineers building AI ap
 
 ```python
 # Fabra: Define features and context in Python
+from datetime import timedelta
 from fabra.core import FeatureStore, entity, feature
 from fabra.context import context, ContextItem
 from fabra.retrieval import retriever
@@ -53,7 +54,7 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="5m")
+@feature(entity=User, refresh=timedelta(minutes=5))
 def transaction_count_1h(user_id: str) -> int:
     return query_db(user_id)  # Your logic
 
@@ -116,7 +117,7 @@ feature_views:
 
 ```python
 # Fabra: Python decorators
-@feature(entity=User, refresh="1h")
+@feature(entity=User, refresh=timedelta(hours=1))
 def transaction_count(user_id: str) -> int:
     return query_db(user_id)
 ```

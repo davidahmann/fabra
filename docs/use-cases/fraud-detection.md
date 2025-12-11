@@ -25,7 +25,9 @@ def score_transaction(user_id):
 
 **Define once:**
 ```python
-@feature(entity=User, refresh="5m", materialize=True, ttl="1h")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(minutes=5), materialize=True, ttl=timedelta(hours=1))
 def declined_count_1h(user_id: str) -> int:
     return sql("""
         SELECT COUNT(*) FROM transactions

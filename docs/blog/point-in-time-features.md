@@ -62,7 +62,9 @@ This joins the **most recent feature value that existed at event time**. For the
 Fabra automatically logs feature values with timestamps:
 
 ```python
-@feature(entity=User, refresh="5m")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(minutes=5))
 def transaction_count_1h(user_id: str) -> int:
     return count_transactions(user_id, hours=1)
 ```
@@ -181,7 +183,9 @@ def total_purchases(user_id: str) -> int:
 
 **Right:**
 ```python
-@feature(entity=User, refresh="5m")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(minutes=5))
 def total_purchases(user_id: str) -> int:
     # Log current value, let temporal join handle point-in-time
     return db.query("SELECT COUNT(*) FROM purchases WHERE user_id = %s", user_id)
@@ -214,6 +218,7 @@ pip install "fabra-ai[ui]"
 ```
 
 ```python
+from datetime import timedelta
 from fabra.core import FeatureStore, entity, feature
 
 store = FeatureStore()
@@ -222,7 +227,7 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="5m")
+@feature(entity=User, refresh=timedelta(minutes=5))
 def login_count(user_id: str) -> int:
     return get_login_count(user_id)
 

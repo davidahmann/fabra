@@ -163,11 +163,13 @@ print(ctx.meta["items_dropped"])  # 2
 This is where Fabra shines. LangChain treats RAG and user features as separate concerns. Fabra unifies them:
 
 ```python
-@feature(entity=User, refresh="daily")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(days=1))
 def user_tier(user_id: str) -> str:
     return lookup_tier(user_id)
 
-@feature(entity=User, refresh="1h")
+@feature(entity=User, refresh=timedelta(hours=1))
 def recent_topics(user_id: str) -> list:
     return get_user_interests(user_id)
 

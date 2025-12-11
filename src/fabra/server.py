@@ -182,6 +182,51 @@ def create_app(store: FeatureStore) -> FastAPI:
             logger.error("Error retrieving features", error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
+    @app.get("/features/{feature_name}")
+    async def get_single_feature(
+        feature_name: str,
+        entity_id: str,
+        api_key: str = Depends(get_api_key),
+    ) -> Dict[str, Any]:
+        """
+        Simple GET endpoint to retrieve a single feature value.
+
+        Returns {"value": ..., "freshness_ms": 0, "served_from": "online"}
+        """
+        try:
+            # Find the entity for this feature
+            feature_def = store.registry.features.get(feature_name)
+            if not feature_def:
+                raise HTTPException(
+                    status_code=404, detail=f"Feature '{feature_name}' not found"
+                )
+
+            entity_name = feature_def.entity_name
+
+            # Get the feature value
+            features = await store.get_online_features(
+                entity_name=entity_name,
+                entity_id=entity_id,
+                features=[feature_name],
+            )
+
+            if feature_name not in features:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Feature '{feature_name}' not found for entity '{entity_id}'",
+                )
+
+            return {
+                "value": features[feature_name],
+                "freshness_ms": 0,
+                "served_from": "online",
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("get_single_feature_error", feature=feature_name, error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
     @v1_router.post("/ingest/{event_type}", status_code=202)
     async def ingest_event(
         event_type: str,
@@ -249,25 +294,108 @@ def create_app(store: FeatureStore) -> FastAPI:
         start: Optional[str] = None,
         end: Optional[str] = None,
         limit: int = 100,
+        name: Optional[str] = None,
+        freshness_status: Optional[str] = None,
         api_key: str = Depends(get_api_key),
     ) -> List[Dict[str, Any]]:
         """
         List contexts in a time range for debugging/audit.
+
         Query params:
             - start: ISO format timestamp (optional)
             - end: ISO format timestamp (optional)
             - limit: max results (default 100)
+            - name: filter by context name (optional)
+            - freshness_status: filter by status - "guaranteed" or "degraded" (optional)
+
+        Examples:
+            GET /v1/contexts?limit=10
+            GET /v1/contexts?name=chat_context&freshness_status=degraded
+            GET /v1/contexts?start=2024-01-01T00:00:00Z&end=2024-01-02T00:00:00Z
         """
         start_dt = datetime.fromisoformat(start) if start else None
         end_dt = datetime.fromisoformat(end) if end else None
 
+        # Validate freshness_status if provided
+        if freshness_status and freshness_status not in ("guaranteed", "degraded"):
+            raise HTTPException(
+                status_code=400,
+                detail="freshness_status must be 'guaranteed' or 'degraded'",
+            )
+
         try:
             contexts = await store.list_contexts(
-                start=start_dt, end=end_dt, limit=limit
+                start=start_dt,
+                end=end_dt,
+                limit=limit,
+                name=name,
+                freshness_status=freshness_status,
             )
             return contexts
         except Exception as e:
             logger.error("list_contexts_failed", error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @v1_router.post("/context/{context_name}")
+    async def assemble_context(
+        context_name: str,
+        payload: Dict[str, Any],
+        api_key: str = Depends(get_api_key),
+    ) -> Dict[str, Any]:
+        """
+        Assemble a new context by calling the registered context function.
+
+        The payload should contain the arguments expected by the context function.
+        For example, if the context function is:
+            @context(store, name="chat_context")
+            async def chat_context(user_id: str, query: str): ...
+
+        Then the payload should be:
+            {"user_id": "user_123", "query": "how do features work?"}
+
+        Returns the assembled context with id, content, meta, and lineage.
+        """
+        # Find the context function
+        if context_name not in store.registry.contexts:
+            raise HTTPException(
+                status_code=404, detail=f"Context '{context_name}' not found"
+            )
+
+        context_func = store.registry.contexts[context_name]
+
+        try:
+            # Call the context function with the provided arguments
+            ctx = await context_func(**payload)
+
+            # The context decorator returns an AssembledContext
+            result: Dict[str, Any] = {
+                "id": ctx.id,
+                "content": ctx.content,
+                "meta": ctx.meta,
+            }
+
+            if ctx.lineage:
+                result["lineage"] = ctx.lineage.model_dump()
+
+            return result
+
+        except TypeError as e:
+            # Missing or invalid arguments
+            logger.error(
+                "assemble_context_type_error",
+                context_name=context_name,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid arguments for context '{context_name}': {e}",
+            )
+        except Exception as e:
+            logger.error(
+                "assemble_context_failed",
+                context_name=context_name,
+                error=str(e),
+            )
             raise HTTPException(status_code=500, detail=str(e))
 
     @v1_router.get("/context/{context_id}")
@@ -355,6 +483,130 @@ def create_app(store: FeatureStore) -> FastAPI:
             logger.error("explain_context_failed", error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
+    @v1_router.post("/context/{context_id}/replay")
+    async def replay_context(
+        context_id: str,
+        timestamp: Optional[str] = None,
+        api_key: str = Depends(get_api_key),
+    ) -> Dict[str, Any]:
+        """
+        Replay a historical context assembly.
+
+        If timestamp is provided, re-executes the context function with
+        feature values as they existed at that point in time.
+
+        Args:
+            context_id: The UUIDv7 identifier from a previous context assembly.
+            timestamp: Optional ISO timestamp for time-travel replay.
+
+        Returns:
+            The replayed context with content, lineage, and meta.
+        """
+        try:
+            # Parse timestamp if provided
+            replay_ts = None
+            if timestamp:
+                replay_ts = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+            ctx = await store.replay_context(context_id, timestamp=replay_ts)
+            if not ctx:
+                raise HTTPException(status_code=404, detail="Context not found")
+
+            # Return serialized context
+            result: Dict[str, Any] = {
+                "id": ctx.id,
+                "content": ctx.content,
+                "meta": ctx.meta,
+                "version": getattr(ctx, "version", "v1"),
+            }
+
+            if ctx.lineage:
+                result["lineage"] = ctx.lineage.model_dump()
+
+            return result
+
+        except HTTPException:
+            raise
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid timestamp format: {e}"
+            )
+        except Exception as e:
+            logger.error("replay_context_failed", context_id=context_id, error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @v1_router.get("/context/diff/{base_id}/{comparison_id}")
+    async def diff_contexts(
+        base_id: str,
+        comparison_id: str,
+        api_key: str = Depends(get_api_key),
+    ) -> Dict[str, Any]:
+        """
+        Compare two context assemblies and return detailed diff.
+
+        Shows what features, retrievers, and content changed between two contexts.
+
+        Args:
+            base_id: The UUIDv7 identifier of the base (older) context.
+            comparison_id: The UUIDv7 identifier of the comparison (newer) context.
+
+        Returns:
+            ContextDiff with all changes between the two contexts.
+        """
+        from fabra.utils.compare import compare_contexts
+        from fabra.models import ContextLineage
+
+        try:
+            # Fetch both contexts
+            base_ctx = await store.get_context_at(base_id)
+            if not base_ctx:
+                raise HTTPException(
+                    status_code=404, detail=f"Base context {base_id} not found"
+                )
+
+            comp_ctx = await store.get_context_at(comparison_id)
+            if not comp_ctx:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Comparison context {comparison_id} not found",
+                )
+
+            # Build lineage objects (with fallbacks for contexts without lineage)
+            base_lineage = base_ctx.lineage or ContextLineage(
+                context_id=base_id,
+                token_usage=base_ctx.meta.get("token_usage", 0),
+                estimated_cost_usd=base_ctx.meta.get("cost_usd", 0.0),
+                freshness_status=base_ctx.meta.get("freshness_status", "unknown"),
+            )
+
+            comp_lineage = comp_ctx.lineage or ContextLineage(
+                context_id=comparison_id,
+                token_usage=comp_ctx.meta.get("token_usage", 0),
+                estimated_cost_usd=comp_ctx.meta.get("cost_usd", 0.0),
+                freshness_status=comp_ctx.meta.get("freshness_status", "unknown"),
+            )
+
+            # Compute diff
+            diff = compare_contexts(
+                base_lineage,
+                comp_lineage,
+                base_content=base_ctx.content,
+                comparison_content=comp_ctx.content,
+            )
+
+            return diff.model_dump()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "diff_contexts_failed",
+                base_id=base_id,
+                comparison_id=comparison_id,
+                error=str(e),
+            )
+            raise HTTPException(status_code=500, detail=str(e))
+
     @v1_router.delete("/cache/{entity_name}/{entity_id}")
     async def invalidate_cache(
         entity_name: str, entity_id: str, api_key: str = Depends(get_api_key)
@@ -401,7 +653,7 @@ def create_app(store: FeatureStore) -> FastAPI:
         context_id: str, api_key: str = Depends(get_api_key)
     ) -> HTMLResponse:
         """
-        Returns a visual HTML representation of the context trace.
+        Returns a visual HTML representation of the context trace with Mermaid diagram.
         """
         # Reuse logic from explain_context to get data
         trace = await explain_context(context_id, api_key)
@@ -419,6 +671,68 @@ def create_app(store: FeatureStore) -> FastAPI:
             icon = "⚠️" if is_stale else "✅"
             sources_html += f'<span style="background: {bg}; color: {color}; padding: 4px 8px; border-radius: 12px; font-size: 12px; margin-right: 5px; display: inline-block;">{icon} {safe_src}</span>'
 
+        # Build Mermaid diagram for lineage visualization
+        mermaid_nodes = []
+        mermaid_edges = []
+
+        # Categorize sources
+        features = []
+        retrievers = []
+        other_sources = []
+
+        for src in trace.source_ids:
+            # HTML escape to prevent XSS, then escape quotes for Mermaid syntax
+            safe_src = html.escape(str(src)).replace('"', "'")
+            # Classify source types based on naming conventions
+            if (
+                "retriev" in safe_src.lower()
+                or "search" in safe_src.lower()
+                or "docs" in safe_src.lower()
+            ):
+                retrievers.append(safe_src)
+            elif "_" in safe_src and not safe_src.startswith(("system", "user_query")):
+                features.append(safe_src)
+            else:
+                other_sources.append(safe_src)
+
+        # Add feature nodes
+        for i, feat in enumerate(features):
+            node_id = f"F{i}"
+            is_stale = feat in (trace.stale_sources or [])
+            style = ":::stale" if is_stale else ":::fresh"
+            mermaid_nodes.append(f'    {node_id}["{feat}"]{style}')
+            mermaid_edges.append(f"    {node_id} --> CTX")
+
+        # Add retriever nodes
+        for i, ret in enumerate(retrievers):
+            node_id = f"R{i}"
+            is_stale = ret in (trace.stale_sources or [])
+            style = ":::stale" if is_stale else ":::retriever"
+            mermaid_nodes.append(f'    {node_id}["{ret}"]{style}')
+            mermaid_edges.append(f"    {node_id} --> CTX")
+
+        # Add other source nodes
+        for i, src in enumerate(other_sources):
+            node_id = f"S{i}"
+            is_stale = src in (trace.stale_sources or [])
+            style = ":::stale" if is_stale else ":::source"
+            mermaid_nodes.append(f'    {node_id}["{src}"]{style}')
+            mermaid_edges.append(f"    {node_id} --> CTX")
+
+        # Add context assembly node and output
+        mermaid_nodes.append('    CTX[["Context Assembly"]]:::assembly')
+        mermaid_nodes.append(
+            f'    OUT[("Final Prompt\\n{trace.token_usage} tokens")]:::output'
+        )
+        mermaid_edges.append("    CTX --> OUT")
+
+        mermaid_diagram = (
+            "graph LR\\n"
+            + "\\n".join(mermaid_nodes)
+            + "\\n"
+            + "\\n".join(mermaid_edges)
+        )
+
         safe_context_id = html.escape(context_id)
         safe_status = html.escape(str(trace.freshness_status).upper())
         safe_stale_sources = html.escape(str(trace.stale_sources or "None"))
@@ -428,20 +742,25 @@ def create_app(store: FeatureStore) -> FastAPI:
         <html>
         <head>
             <title>Context Trace: {safe_context_id}</title>
+            <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
             <style>
                 body {{ font-family: -apple-system, system-ui, sans-serif; background: #f8f9fa; padding: 40px; margin: 0; }}
-                .card {{ background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 24px; max-width: 800px; margin: 0 auto; }}
+                .card {{ background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 24px; max-width: 900px; margin: 0 auto; }}
                 .header {{ border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }}
                 .title {{ font-size: 20px; font-weight: 600; color: #202124; margin: 0 0 5px 0; }}
                 .subtitle {{ color: #5f6368; font-family: monospace; font-size: 14px; }}
                 .badge {{ display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; color: white; vertical-align: middle; margin-left: 10px; }}
-                .metrics {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }}
+                .metrics {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }}
                 .metric-box {{ background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }}
                 .metric-val {{ font-size: 24px; font-weight: bold; color: #202124; }}
                 .metric-label {{ font-size: 12px; color: #5f6368; text-transform: uppercase; margin-top: 5px; }}
                 .section-title {{ font-size: 14px; font-weight: 600; color: #202124; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }}
                 .sources {{ margin-bottom: 20px; }}
+                .diagram {{ margin: 30px 0; padding: 20px; background: #fafafa; border-radius: 8px; text-align: center; }}
                 .footer {{ margin-top: 30px; text-align: center; color: #9aa0a6; font-size: 12px; }}
+                .legend {{ display: flex; gap: 20px; justify-content: center; margin-top: 15px; font-size: 12px; color: #5f6368; }}
+                .legend-item {{ display: flex; align-items: center; gap: 5px; }}
+                .legend-color {{ width: 12px; height: 12px; border-radius: 3px; }}
             </style>
         </head>
         <body>
@@ -467,6 +786,23 @@ def create_app(store: FeatureStore) -> FastAPI:
                         <div class="metric-val">{len(trace.source_ids)}</div>
                         <div class="metric-label">Sources</div>
                     </div>
+                    <div class="metric-box">
+                        <div class="metric-val">{"Yes" if trace.cache_hit else "No"}</div>
+                        <div class="metric-label">Cache Hit</div>
+                    </div>
+                </div>
+
+                <div class="diagram">
+                    <div class="section-title">Data Lineage Flow</div>
+                    <div class="mermaid">
+                    {mermaid_diagram}
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color" style="background: #e6f4ea;"></div> Feature</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #e3f2fd;"></div> Retriever</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #fff3e0;"></div> Source</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #fce8e6;"></div> Stale</div>
+                    </div>
                 </div>
 
                 <div class="sources">
@@ -477,8 +813,9 @@ def create_app(store: FeatureStore) -> FastAPI:
                 <div class="sources">
                     <div class="section-title">Details</div>
                      <div style="background: #202124; color: #e8eaed; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; overflow-x: auto;">
-                        Cache Hit: {trace.cache_hit}<br>
+                        Created: {trace.created_at.isoformat() if trace.created_at else "N/A"}<br>
                         Stale Sources: {safe_stale_sources}<br>
+                        Missing Features: {html.escape(str(trace.missing_features or "None"))}<br>
                         Cost: {trace.cost_usd if trace.cost_usd else "N/A"}
                     </div>
                 </div>
@@ -487,6 +824,32 @@ def create_app(store: FeatureStore) -> FastAPI:
                     Generated by Fabra Feature Store
                 </div>
             </div>
+            <script>
+                mermaid.initialize({{
+                    startOnLoad: true,
+                    theme: 'neutral',
+                    themeVariables: {{
+                        primaryColor: '#e6f4ea',
+                        primaryBorderColor: '#137333',
+                        lineColor: '#5f6368',
+                        secondaryColor: '#e3f2fd',
+                        tertiaryColor: '#fff3e0'
+                    }},
+                    flowchart: {{
+                        useMaxWidth: true,
+                        htmlLabels: true,
+                        curve: 'basis'
+                    }}
+                }});
+            </script>
+            <style>
+                .mermaid .fresh > rect {{ fill: #e6f4ea !important; stroke: #137333 !important; }}
+                .mermaid .stale > rect {{ fill: #fce8e6 !important; stroke: #c5221f !important; }}
+                .mermaid .retriever > rect {{ fill: #e3f2fd !important; stroke: #1976d2 !important; }}
+                .mermaid .source > rect {{ fill: #fff3e0 !important; stroke: #f57c00 !important; }}
+                .mermaid .assembly > rect {{ fill: #f3e5f5 !important; stroke: #7b1fa2 !important; }}
+                .mermaid .output > rect, .mermaid .output > circle {{ fill: #e8f5e9 !important; stroke: #2e7d32 !important; }}
+            </style>
         </body>
         </html>
         """

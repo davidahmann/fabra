@@ -62,4 +62,6 @@ async def test_xss_prevention() -> None:
     # Verify Stored Source ID is escaped
     # html.escape escapes ' as &#x27; by default
     assert "&lt;script&gt;alert(&#x27;src&#x27;)&lt;/script&gt;" in html_content
-    assert "<script>" not in html_content
+    # Check that the malicious script content is NOT present unescaped
+    # (The page may have legitimate <script> tags for Mermaid.js)
+    assert "<script>alert('src')</script>" not in html_content

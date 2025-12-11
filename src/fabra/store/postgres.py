@@ -465,8 +465,18 @@ class PostgresOfflineStore(OfflineStore):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         limit: int = 100,
+        name: Optional[str] = None,
+        freshness_status: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """List contexts in time range."""
+        """List contexts in time range with optional filters.
+
+        Args:
+            start: Filter contexts created after this time
+            end: Filter contexts created before this time
+            limit: Maximum number of results
+            name: Filter by context name (from meta.name)
+            freshness_status: Filter by freshness status ("guaranteed" or "degraded")
+        """
         await self._ensure_context_table()
 
         conditions = []
@@ -478,6 +488,16 @@ class PostgresOfflineStore(OfflineStore):
         if end:
             conditions.append("timestamp <= :end")
             params["end"] = end
+
+        # Filter by name (stored in meta JSONB)
+        if name:
+            conditions.append("meta->>'name' = :name")
+            params["name"] = name
+
+        # Filter by freshness_status (stored in meta JSONB)
+        if freshness_status:
+            conditions.append("meta->>'freshness_status' = :freshness_status")
+            params["freshness_status"] = freshness_status
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 

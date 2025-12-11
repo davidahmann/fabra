@@ -1,6 +1,7 @@
 'use client';
 
-import type { ContextLineage, FeatureLineage, RetrieverLineage } from '@/types/api';
+import { useState } from 'react';
+import type { ContextLineage, FeatureLineage, RetrieverLineage, DocumentChunkLineage } from '@/types/api';
 
 interface LineagePanelProps {
   lineage: ContextLineage;
@@ -22,8 +23,40 @@ function FreshnessIndicator({ ms, slaMs }: { ms: number; slaMs?: number }) {
           : 'bg-green-500/20 text-green-400'
       }`}
     >
-      {isStale ? '⚠️' : '✓'} {formatMs(ms)}
+      {isStale ? '!' : '\u2713'} {formatMs(ms)}
     </span>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 text-gray-500 hover:text-gray-300 transition"
+      title="Copy to clipboard"
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -66,16 +99,69 @@ function FeatureCard({ feature }: { feature: FeatureLineage }) {
   );
 }
 
+function ChunkCard({ chunk }: { chunk: DocumentChunkLineage }) {
+  return (
+    <div className={`bg-gray-800 border rounded p-2 text-xs ${
+      chunk.is_stale ? 'border-red-500/50' : 'border-gray-700'
+    }`}>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-gray-400 truncate max-w-[120px]" title={chunk.chunk_id}>
+            {chunk.chunk_id.slice(0, 12)}...
+          </span>
+          <CopyButton text={chunk.chunk_id} />
+        </div>
+        <span className={`px-1.5 py-0.5 rounded text-xs ${
+          chunk.is_stale ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+        }`}>
+          {chunk.is_stale ? 'STALE' : 'FRESH'}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1 text-gray-500">
+        <div>
+          <span>Score:</span>
+          <span className="text-blue-400 ml-1">{chunk.similarity_score.toFixed(3)}</span>
+        </div>
+        <div>
+          <span>Age:</span>
+          <span className={chunk.is_stale ? 'text-red-400' : 'text-gray-300'}> {formatMs(chunk.freshness_ms)}</span>
+        </div>
+        <div>
+          <span>Pos:</span>
+          <span className="text-gray-300 ml-1">#{chunk.position_in_results + 1}</span>
+        </div>
+        {chunk.source_url && (
+          <div className="truncate" title={chunk.source_url}>
+            <span>URL:</span>
+            <span className="text-gray-400 ml-1">{chunk.source_url.split('/').pop()}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RetrieverCard({ retriever }: { retriever: RetrieverLineage }) {
+  const [showChunks, setShowChunks] = useState(false);
+  const hasChunks = retriever.chunks_returned && retriever.chunks_returned.length > 0;
+  const staleCount = retriever.stale_chunks_count || 0;
+
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-blue-400 text-sm">
           {retriever.retriever_name}
         </span>
-        <span className="text-xs text-gray-400">
-          {retriever.latency_ms.toFixed(1)}ms
-        </span>
+        <div className="flex items-center gap-2">
+          {staleCount > 0 && (
+            <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
+              {staleCount} stale
+            </span>
+          )}
+          <span className="text-xs text-gray-400">
+            {retriever.latency_ms.toFixed(1)}ms
+          </span>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
@@ -88,6 +174,12 @@ function RetrieverCard({ retriever }: { retriever: RetrieverLineage }) {
             <span className="text-gray-300 ml-1">{retriever.index_name}</span>
           </div>
         )}
+        {retriever.oldest_chunk_ms !== undefined && retriever.oldest_chunk_ms > 0 && (
+          <div>
+            <span className="text-gray-500">Oldest:</span>
+            <span className="text-gray-300 ml-1">{formatMs(retriever.oldest_chunk_ms)}</span>
+          </div>
+        )}
         <div className="col-span-2">
           <span className="text-gray-500">Query:</span>
           <span className="text-gray-300 ml-1 truncate block">
@@ -95,6 +187,33 @@ function RetrieverCard({ retriever }: { retriever: RetrieverLineage }) {
           </span>
         </div>
       </div>
+
+      {/* Expandable Chunks Section */}
+      {hasChunks && (
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          <button
+            onClick={() => setShowChunks(!showChunks)}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-300 transition"
+          >
+            <svg
+              className={`w-3 h-3 transform transition-transform ${showChunks ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            {retriever.chunks_returned!.length} chunks returned
+          </button>
+          {showChunks && (
+            <div className="mt-2 space-y-2">
+              {retriever.chunks_returned!.map((chunk, idx) => (
+                <ChunkCard key={idx} chunk={chunk} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -119,7 +238,10 @@ export default function LineagePanel({ lineage }: LineagePanelProps) {
       {/* Header Stats */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-gray-200 font-semibold">Context Lineage</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="text-gray-200 font-semibold">Context Lineage</h4>
+            <CopyButton text={lineage.context_id} />
+          </div>
           <span
             className={`px-2 py-1 rounded text-xs font-medium ${statusBg} ${statusColor}`}
           >
@@ -130,7 +252,7 @@ export default function LineagePanel({ lineage }: LineagePanelProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="bg-gray-900 rounded p-3">
             <div className="text-gray-500 text-xs mb-1">Context ID</div>
-            <div className="text-gray-300 font-mono text-xs truncate">
+            <div className="text-gray-300 font-mono text-xs truncate flex items-center gap-1">
               {lineage.context_id.slice(0, 12)}...
             </div>
           </div>

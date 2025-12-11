@@ -46,6 +46,16 @@ This is "write path ownership": we ingest and manage your context data, not just
 
 ## The 30-Second Quickstart
 
+### Fastest Path
+
+```bash
+pip install fabra-ai && fabra demo
+```
+
+That's it. Server starts, makes a test request, shows you the result. No Docker. No config files. No API keys.
+
+### Build Your Own
+
 ```bash
 pip install "fabra-ai[ui]"
 ```
@@ -54,6 +64,7 @@ pip install "fabra-ai[ui]"
 from fabra.core import FeatureStore, entity, feature
 from fabra.context import context, ContextItem
 from fabra.retrieval import retriever
+from datetime import timedelta
 
 store = FeatureStore()
 
@@ -61,7 +72,7 @@ store = FeatureStore()
 class User:
     user_id: str
 
-@feature(entity=User, refresh="daily")
+@feature(entity=User, refresh=timedelta(days=1))
 def user_tier(user_id: str) -> str:
     return "premium" if hash(user_id) % 2 == 0 else "free"
 
@@ -82,6 +93,9 @@ async def build_prompt(user_id: str, query: str):
 ```bash
 fabra serve features.py
 # Server running on http://localhost:8000
+
+curl localhost:8000/features/user_tier?entity_id=user123
+# {"value": "premium", "freshness_ms": 0, "served_from": "online"}
 ```
 
 **That's it.** No infrastructure. No config files. Just Python.

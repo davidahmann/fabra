@@ -16,6 +16,8 @@ from fabra.models import (
     ContextLineage,
     FeatureLineage,
     RetrieverLineage,
+    DocumentChunkLineage,
+    RetrieverSnapshot,
 )
 from fabra.observability import ContextMetrics
 from fabra.exceptions import FreshnessSLAError
@@ -33,6 +35,26 @@ _assembly_tracker: ContextVar[Optional["AssemblyTracker"]] = ContextVar(
     "fabra_assembly_tracker", default=None
 )
 
+# Time travel context for replay functionality
+_time_travel_timestamp: ContextVar[Optional[datetime]] = ContextVar(
+    "fabra_time_travel_timestamp", default=None
+)
+
+
+def set_time_travel_context(timestamp: datetime) -> None:
+    """Set the time travel timestamp for replay operations."""
+    _time_travel_timestamp.set(timestamp)
+
+
+def clear_time_travel_context() -> None:
+    """Clear the time travel timestamp after replay operations."""
+    _time_travel_timestamp.set(None)
+
+
+def get_time_travel_timestamp() -> Optional[datetime]:
+    """Get the current time travel timestamp if set."""
+    return _time_travel_timestamp.get()
+
 
 class AssemblyTracker:
     """
@@ -40,10 +62,12 @@ class AssemblyTracker:
     Used internally by the @context decorator to build lineage.
     """
 
-    def __init__(self, context_id: str) -> None:
+    def __init__(self, context_id: str, capture_snapshots: bool = False) -> None:
         self.context_id = context_id
         self.features: List[FeatureLineage] = []
         self.retrievers: List[RetrieverLineage] = []
+        self.snapshots: List[RetrieverSnapshot] = []
+        self.capture_snapshots = capture_snapshots
         self.start_time = datetime.now(timezone.utc)
 
     def record_feature(
@@ -65,7 +89,7 @@ class AssemblyTracker:
                 value=value,
                 timestamp=timestamp,
                 freshness_ms=freshness_ms,
-                source=source,  # type: ignore
+                source=source,
             )
         )
 
@@ -76,8 +100,13 @@ class AssemblyTracker:
         results_count: int,
         latency_ms: float,
         index_name: Optional[str] = None,
+        chunks: Optional[List[DocumentChunkLineage]] = None,
+        stale_chunks_count: int = 0,
+        oldest_chunk_ms: int = 0,
+        raw_results: Optional[List[Dict[str, Any]]] = None,
+        chunk_contents: Optional[Dict[str, str]] = None,
     ) -> None:
-        """Record a retriever call during assembly."""
+        """Record a retriever call during assembly with chunk freshness tracking."""
         self.retrievers.append(
             RetrieverLineage(
                 retriever_name=retriever_name,
@@ -85,8 +114,28 @@ class AssemblyTracker:
                 results_count=results_count,
                 latency_ms=latency_ms,
                 index_name=index_name,
+                chunks_returned=chunks or [],
+                stale_chunks_count=stale_chunks_count,
+                oldest_chunk_ms=oldest_chunk_ms,
             )
         )
+
+        # Capture snapshot if enabled
+        if self.capture_snapshots and raw_results is not None:
+            snapshot = RetrieverSnapshot(
+                snapshot_id=str(uuid6.uuid7()),
+                retriever_name=retriever_name,
+                query=query,
+                timestamp=datetime.now(timezone.utc),
+                results=raw_results,
+                results_count=results_count,
+                chunks=chunks or [],
+                chunk_contents=chunk_contents or {},
+                latency_ms=latency_ms,
+                index_name=index_name,
+                context_id=self.context_id,
+            )
+            self.snapshots.append(snapshot)
 
     def get_stalest_feature_ms(self) -> int:
         """Return the age in ms of the oldest feature used."""
@@ -128,19 +177,96 @@ def record_retriever_usage(
     results_count: int,
     latency_ms: float,
     index_name: Optional[str] = None,
+    chunks: Optional[List[Dict[str, Any]]] = None,
+    chunk_freshness_sla_ms: Optional[int] = None,
+    capture_snapshot: bool = False,
 ) -> None:
     """
-    Record retriever usage for lineage tracking.
-    Call this from retriever execution to track usage.
+    Record retriever usage for lineage tracking with document/chunk freshness.
+
+    Args:
+        retriever_name: Name of the retriever.
+        query: Query string passed to retriever.
+        results_count: Number of results returned.
+        latency_ms: Time taken for retrieval in ms.
+        index_name: Optional index/collection searched.
+        chunks: Optional list of chunk metadata with freshness info.
+            Each chunk should have: chunk_id, document_id, content_hash,
+            indexed_at (datetime or ISO string), similarity_score, etc.
+        chunk_freshness_sla_ms: Optional freshness SLA in milliseconds.
+            Chunks older than this will be marked as stale.
+        capture_snapshot: If True, capture full snapshot for replay.
     """
     tracker = _assembly_tracker.get()
     if tracker:
+        # Process chunks if provided
+        chunk_lineages: List[DocumentChunkLineage] = []
+        stale_count = 0
+        oldest_ms = 0
+
+        if chunks:
+            now = datetime.now(timezone.utc)
+            for i, chunk in enumerate(chunks):
+                # Parse indexed_at timestamp
+                indexed_at = chunk.get("indexed_at")
+                if isinstance(indexed_at, str):
+                    indexed_at = datetime.fromisoformat(
+                        indexed_at.replace("Z", "+00:00")
+                    )
+                elif indexed_at is None:
+                    indexed_at = now  # Default to now if not provided
+
+                # Calculate freshness
+                freshness_ms = int((now - indexed_at).total_seconds() * 1000)
+                oldest_ms = max(oldest_ms, freshness_ms)
+
+                # Check if stale
+                is_stale = False
+                if chunk_freshness_sla_ms and freshness_ms > chunk_freshness_sla_ms:
+                    is_stale = True
+                    stale_count += 1
+
+                # Create chunk lineage
+                chunk_lineage = DocumentChunkLineage(
+                    chunk_id=chunk.get("chunk_id", f"chunk_{i}"),
+                    document_id=chunk.get("document_id", "unknown"),
+                    content_hash=chunk.get(
+                        "content_hash",
+                        hashlib.sha256(chunk.get("content", "").encode()).hexdigest()[
+                            :16
+                        ],
+                    ),
+                    source_url=chunk.get("source_url"),
+                    indexed_at=indexed_at,
+                    document_modified_at=chunk.get("document_modified_at"),
+                    freshness_ms=freshness_ms,
+                    is_stale=is_stale,
+                    similarity_score=chunk.get("similarity_score", 0.0),
+                    retriever_name=retriever_name,
+                    position_in_results=i,
+                )
+                chunk_lineages.append(chunk_lineage)
+
+        # Build chunk contents map for snapshots
+        chunk_contents: Dict[str, str] = {}
+        if capture_snapshot and chunks:
+            for chunk in chunks:
+                chunk_id = chunk.get("chunk_id", f"chunk_{chunks.index(chunk)}")
+                content = chunk.get("content", "")
+                if content:
+                    chunk_contents[chunk_id] = content
+
         tracker.record_retriever(
             retriever_name=retriever_name,
             query=query,
             results_count=results_count,
             latency_ms=latency_ms,
             index_name=index_name,
+            chunks=chunk_lineages,
+            stale_chunks_count=stale_count,
+            oldest_chunk_ms=oldest_ms,
+            raw_results=chunks if capture_snapshot else None,
+            chunk_contents=chunk_contents if capture_snapshot else None,
         )
 
 
@@ -607,10 +733,22 @@ def context(
 
                 if offline_store and hasattr(offline_store, "log_context"):
                     try:
+                        # Capture kwargs for replay (filter out non-serializable items)
+                        replay_args: Dict[str, Any] = {}
+                        for k, v in kwargs.items():
+                            try:
+                                json.dumps(v)  # Test if serializable
+                                replay_args[k] = v
+                            except (TypeError, ValueError):
+                                pass  # Skip non-serializable args
+
                         # Build full lineage using tracker data
                         lineage_data = ContextLineage(
                             context_id=ctx_id,
                             timestamp=datetime.now(timezone.utc),
+                            # Context function info for replay
+                            context_name=context_name,
+                            context_args=replay_args if replay_args else None,
                             # Include tracked features and retrievers
                             features_used=tracker.features,
                             retrievers_used=tracker.retrievers,
@@ -665,6 +803,12 @@ def context(
 
         # Mark it so we can find it in the registry if needed
         wrapper._is_context = True  # type: ignore[attr-defined]
+        wrapper._context_name = context_name  # type: ignore[attr-defined]
+
+        # Register context function with the store's registry for replay support
+        if store and hasattr(store, "registry"):
+            store.registry.register_context(context_name, wrapper)
+
         return wrapper
 
     return decorator

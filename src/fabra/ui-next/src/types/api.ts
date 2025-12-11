@@ -48,6 +48,9 @@ export interface RetrieverLineage {
   results_count: number;
   latency_ms: number;
   index_name?: string;
+  chunks_returned?: DocumentChunkLineage[];
+  stale_chunks_count?: number;
+  oldest_chunk_ms?: number;
 }
 
 export interface ContextLineage {
@@ -98,4 +101,73 @@ export interface FeatureValues {
 
 export interface MermaidGraph {
   code: string;
+}
+
+// Context diff types
+export interface FeatureDiff {
+  feature_name: string;
+  entity_id: string;
+  old_value: unknown;
+  new_value: unknown;
+  change_type: 'added' | 'removed' | 'modified' | 'unchanged';
+  old_freshness_ms?: number;
+  new_freshness_ms?: number;
+}
+
+export interface RetrieverDiff {
+  retriever_name: string;
+  query_changed: boolean;
+  old_query?: string;
+  new_query?: string;
+  old_results_count: number;
+  new_results_count: number;
+  chunks_added: string[];
+  chunks_removed: string[];
+  change_type: 'added' | 'removed' | 'modified' | 'unchanged';
+}
+
+export interface ContentDiff {
+  lines_added: number;
+  lines_removed: number;
+  lines_changed: number;
+  similarity_score: number;
+  diff_summary: string;
+}
+
+export interface ContextDiff {
+  base_context_id: string;
+  comparison_context_id: string;
+  timestamp: string;
+  time_delta_ms: number;
+  feature_diffs: FeatureDiff[];
+  features_added: number;
+  features_removed: number;
+  features_modified: number;
+  retriever_diffs: RetrieverDiff[];
+  retrievers_added: number;
+  retrievers_removed: number;
+  retrievers_modified: number;
+  content_diff?: ContentDiff;
+  token_delta: number;
+  cost_delta_usd: number;
+  base_freshness_status: string;
+  comparison_freshness_status: string;
+  freshness_improved: boolean;
+  has_changes: boolean;
+  change_summary: string;
+}
+
+// Document chunk lineage with freshness
+export interface DocumentChunkLineage {
+  chunk_id: string;
+  document_id: string;
+  content_hash: string;
+  source_url?: string;
+  indexed_at: string;
+  document_modified_at?: string;
+  freshness_ms: number;
+  is_stale: boolean;
+  similarity_score: number;
+  retriever_name: string;
+  position_in_results: number;
 }

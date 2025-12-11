@@ -388,7 +388,7 @@ fabra deploy fly --name my-features
 fly deploy
 
 # Test
-curl https://my-features.fly.dev/features/login_count?user_id=test123
+curl https://my-features.fly.dev/features/login_count?entity_id=test123
 ```
 
 No Kubernetes. No YAML. Just features.

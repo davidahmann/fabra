@@ -194,7 +194,7 @@ def login_count(user_id: str) -> int:
 EOF
 
 fabra serve features.py
-curl http://localhost:8000/features/login_count?user_id=test123
+curl localhost:8000/features/login_count?entity_id=test123
 ```
 
 30 seconds. No YAML. No Kubernetes.

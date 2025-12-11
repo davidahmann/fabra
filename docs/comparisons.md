@@ -57,7 +57,9 @@ keywords: fabra vs feast, tecton alternative, feature store comparison, langchai
 ```python
 # Feast: features.yaml + entity.yaml + registry.yaml + ...
 # Fabra: Just Python
-@feature(entity=User, refresh="hourly")
+from datetime import timedelta
+
+@feature(entity=User, refresh=timedelta(hours=1))
 def click_count(user_id: str) -> int:
     return db.query("SELECT COUNT(*) FROM clicks WHERE user_id = ?", user_id)
 ```
