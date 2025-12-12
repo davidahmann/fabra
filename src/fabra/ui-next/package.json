@@ -10,7 +10,7 @@
     "export": "next build && cp -r .next/static out/_next/static"
   },
   "dependencies": {
-    "next": "^14.2.0",
+    "next": "^14.2.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "mermaid": "^10.6.0",
