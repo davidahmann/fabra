@@ -72,11 +72,9 @@ marked.use({ renderer });
  * Supports full GitHub Flavored Markdown including tables
  */
 export function markdownToHtml(markdown: string): string {
-  // Remove frontmatter
-  const content = markdown.replace(/^---[\s\S]*?---\n*/m, '');
-
-  // Remove Jekyll liquid tags
-  const cleanContent = content
+  // Note: Frontmatter is already removed by gray-matter in docs.ts
+  // Only remove Jekyll liquid tags here
+  const cleanContent = markdown
     .replace(/\{%.*?%\}/g, '')
     .replace(/\{\{.*?\}\}/g, '');
 

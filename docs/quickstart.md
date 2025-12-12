@@ -6,7 +6,7 @@ keywords: fabra quickstart, context infrastructure, ai audit trail, python featu
 
 # Quickstart: 30 Seconds to Production-Ready AI Infrastructure
 
-> **TL;DR:** Install with `pip install "fabra-ai[ui]"`. Define features or context with Python decorators. Run `fabra serve`. Full lineage and replay included.
+> **TL;DR:** Install with `pip install fabra-ai`. Define features or context with Python decorators. Run `fabra serve`. Full lineage and replay included.
 
 ## Choose Your Track
 
@@ -58,7 +58,7 @@ That's it. Server starts, makes a test request, shows you the result. No Docker.
 ### Build Your Own Features
 
 ```bash
-pip install "fabra-ai[ui]"
+pip install fabra-ai
 ```
 
 ```python
@@ -109,7 +109,7 @@ curl localhost:8000/features/purchase_count?entity_id=user123
 > **Prerequisites:** To use Vector Search, you need an API Key (OpenAI, Anthropic, or Cohere).
 
 ```bash
-pip install "fabra-ai[ui]"
+pip install fabra-ai
 ```
 
 ```python
@@ -184,7 +184,7 @@ FABRA_ENV=production fabra serve features.py
 ## FAQ
 
 **Q: How do I run a feature store locally without Docker?**
-A: Fabra uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install "fabra-ai[ui]"`, define features in Python, run `fabra serve`. Zero infrastructure required.
+A: Fabra uses DuckDB (embedded) and in-memory cache for local dev. Install with `pip install fabra-ai`, define features in Python, run `fabra serve`. Zero infrastructure required.
 
 **Q: What's the simplest context infrastructure for small ML teams?**
 A: Fabra targets "Tier 2" companies (Series B-D, 10-500 engineers) who need real-time ML and LLM features but can't afford Kubernetes ops. We own the write path — ingest, index, track freshness, and serve — giving you lineage and replay that read-only frameworks can't provide.
@@ -213,7 +213,7 @@ A: Fabra eliminates YAML configuration. Define features in Python with `@feature
   "step": [{
     "@type": "HowToStep",
     "name": "Install Fabra",
-    "text": "Run pip install \"fabra-ai[ui]\" to install the library."
+    "text": "Run pip install fabra-ai to install the library."
   }, {
     "@type": "HowToStep",
     "name": "Define Features",

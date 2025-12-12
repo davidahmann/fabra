@@ -11,8 +11,8 @@ keywords: fabra ui, feature store ui, context explorer, rag debugger, feature vi
 ## Quick Start
 
 ```bash
-# Install with UI dependencies
-pip install "fabra-ai[ui]"
+# Install Fabra
+pip install fabra-ai
 
 # Launch the UI
 fabra ui examples/demo_context.py
