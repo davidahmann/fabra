@@ -14,17 +14,17 @@ interface SearchResult {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://okwvjfgvqghnogymebla.supabase.co';
 
 const POPULAR_QUERIES = [
-  // AI Engineers
-  { query: 'How to build a RAG chatbot?', href: '/docs/rag-chatbot' },
+  // Core value prop (Context Records)
+  { query: 'What is a Context Record?', href: '/docs/context-record-spec' },
   { query: 'What data did my AI use?', href: '/docs/rag-audit-trail' },
-  { query: 'Token budget management', href: '/docs/context-assembly' },
-  // ML Engineers
-  { query: 'How to define features?', href: '/docs/feature-definitions' },
-  { query: 'Point-in-time correctness', href: '/docs/point-in-time' },
-  { query: 'Fabra vs Feast', href: '/docs/feast-alternative' },
-  // Both personas
+  { query: 'How to replay an AI decision?', href: '/docs/context-accountability' },
+  { query: 'Why was context dropped?', href: '/docs/context-assembly' },
+  // Getting started
+  { query: 'Quickstart in 30 seconds', href: '/docs/quickstart' },
   { query: 'How to deploy Fabra?', href: '/docs/local-to-production' },
-  { query: 'Freshness SLAs', href: '/docs/freshness-sla' },
+  // Comparisons
+  { query: 'Fabra vs Feast', href: '/docs/feast-alternative' },
+  { query: 'Fabra vs LangChain', href: '/docs/comparisons' },
 ];
 
 interface SearchModalProps {
