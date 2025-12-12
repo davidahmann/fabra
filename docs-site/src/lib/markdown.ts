@@ -9,6 +9,16 @@ marked.setOptions({
 // Get basePath for production (GitHub Pages deploys to /fabra/)
 const basePath = process.env.NODE_ENV === 'production' ? '/fabra' : '';
 
+// Helper function to generate slug from heading text (similar to rehype-slug)
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .trim();
+}
+
 // Custom renderer to handle internal .md links and add classes
 const renderer = new marked.Renderer();
 
@@ -62,6 +72,12 @@ renderer.code = function ({ text, lang }) {
 // Override inline code rendering
 renderer.codespan = function ({ text }) {
   return `<code class="inline-code">${text}</code>`;
+};
+
+// Override heading rendering to add IDs for anchor links
+renderer.heading = function ({ text, depth }) {
+  const slug = slugify(text);
+  return `<h${depth} id="${slug}">${text}</h${depth}>`;
 };
 
 // Use the custom renderer
