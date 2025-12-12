@@ -1,58 +1,253 @@
 ---
-title: "Fabra Architecture: Context Infrastructure That Owns the Write Path"
-description: "Deep dive into Fabra's architecture. Learn how we own the write path for context data, enabling lineage, replay, and auditability that read-only frameworks cannot provide."
-keywords: context infrastructure architecture, write path ownership, duckdb feature store, feature store design, postgres redis mlops, pgvector vector search, ai audit trail, context lineage
+title: "Fabra Architecture: How Context Records Work"
+description: "Technical deep-dive into Fabra's architecture. Learn how Context Records are created, stored, and replayed — from local development to production."
+keywords: context record architecture, fabra architecture, ai audit trail, duckdb, postgres, redis, pgvector, context infrastructure
 ---
 
-# Fabra Architecture: Boring Technology, Properly Applied
+# Architecture
 
-> **TL;DR:** Fabra is context infrastructure that owns the write path. We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability that read-only wrappers cannot provide. DuckDB for local, Postgres + Redis + pgvector for production.
+> **TL;DR:** Fabra creates a **Context Record** for every AI decision — an immutable snapshot of what data was used, where it came from, and what got dropped. DuckDB for local, Postgres + Redis + pgvector for production.
 
-## Design Philosophy
+## The Context Record
 
-1. **Redis-Only Caching (No L1)**
-   - Most feature stores use in-memory L1 + Redis L2
-   - This creates cache coherence bugs (pods see stale values)
-   - We use Redis-only: 1ms localhost latency, strong consistency
-   - Correctness > micro-optimization for fraud/finance
+Everything in Fabra flows through the **Context Record** — the atomic unit of AI accountability.
 
-2. **Randomized Distributed Locking (No Leader Election)**
-   - Most systems use consistent hashing or leader election
-   - We use randomized work selection + Redis SETNX locks
-   - Self-healing, no topology awareness required
-   - "Even enough" statistically, brutally simple
+```json
+{
+  "context_id": "ctx_018f3a2b-...",
+  "created_at": "2025-02-14T18:42:31.221Z",
+  "content": "You are a helpful assistant...",
+  "token_count": 3847,
 
-3. **Explicit Over Magic**
-   - No auto-caching hot features
-   - No query optimization
-   - User writes `materialize=True`, we cache. That's it.
-   - Predictability > cleverness
+  "features": [
+    {"name": "user_tier", "value": "premium", "freshness_ms": 1200},
+    {"name": "support_tickets", "value": 3, "freshness_ms": 45000}
+  ],
+
+  "retrieved_items": [
+    {"chunk_id": "doc_123_chunk_2", "similarity": 0.89, "tokens": 512},
+    {"chunk_id": "doc_456_chunk_1", "similarity": 0.84, "tokens": 384}
+  ],
+
+  "assembly": {
+    "max_tokens": 4000,
+    "tokens_used": 3847,
+    "items_dropped": [
+      {"chunk_id": "doc_789_chunk_3", "reason": "budget_exceeded", "tokens": 256}
+    ]
+  },
+
+  "integrity": {
+    "record_hash": "sha256:a1b2c3d4..."
+  }
+}
+```
+
+This record answers every question about an AI decision:
+- **What features?** → `features[]` with exact values and freshness
+- **What documents?** → `retrieved_items[]` with similarity scores
+- **What got dropped?** → `assembly.items_dropped[]` with reasons
+- **Can we verify it?** → `integrity.record_hash` for tamper detection
+
+## System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Your Application                         │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         Fabra Server                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │  @feature   │  │  @retriever │  │       @context          │  │
+│  │  decorator  │  │  decorator  │  │       decorator         │  │
+│  └──────┬──────┘  └──────┬──────┘  └───────────┬─────────────┘  │
+│         │                │                     │                 │
+│         └────────────────┴─────────────────────┘                 │
+│                          │                                       │
+│                          ▼                                       │
+│              ┌───────────────────────┐                          │
+│              │    Context Record     │  ← Created on every call │
+│              │    (immutable)        │                          │
+│              └───────────┬───────────┘                          │
+└──────────────────────────┼──────────────────────────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    ┌────────────┐  ┌────────────┐  ┌────────────┐
+    │   Online   │  │  Offline   │  │   Vector   │
+    │   Store    │  │   Store    │  │   Store    │
+    │  (Redis)   │  │ (Postgres) │  │ (pgvector) │
+    └────────────┘  └────────────┘  └────────────┘
+```
 
 ## The Stack
 
-**Local Mode:**
-- **Offline:** DuckDB (embedded SQL engine)
-- **Online:** Python dict (in-memory)
-- **Scheduler:** APScheduler (background thread)
-- **Infrastructure:** None (Just `pip install`)
+### Local Development
 
-**Production Mode:**
-- **Offline:** Postgres 13+ (Async with `asyncpg`)
-- **Online:** Redis 6+ (standalone or cluster)
-- **Vector:** pgvector extension for embeddings
-- **Scheduler:** Distributed Workers with Redis Locks
-- **Infrastructure:** 1x Postgres (with pgvector), 1x Redis, Nx API Pods
+| Component | Technology | Purpose |
+|:----------|:-----------|:--------|
+| Offline Store | DuckDB (embedded) | Feature history, Context Records |
+| Online Store | Python dict | Feature cache |
+| Vector Store | In-memory | Document embeddings |
+| Scheduler | APScheduler | Background refresh |
+
+**Infrastructure required:** None. Just `pip install fabra-ai`.
+
+### Production
+
+| Component | Technology | Purpose |
+|:----------|:-----------|:--------|
+| Offline Store | Postgres 13+ | Feature history, Context Records |
+| Online Store | Redis 6+ | Feature cache, sub-ms reads |
+| Vector Store | pgvector | Semantic search |
+| Scheduler | Distributed workers | Redis-locked refresh |
+
+**Infrastructure required:** 1x Postgres (with pgvector), 1x Redis, Nx API pods.
+
+## How Context Records Are Created
+
+### 1. Feature Resolution
+
+When you access a feature, Fabra tracks it:
+
+```python
+@feature(entity=User, refresh=timedelta(hours=1))
+def user_tier(user_id: str) -> str:
+    return db.query("SELECT tier FROM users WHERE id = ?", user_id)
+```
+
+Every feature access is logged with:
+- **Value** at access time
+- **Freshness** (how old the cached value is)
+- **Source** (cache hit vs computed)
+
+### 2. Document Retrieval
+
+When you retrieve documents, Fabra tracks them:
+
+```python
+@retriever(index="support_docs", top_k=5)
+async def search_docs(query: str) -> list[str]:
+    pass  # Fabra handles the vector search
+```
+
+Every retrieval is logged with:
+- **Chunk IDs** and document sources
+- **Similarity scores**
+- **Token counts**
+- **Freshness** (when indexed)
+
+### 3. Context Assembly
+
+When you assemble context, Fabra creates the record:
+
+```python
+@context(store, max_tokens=4000)
+async def chat_context(user_id: str, query: str) -> list[ContextItem]:
+    docs = await search_docs(query)
+    tier = await store.get_feature("user_tier", user_id)
+
+    return [
+        ContextItem(content="You are helpful.", priority=0, required=True),
+        ContextItem(content=f"User tier: {tier}", priority=1),
+        ContextItem(content=str(docs), priority=2),
+    ]
+```
+
+The `@context` decorator:
+1. Executes your function
+2. Tracks all feature accesses and retrievals
+3. Applies token budget (drops low-priority items if needed)
+4. Creates immutable Context Record with hash
+5. Stores record in Offline Store
+
+## Token Budget Management
+
+Context assembly uses priority-based truncation:
+
+```python
+@context(store, max_tokens=4000)
+async def chat_context(...):
+    return [
+        ContextItem(content=system, priority=0, required=True),   # Never dropped
+        ContextItem(content=user_data, priority=1, required=True), # Never dropped
+        ContextItem(content=docs, priority=2),                     # Dropped if needed
+        ContextItem(content=suggestions, priority=3),              # Dropped first
+    ]
+```
+
+When budget is exceeded:
+1. Sort items by priority (lowest = most important)
+2. Drop highest-priority items first
+3. Record every dropped item with reason
+4. Raise `ContextBudgetError` if required items can't fit
+
+The Context Record captures **what was dropped and why** — critical for debugging "why didn't the AI know about X?"
+
+## Data Flow Diagrams
+
+### Feature Materialization
+
+```mermaid
+sequenceDiagram
+    participant S as Scheduler
+    participant F as Feature Function
+    participant O as Offline Store
+    participant C as Online Cache
+
+    S->>F: Trigger refresh
+    F->>F: Compute value
+    F->>O: Write (entity_id, value, timestamp)
+    F->>C: Write (entity_id, value, TTL)
+```
+
+### Context Assembly
+
+```mermaid
+sequenceDiagram
+    participant A as Application
+    participant C as @context
+    participant F as Features
+    participant R as Retriever
+    participant V as Vector Store
+    participant O as Offline Store
+
+    A->>C: chat_context(user_id, query)
+    C->>F: get_feature("user_tier")
+    F-->>C: "premium" (tracked)
+    C->>R: search_docs(query)
+    R->>V: Vector similarity
+    V-->>R: Top-K chunks
+    R-->>C: Documents (tracked)
+    C->>C: Apply token budget
+    C->>C: Create Context Record
+    C->>O: Store record
+    C-->>A: Context with ctx.id
+```
 
 ## Point-in-Time Correctness
 
-Training/serving skew is the #1 killer of ML models in production.
+Training/serving skew kills ML models. Fabra ensures consistency:
 
-**Problem:** Your model trains on Monday's features but serves Tuesday's features.
+### The Problem
 
-**Solution:** Fabra's `get_training_data()` uses "as-of" joins to ensure zero leakage.
+Your model trains on Monday's features but serves Tuesday's features. The model learned patterns that no longer exist.
 
-### DuckDB (Development)
-Uses native `ASOF JOIN` for high performance:
+### The Solution
+
+Fabra's `get_training_data()` uses "as-of" joins:
+
+```python
+# Get features AS THEY WERE at each event time
+training_df = await store.get_training_data(
+    entity_df=events,  # DataFrame with entity_id + timestamp
+    features=["user_tier", "purchase_count"],
+)
+```
+
+**DuckDB (local):**
 ```sql
 SELECT e.*, f.value
 FROM entity_df e
@@ -60,8 +255,7 @@ ASOF LEFT JOIN feature_table f
 ON e.entity_id = f.entity_id AND e.timestamp >= f.timestamp
 ```
 
-### Postgres (Production)
-Uses `LATERAL JOIN` for standard SQL compatibility:
+**Postgres (production):**
 ```sql
 LEFT JOIN LATERAL (
     SELECT value FROM feature_table f
@@ -70,112 +264,64 @@ LEFT JOIN LATERAL (
 ) f ON TRUE
 ```
 
-Same logic offline (training) and online (serving). Guaranteed consistency.
+Same logic offline (training) and online (serving). No skew.
 
-## Hybrid Retrieval (Python + SQL)
+## Design Decisions
 
-Fabra supports a unique hybrid architecture:
-1.  **Python Features:** Computed on-the-fly (Online) or via `apply()` (Offline).
-2.  **SQL Features:** Computed via SQL queries (Offline) and materialized to Redis (Online).
-3.  **Unified API:** `get_training_data` automatically orchestrates both and joins the results.
+### Why Redis-Only Caching?
 
-## Feature Store Architecture
+Most feature stores use L1 (in-memory) + L2 (Redis). This creates cache coherence bugs — different pods see different values.
 
-```mermaid
-graph TD
-    User["User/Data Scientist"] -->|Defines| Code["Feature Definitions"]
-    Code -->|Registers| Registry["Feature Registry"]
-    Registry -->|Configures| Scheduler["Scheduler"]
-    Scheduler -->|Triggers| Materialization["Materialization Job"]
-    Materialization -->|Reads| Offline["Offline Store - DuckDB/Postgres"]
-    Materialization -->|Writes| Online["Online Store - Redis/Memory"]
-    API["FastAPI Server"] -->|Reads| Online
-    API -->|Returns| Client["Client App"]
-```
+Fabra uses Redis-only:
+- 1ms localhost latency (fast enough)
+- Strong consistency (all pods see same value)
+- Simpler debugging (one source of truth)
 
-## Context Store Architecture (New in v1.2.0)
+For fraud detection and financial decisions, **correctness > micro-optimization**.
 
-The Context Store extends Fabra to support LLM applications with RAG, vector search, and intelligent context assembly.
+### Why No Leader Election?
 
-### Components
+Distributed schedulers typically use leader election or consistent hashing. Complex, fragile, hard to debug.
 
-1. **Index Registry:** Manages document collections with automatic chunking (tiktoken) and embedding (OpenAI/Cohere).
-2. **Vector Store:** pgvector extension in Postgres for semantic similarity search.
-3. **Retrievers:** `@retriever` decorated functions that perform vector search with result caching.
-4. **Context Assembly:** `@context` decorated functions that compose retrievers with token budgets.
-5. **Event Bus:** Redis Streams for real-time document ingestion and trigger-based updates.
+Fabra uses randomized work selection + Redis SETNX locks:
+- Any worker can pick up any job
+- Redis lock prevents double-execution
+- Self-healing, no topology awareness needed
+- "Even enough" distribution statistically
 
-### Context Store Diagram
+### Why Explicit Over Magic?
 
-```mermaid
-graph TD
-    subgraph Ingestion
-        Doc[Document] -->|POST /ingest| API[FastAPI]
-        API -->|Chunk + Embed| Embed[Embedding Provider]
-        Embed -->|Store| PGV[(Postgres + pgvector)]
-    end
+No auto-caching hot features. No query optimization. No hidden materialization.
 
-    subgraph Retrieval
-        Query[User Query] -->|POST /context| CTX[Context Resolver]
-        CTX -->|Vector Search| PGV
-        CTX -->|Get Features| Redis[(Redis Cache)]
-        CTX -->|Token Budget| Assembler[Context Assembler]
-        Assembler -->|Truncate by Priority| Response[Context Response]
-    end
+You write `materialize=True`, we cache. That's it.
 
-    subgraph Events
-        Event[AxiomEvent] -->|Redis Streams| Worker[AxiomWorker]
-        Worker -->|Trigger| Feature[Feature Update]
-        Worker -->|Re-index| PGV
-    end
-```
+**Predictability > cleverness** when debugging production issues.
 
-### Request Lifecycle
+## Integrity and Verification
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    participant R as Retriever
-    participant V as Vector Store
-    participant A as Assembler
-
-    C->>S: POST /context
-    S->>R: Resolve retrievers
-    R->>V: Vector similarity search
-    V-->>R: Top-K documents
-    R->>A: Collect ContextItems
-    A->>A: Sort by priority
-    A->>A: Truncate to token budget
-    A-->>S: Assembled context
-    S-->>C: JSON Response
-```
-
-### Token Budget Management
-
-Context assembly uses priority-based truncation to fit within LLM token limits:
+Every Context Record includes cryptographic integrity:
 
 ```python
-@context(store, max_tokens=4000)
-async def chat_context(user_id: str, query: str):
-    return [
-        ContextItem(content=system_prompt, priority=0, required=True),  # Never truncated
-        ContextItem(content=relevant_docs, priority=1, required=True), # Required, high priority
-        ContextItem(content=user_history, priority=2),                 # Optional, medium priority
-        ContextItem(content=suggestions, priority=3),                  # Optional, low priority (truncated first)
-    ]
+# Verify a record hasn't been tampered with
+fabra context verify ctx_018f3a2b-...
+# ✓ Record integrity verified (hash matches)
 ```
 
-Items are sorted by priority (lowest first), and lower-priority items are truncated when the budget is exceeded. Items marked `required=True` raise `ContextBudgetError` if they cannot fit.
+The `record_hash` is computed from canonical JSON of all fields (excluding the hash itself). Any modification — even a single character — produces a different hash.
+
+This matters for:
+- **Compliance:** Prove records haven't been altered
+- **Debugging:** Trust that replays show real data
+- **Audits:** Evidence, not assertions
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Fabra Architecture: Local-First Feature Store & Context Store Design",
-  "description": "Technical deep-dive into Fabra's architecture, explaining the use of DuckDB for local development and Postgres/Redis/pgvector for production ML features and LLM context without Kubernetes.",
+  "headline": "Fabra Architecture: How Context Records Work",
+  "description": "Technical deep-dive into Fabra's architecture. Learn how Context Records are created, stored, and replayed.",
   "author": {"@type": "Organization", "name": "Fabra Team"},
-  "keywords": "feature store architecture, context store, duckdb, redis, pgvector, mlops, rag",
+  "keywords": "context record, fabra architecture, ai audit trail, duckdb, postgres, redis",
   "articleSection": "Software Architecture"
 }
 </script>

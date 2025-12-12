@@ -1,104 +1,133 @@
 ---
-title: "Fabra Philosophy: Own the Write Path, Infrastructure Not Framework"
-description: "Why we built Fabra as context infrastructure that owns the write path. The philosophy behind prioritizing lineage, auditability, and compliance over orchestration complexity."
-keywords: fabra philosophy, context infrastructure, write path ownership, ai audit trail, context store design, mlops philosophy, local-first software
+title: "Fabra Philosophy: Record What Your AI Saw"
+description: "Why we built Fabra around Context Records. The philosophy behind making AI decisions replayable, debuggable, and auditable."
+keywords: fabra philosophy, context record, ai audit trail, replay ai decisions, debug ai, context infrastructure, write path ownership
 ---
 
-# Philosophy & Trade-offs
+# Philosophy
 
-We built Fabra because we were tired of "Google-scale" tools for Series B problems — and because we saw a gap in the market for context infrastructure that actually owns the data lifecycle.
+We built Fabra because we believe every AI decision should produce an artifact you can replay and debug.
 
-Here is the honest truth about why we made these design choices and who they are for.
+Not a log. Not a trace. A **Context Record** — an immutable snapshot of exactly what data your AI used, where it came from, what got dropped, and why.
 
-## The 95% Rule
+## The Problem We Saw
 
-**95% of feature serving is just:**
-```sql
-SELECT COUNT(*) FROM events
-WHERE user_id = ?
-AND timestamp > NOW() - INTERVAL '1 hour'
+When an AI makes a bad decision, teams scramble to answer basic questions:
+
+- What features did the model see?
+- Which documents were retrieved?
+- Were any of them stale?
+- What got dropped due to token limits?
+- Can we reproduce this exact decision?
+
+Most AI tooling can't answer these questions because they don't own the data. LangChain queries your vector DB. Orchestration frameworks call your APIs. They pass data through — they don't record it.
+
+**You can't debug what you didn't capture. You can't audit what you don't own.**
+
+## The Context Record Principle
+
+Fabra is built around a single principle: **every context assembly produces an immutable record**.
+
+```python
+ctx = await chat_context("user_123", "how do I get a refund?")
+
+print(ctx.id)        # ctx_018f3a2b-... (stable ID)
+print(ctx.lineage)   # Exactly what data was used
 ```
-Cached in Redis. Refreshed every 5 minutes. Served in <5ms.
 
-That's it. You don't need Spark. You don't need Kafka. You don't need Kubernetes.
+That `ctx.id` is your receipt. Days, weeks, or months later, you can:
 
-Fabra is optimized for this 95%. If you need the other 5% (sub-second streaming, complex DAGs), you should use Tecton or Feast.
+```bash
+# See exactly what the AI knew
+fabra context show ctx_018f3a2b-...
 
-## Why Not Just Redis?
+# Verify the record hasn't been tampered with
+fabra context verify ctx_018f3a2b-...
 
-A common question is: *"Why do I need a feature store? Can't I just write to Redis?"*
+# Compare two decisions
+fabra context diff ctx_a ctx_b
+```
 
-You can, and for simple apps, you should. But here is where raw Redis breaks down for ML:
+This is the difference between "we think it saw these documents" and "here is cryptographic proof of exactly what it saw."
 
-1.  **Point-in-Time Correctness:** Redis only knows "now". It doesn't know "what was the value of this feature 3 months ago?" Fabra logs feature values to the Offline Store (Postgres/DuckDB) so you can generate training data that is historically accurate.
-2.  **Schema Evolution:** What happens when you change a feature definition? With raw Redis, you have to write a migration script. With Fabra, you just update the `@feature` decorator.
-3.  **Observability:** Fabra automatically tracks cache hit rates, latency, and staleness. Raw Redis is a black box.
+## Why "Own the Write Path"?
 
-## Why Not Just dbt?
+Most AI tools are read-only wrappers. They query databases but don't manage the data lifecycle.
 
-dbt is fantastic for batch transformations. We love dbt. But dbt stops at the data warehouse.
+Fabra **owns the write path**:
 
-*   **dbt** creates **tables** (e.g., `daily_user_stats`).
-*   **Fabra** serves **rows** (e.g., `user_id: 123`).
+| Capability | Read-Only Tools | Fabra |
+|:-----------|:----------------|:------|
+| Ingest documents | Pass-through | Stores with timestamps |
+| Track freshness | No visibility | SLAs with violations logged |
+| Log what was retrieved | Maybe, inconsistently | Every item, every time |
+| Record what was dropped | Never | Full list with reasons |
+| Replay decisions | Impossible | Built-in |
 
-If you only need features refreshed once a day, dbt is enough. But if you need to serve those features to a live API with <10ms latency, you need a serving layer. Fabra bridges that gap.
+When you own the write path, you control the data lifecycle. When you control the lifecycle, you can record everything. When you record everything, you can replay and debug.
 
-## Why Own the Write Path?
+## Trade-offs We Made
 
-Most AI tooling is read-only. LangChain queries your vector DB. Orchestration frameworks call your APIs. They don't own your data.
+### Simplicity Over Scale
 
-This creates a fundamental problem: **you can't audit what you don't control.**
+Fabra runs on your laptop with `pip install`. No Kubernetes. No Spark. No Docker required for development.
 
-When regulators ask "what did your AI know when it made this decision?", read-only wrappers have no answer. They don't track freshness. They don't log what context was assembled. They don't enable replay.
+This means we're not optimized for Google-scale problems. If you need sub-millisecond streaming at millions of QPS, use Tecton. If you need to serve features without infrastructure complexity and want full audit trails, use Fabra.
 
-**Fabra owns the write path:**
+### Records Over Performance
 
-*   **Ingest:** We store your documents and features, not just query them.
-*   **Index:** We manage embeddings with freshness timestamps.
-*   **Track:** Every context assembly is logged with full lineage.
-*   **Replay:** Reproduce exactly what your AI knew at any point in time.
+We prioritize complete Context Records over micro-optimizations. Every context assembly logs:
 
-This is the difference between infrastructure and a framework.
+- All features accessed (with freshness)
+- All documents retrieved (with similarity scores)
+- All items dropped (with reasons)
+- Assembly latency and token usage
 
-## Why Context Store?
+This adds overhead. We think it's worth it. The first time you debug a production AI issue by replaying the exact context, you'll agree.
 
-With the rise of LLMs, we saw teams building parallel infrastructure:
+### Explicit Over Magic
 
-1. **Feature Store** for ML models (fraud, recommendations)
-2. **Vector Database** for RAG (Pinecone, Weaviate)
-3. **Glue Code** to combine them (LangChain chains)
+No auto-caching. No query optimization. No hidden materialization.
 
-This is the same complexity trap. Three systems to maintain, three sets of credentials, three failure modes.
+You write `@feature`, we compute and cache it. You write `@context`, we assemble and record it. What you see is what happens.
 
-**Fabra's Context Store** unifies this:
+Predictability matters more than cleverness when you're debugging at 2am.
 
-*   **Same Postgres:** Features in tables, embeddings in pgvector.
-*   **Same Redis:** Feature cache and retriever cache.
-*   **Same API:** `/features` and `/context` from one server.
-*   **Same Decorators:** `@feature`, `@retriever`, `@context`.
+## Who Fabra Is For
 
-If you're building an LLM app that needs user personalization (features) + document retrieval (context), you don't need two systems. You need Fabra.
+**You should use Fabra if:**
 
-## The "Confession"
+- You need to prove what your AI knew when it decided
+- You want to replay and debug AI decisions
+- You're in a regulated industry (fintech, healthcare, legal)
+- You value "works on my laptop" over "scales to exabytes"
+- You want features and RAG from one system, not five
 
-We didn't start by building Fabra. We started by trying to use existing tools.
+**You should NOT use Fabra if:**
 
-We spent 6 weeks setting up a popular open-source feature store. We fought with Docker networking, Kubernetes manifests, and registry sync issues. We realized we were spending 90% of our time on infrastructure and 10% on ML.
+- You need sub-millisecond streaming inference
+- You have a dedicated platform team for Kubernetes
+- You don't care about audit trails
+- You're optimizing for maximum QPS, not debuggability
 
-So we gave up.
+## The Honest Truth
 
-We built Fabra in 2 weeks with a simple goal: **"It must run in a Jupyter notebook with `pip install`."**
+We didn't start by building Fabra. We spent weeks trying to use existing tools. We fought with Kubernetes manifests, registry sync issues, and infrastructure complexity.
 
-If you value "works on my laptop" over "scales to exabytes", Fabra is for you.
+Then we asked: "What if we just recorded everything the AI saw?"
+
+That question led to Context Records. Context Records led to Fabra.
+
+**Once context is a ledger, everything else follows.**
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Fabra Philosophy: The 95% Rule, Local-First Design, and Unified Context",
-  "description": "Why we built Fabra. Prioritizing developer experience, simple infrastructure, and unified feature+context over Google-scale complexity.",
+  "headline": "Fabra Philosophy: Record What Your AI Saw",
+  "description": "Why we built Fabra around Context Records. The philosophy behind making AI decisions replayable, debuggable, and auditable.",
   "author": {"@type": "Organization", "name": "Fabra Team"},
-  "keywords": "fabra philosophy, feature store design, local-first software, mlops",
+  "keywords": "fabra philosophy, context record, ai audit trail, replay ai decisions",
   "articleSection": "Philosophy"
 }
 </script>

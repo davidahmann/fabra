@@ -1,80 +1,152 @@
 ---
-title: "Why We Built Fabra: Context Infrastructure That Owns the Write Path"
-description: "The story behind Fabra. Why we built context infrastructure that owns the write path — enabling lineage, replay, and auditability that read-only frameworks cannot provide."
-keywords: why fabra, context infrastructure, write path ownership, ai audit trail, mlops tools, developer experience
+title: "Why We Built Fabra: Record What Your AI Saw"
+description: "The story behind Fabra. Why we built context infrastructure that creates replayable Context Records for every AI decision."
+keywords: why fabra, context record, ai audit trail, replay ai decisions, debug ai, context infrastructure
 ---
 
-# Why We Built Fabra: Context Infrastructure That Owns the Write Path
+# Why We Built Fabra
 
 **What did your AI know when it decided?**
 
-We built Fabra because we saw a gap in the market.
+That's the question that started Fabra.
 
-Every AI tool was either a framework (LangChain — orchestration but no data ownership) or a database (Pinecone — storage but no lineage). Nobody owned the write path. Nobody could answer: "What did the AI know when it made this decision?"
+We watched teams deploy AI systems with no way to answer basic questions: What features did the model see? Which documents were retrieved? What got dropped due to token limits? Why did it make *that* decision?
 
-We realized that for regulated industries, this wasn't just inconvenient — it was a compliance nightmare.
+When something went wrong — a bad recommendation, a rejected loan, a hallucinated answer — they couldn't debug it. They couldn't replay it. They couldn't prove what happened.
 
-## The Epiphany: Own the Write Path
+We built Fabra to fix this.
 
-Most AI tooling is read-only. LangChain queries your vector DB. Orchestration frameworks call your APIs. They don't own your data.
+## The Problem: AI Without a Receipt
 
-This creates a fundamental problem: **you can't audit what you don't control.**
+Every financial transaction creates a receipt. Every database query creates a log. But AI decisions? They vanish into thin air.
 
-When regulators ask "what did your AI know when it made this decision?", read-only wrappers have no answer. They never saw the data — they just passed it through.
+Most AI tooling is **read-only**:
 
-What if you just want to:
-1.  Ingest and index your context data.
-2.  Track what was retrieved and when.
-3.  Replay any AI decision for compliance or debugging.
+- **LangChain** orchestrates calls but doesn't record what data was used
+- **Pinecone** stores vectors but doesn't track what was retrieved when
+- **Feature stores** cache values but don't capture the full decision context
 
-That shouldn't require stitching together 5 different systems. It should require `pip install`.
+When regulators ask "what did your AI know when it made this decision?", these tools have no answer. They never saw the complete picture — they just passed pieces through.
 
-## Enter Fabra
+## The Solution: Context Records
 
-Fabra is **context infrastructure that owns the write path**. It is designed to be:
+Fabra creates a **Context Record** for every AI decision — an immutable snapshot of:
 
-*   **Write Path Owner:** We ingest, index, track freshness, and serve — not just query. This enables lineage, replay, and auditability.
-*   **Developer-First:** No YAML. No DSLs. Just Python decorators (`@feature`, `@context`).
-*   **Infrastructure-Light:** Runs on your laptop with DuckDB. Scales to production with standard Postgres and Redis.
-*   **Compliance-Ready:** Full audit trail for AI decisions. Know exactly what your AI knew when it decided.
+- **What features were used** (with exact values and freshness)
+- **What documents were retrieved** (with similarity scores)
+- **What got dropped** (due to token limits, with reasons)
+- **Cryptographic proof** that the record is authentic
+
+```python
+ctx = await chat_context("user_123", "can I get a refund?")
+
+print(ctx.id)        # ctx_018f3a2b-... (your receipt)
+print(ctx.lineage)   # Complete data provenance
+```
+
+That `ctx.id` is permanent. Weeks later, you can:
+
+```bash
+# See exactly what the AI knew
+fabra context show ctx_018f3a2b-...
+
+# Verify the record is authentic
+fabra context verify ctx_018f3a2b-...
+
+# Compare two decisions side-by-side
+fabra context diff ctx_a ctx_b
+```
+
+**This is the difference between "we think it worked" and "here's the proof."**
+
+## Why "Own the Write Path"?
+
+The key insight: **you can't record what you don't control.**
+
+Read-only wrappers sit between your app and external databases. They see queries and responses, but they don't manage the data lifecycle. They can't guarantee what was fresh. They can't capture what was dropped. They can't enable replay.
+
+Fabra **owns the write path**:
+
+- **Ingest:** We store your documents and features (not just query them)
+- **Index:** We manage embeddings with freshness timestamps
+- **Track:** Every context assembly is logged with full lineage
+- **Replay:** Reproduce exactly what your AI knew at any point
+
+When you own the data lifecycle, you can create perfect records. When you have perfect records, you can debug anything.
+
+## Who We Built This For
+
+### ML Engineers
+
+You're building fraud detection, recommendations, or risk models. You need:
+
+- Features served without Kubernetes complexity
+- Point-in-time correctness for training data
+- Proof of what data your model saw for each prediction
+
+**Fabra gives you:** `@feature` decorators that create audit trails automatically.
+
+### AI Engineers
+
+You're building RAG chatbots, AI agents, or LLM applications. You need:
+
+- Vector search with retrieval tracking
+- Token budget management that logs what got dropped
+- Compliance evidence for regulated industries
+
+**Fabra gives you:** `@context` decorators that create replayable Context Records.
 
 ## The Honest Comparison
 
-If you are asking **"What is the best feature store for small teams?"** or **"Fabra vs Feast"**, here is the honest answer:
+| Capability | **Fabra** | **LangChain** | **Feast** |
+|:-----------|:----------|:--------------|:----------|
+| **Records what AI saw** | Full Context Record | No | Partial (features only) |
+| **Tracks dropped items** | Yes, with reasons | No | No |
+| **Replay decisions** | Built-in CLI | Manual | No |
+| **Verify integrity** | Cryptographic hash | No | No |
+| **Setup time** | 30 seconds | Minutes | Days/Weeks |
+| **Infrastructure** | None required | None required | Kubernetes |
 
-| Feature | **Fabra** | **Feast** | **Tecton** |
-| :--- | :--- | :--- | :--- |
-| **Best For** | **Startups & Scale-ups** (Series A-C) | **Enterprises** with Platform Teams | **Large Enterprises** with Budget |
-| **Language** | Pure Python | Python + Go + Java | Proprietary / Python |
-| **Config** | Decorators (`@feature`) | YAML Files | Python SDK |
-| **Infra** | Postgres + Redis | Kubernetes + Spark | Managed SaaS |
-| **Setup Time** | **30 Seconds** | Days/Weeks | Weeks/Months |
-| **Cost** | Free (OSS) | Free (OSS) | $$$$ |
+We're not trying to replace everything. LangChain is great for orchestration. Feast is great for enterprises with platform teams.
 
-## The "No-Magic" Promise
+Fabra is for teams who need to **prove what their AI knew**.
 
-Fabra doesn't do magic. It doesn't auto-scale your K8s cluster (because you don't need one). It doesn't pretend to own data it only queries.
+## What We Don't Do
 
-It does three things extremely well:
+Fabra is focused. We don't do:
 
-1.  **Own the Write Path:** Ingest, index, track freshness, serve. Full lineage and replay.
-2.  **Reliable Serving:** Circuit breakers and fallbacks built-in.
-3.  **Instant Developer Experience:** From `pip install` to serving in under a minute.
+- **Agent orchestration** — Use LangChain, CrewAI
+- **Workflow scheduling** — Use Airflow, Prefect
+- **Model serving** — Use vLLM, TensorRT
+- **High-QPS streaming** — Use Tecton, Feathr
 
-## Join the Rebellion
+We do one thing: **create replayable records of AI decisions**.
 
-If you value **owning your data** over **wrapping external stores**, Fabra is for you.
+## The 30-Second Test
 
-[Get Started in 30 Seconds →](quickstart.md)
+```bash
+pip install fabra-ai
+fabra demo
+```
+
+That's it. No Docker. No Kubernetes. No API keys.
+
+You'll see a Context Record created, stored, and queryable. If that's useful, keep going. If not, no hard feelings.
+
+## Join Us
+
+If you believe AI decisions should be auditable, debuggable, and replayable — we built Fabra for you.
+
+[Get Started →](quickstart.md)
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "Why We Built Fabra: Context Infrastructure That Owns the Write Path",
-  "description": "The story behind Fabra. Why we built context infrastructure that owns the write path — enabling lineage, replay, and auditability that read-only frameworks cannot provide.",
+  "headline": "Why We Built Fabra: Record What Your AI Saw",
+  "description": "The story behind Fabra. Why we built context infrastructure that creates replayable Context Records for every AI decision.",
   "author": {"@type": "Organization", "name": "Fabra Team"},
-  "keywords": "why fabra, context infrastructure, write path ownership, ai audit trail, mlops tools",
+  "keywords": "why fabra, context record, ai audit trail, replay ai decisions",
   "articleSection": "About"
 }
 </script>
