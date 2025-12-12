@@ -1,7 +1,7 @@
 <div align="center">
   <h1>Fabra</h1>
-  <p><strong>Prove what your AI knew.</strong></p>
-  <p>Fabra is the <strong>Inference Context Ledger</strong> — the system of record that captures<br/>exactly what data an AI used at decision time, with full lineage, freshness guarantees, and replay.</p>
+  <p><strong>Fabra records what your AI saw — so you can replay and debug it.</strong></p>
+  <p>Fabra creates a replayable <strong>Context Record</strong> for every AI call: what data was used,<br/>where it came from, what got dropped, and why.</p>
 
   <p>
     <a href="https://pypi.org/project/fabra-ai/"><img src="https://img.shields.io/pypi/v/fabra-ai?color=blue&label=pypi" alt="PyPI version" /></a>
