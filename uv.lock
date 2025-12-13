@@ -680,7 +680,7 @@ wheels = [
 
 [[package]]
 name = "fabra-ai"
-version = "2.1.0"
+version = "2.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -776,7 +776,7 @@ requires-dist = [
     { name = "uuid6", specifier = ">=2024.1.12" },
     { name = "uvicorn", specifier = ">=0.20.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["ui", "dev"]
 
 [[package]]
 name = "fakeredis"
