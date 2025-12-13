@@ -11,7 +11,7 @@
 #
 # Requirements:
 #   - Python 3.10+
-#   - pip or uv
+#   - pip
 
 set -e
 
@@ -26,10 +26,12 @@ NC='\033[0m' # No Color
 PORT=8765  # Use non-standard port to avoid conflicts
 TIMEOUT=30
 MODE=${1:-all}  # all, features, or context
+INSTALL_MODE=${FABRA_INSTALL_MODE:-pypi} # pypi|source
 
 echo -e "${BLUE}=== Fabra 30-Second Quickstart Validation ===${NC}"
 echo -e "Mode: ${MODE}"
 echo -e "Port: ${PORT}"
+echo -e "Install: ${INSTALL_MODE}"
 echo ""
 
 # Cleanup function
@@ -40,15 +42,32 @@ cleanup() {
         wait $SERVER_PID 2>/dev/null || true
     fi
     # Kill any remaining fabra processes on our port
-    lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
+    fi
 }
 
 trap cleanup EXIT
 
-# Check if we're in the right directory
-if [ ! -f "pyproject.toml" ] || [ ! -d "examples" ]; then
-    echo -e "${RED}ERROR: Run this script from the project root directory${NC}"
-    exit 1
+# Create a clean virtual environment (fresh machine simulation)
+TMPDIR=$(mktemp -d)
+python3 -m venv "$TMPDIR/venv"
+VENV_PY="$TMPDIR/venv/bin/python"
+VENV_PIP="$TMPDIR/venv/bin/pip"
+VENV_FABRA="$TMPDIR/venv/bin/fabra"
+
+echo -e "${YELLOW}Creating clean venv at ${TMPDIR}/venv...${NC}"
+"$VENV_PIP" install -U pip >/dev/null
+
+echo -e "${YELLOW}Installing Fabra (${INSTALL_MODE})...${NC}"
+if [ "$INSTALL_MODE" = "source" ]; then
+    if [ ! -f "pyproject.toml" ]; then
+        echo -e "${RED}ERROR: FABRA_INSTALL_MODE=source requires running from the project root${NC}"
+        exit 1
+    fi
+    "$VENV_PIP" install -e . >/dev/null
+else
+    "$VENV_PIP" install fabra-ai >/dev/null
 fi
 
 # Track total time
@@ -60,8 +79,8 @@ test_features() {
     local START=$(date +%s)
 
     # Start server in background
-    echo -e "${YELLOW}Starting server with demo_features.py...${NC}"
-    uv run fabra serve examples/demo_features.py --port $PORT &
+    echo -e "${YELLOW}Starting demo server (features)...${NC}"
+    "$VENV_FABRA" demo --mode features --port $PORT >/dev/null 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready (poll health endpoint)
@@ -120,8 +139,8 @@ test_context() {
     local START=$(date +%s)
 
     # Start server in background
-    echo -e "${YELLOW}Starting server with demo_context.py...${NC}"
-    uv run fabra serve examples/demo_context.py --port $PORT &
+    echo -e "${YELLOW}Starting demo server (context)...${NC}"
+    "$VENV_FABRA" demo --mode context --port $PORT >/dev/null 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready

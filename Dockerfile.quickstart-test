@@ -25,16 +25,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Fabra from source (for testing) or from PyPI
-# Option 1: From source (for testing)
+ARG INSTALL_SOURCE=0
+
+# Demo files (kept in the repo for validation)
+COPY examples/ ./examples/
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
-COPY examples/ ./examples/
 
-RUN pip install --no-cache-dir -e .
-
-# Option 2: From PyPI (uncomment for production validation)
-# RUN pip install --no-cache-dir fabra-ai
-# COPY examples/demo_features.py examples/demo_context.py ./examples/
+# Default: simulate a real user installing from PyPI
+RUN if [ "$INSTALL_SOURCE" = "1" ]; then \
+      echo "Installing Fabra from source..." && \
+      pip install --no-cache-dir -e . ; \
+    else \
+      echo "Installing Fabra from PyPI..." && \
+      pip install --no-cache-dir fabra-ai ; \
+    fi
 
 # Environment variables
 ENV DEMO_MODE=features
