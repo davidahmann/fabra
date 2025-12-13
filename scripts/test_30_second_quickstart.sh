@@ -9,6 +9,13 @@
 #   ./scripts/test_30_second_quickstart.sh features  # Only test Feature Store
 #   ./scripts/test_30_second_quickstart.sh context   # Only test Context Store
 #
+# Notes:
+# - In the repo, the equivalent served files are:
+#     - examples/demo_features.py
+#     - examples/demo_context.py
+# - For a true "fresh machine" simulation (PyPI install), we use `fabra demo`,
+#   which runs packaged demos with the same behavior as those example files.
+#
 # Requirements:
 #   - Python 3.10+
 #   - pip

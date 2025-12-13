@@ -768,14 +768,30 @@ def ui(
     ui_next_dir = os.path.join(os.path.dirname(__file__), "ui-next")
     if not os.path.exists(os.path.join(ui_next_dir, "node_modules")):
         console.print(
-            "[yellow]Warning:[/yellow] Next.js dependencies not installed.\n"
-            "Run the following to set up:\n"
-            f"  cd {ui_next_dir} && npm install\n\n"
-            "Falling back to API-only mode..."
+            "[yellow]UI dependencies not installed.[/yellow] Attempting to install...\n"
+            f"[dim]Directory: {ui_next_dir}[/dim]"
         )
-        # Just run the API server
-        run_server(file, port=api_port, host="127.0.0.1")
-        return
+        try:
+            npm_cmd = (
+                ["npm", "ci"]
+                if os.path.exists(os.path.join(ui_next_dir, "package-lock.json"))
+                else ["npm", "install"]
+            )
+            subprocess.run(npm_cmd, cwd=ui_next_dir, check=True)  # nosec B603 B607
+        except FileNotFoundError:
+            console.print(
+                "[bold red]Error:[/bold red] npm not found. "
+                "Install Node.js (npm) to use the UI."
+            )
+            raise typer.Exit(code=1)
+        except subprocess.CalledProcessError as e:
+            console.print(
+                "[yellow]Warning:[/yellow] Failed to install UI dependencies.\n"
+                f"[dim]{e}[/dim]\n\n"
+                "Falling back to API-only mode..."
+            )
+            run_server(file, port=api_port, host="127.0.0.1")
+            return
 
     # Start API server in background thread
     def start_api() -> None:
@@ -1697,7 +1713,9 @@ HEALTHCHECK --interval=30s --timeout=3s \\
 CMD ["fabra", "serve", "{file}", "--host", "0.0.0.0", "--port", "8000"]
 """
 
-    requirements_txt = """fabra>=2.2.0
+    from fabra import __version__
+
+    requirements_txt = f"""fabra-ai>={__version__}
 redis>=4.0.0
 asyncpg>=0.27.0
 """

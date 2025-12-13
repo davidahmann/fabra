@@ -1,12 +1,21 @@
+"""
+No-keys, no-setup variant of `basic_features.py`.
+
+Run:
+  fabra serve examples/basic_features_no_keys.py
+
+Test:
+  curl 'http://127.0.0.1:8000/features/user_click_count?entity_id=u1'
+"""
+
 from datetime import timedelta
+
 from fabra.core import FeatureStore, entity, feature
 from fabra.store import DuckDBOfflineStore, InMemoryOnlineStore
 
-# Initialize the store
-# For serving, we typically want a persistent offline store and a fast online store.
-# Here we use defaults for simplicity.
 store = FeatureStore(
-    offline_store=DuckDBOfflineStore(), online_store=InMemoryOnlineStore()
+    offline_store=DuckDBOfflineStore(),
+    online_store=InMemoryOnlineStore(),
 )
 
 
@@ -17,19 +26,14 @@ class User:
 
 @feature(entity=User, refresh=timedelta(minutes=5), materialize=True)
 def user_click_count(user_id: str) -> int:
-    """Calculates the total clicks for a user."""
-    # Deterministic demo value (stable across requests).
     return abs(hash(user_id + "clicks")) % 101
 
 
 @feature(entity=User)
 def user_is_active(user_id: str) -> bool:
-    """Determines if a user is currently active."""
-    return hash(user_id) % 3 != 0  # ~66% active, deterministic
+    return hash(user_id) % 3 != 0
 
 
-# Pre-seed data on module import so `fabra serve examples/basic_features.py`
-# returns values immediately.
 async def _seed_demo_data() -> None:
     await store.online_store.set_online_features(
         "User",
@@ -52,8 +56,3 @@ def _run_seed() -> None:
 
 
 _run_seed()
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(_seed_demo_data())
