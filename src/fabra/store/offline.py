@@ -5,6 +5,8 @@ import pandas as pd
 import asyncio
 from typing import Dict, Any
 from datetime import datetime, timezone
+import os
+from pathlib import Path
 
 
 import structlog
@@ -154,7 +156,17 @@ class OfflineStore(ABC):
 
 
 class DuckDBOfflineStore(OfflineStore):
-    def __init__(self, database: str = ":memory:") -> None:
+    def __init__(self, database: str | None = None) -> None:
+        if database is None:
+            database = os.getenv("FABRA_DUCKDB_PATH")
+            if not database:
+                database = str(Path.home() / ".fabra" / "fabra.duckdb")
+
+        if database != ":memory:":
+            db_path = Path(database).expanduser()
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            database = str(db_path)
+
         self.conn = duckdb.connect(database=database)
 
     async def get_training_data(

@@ -23,6 +23,25 @@ app = typer.Typer(
         "  fabra context verify <context_id>\n"
     )
 )
+
+
+def _supports_unicode_output() -> bool:
+    encoding = (getattr(sys.stdout, "encoding", None) or "").lower()
+    return "utf" in encoding
+
+
+def _ok_icon() -> str:
+    return "✓" if _supports_unicode_output() else "OK"
+
+
+def _fail_icon() -> str:
+    return "✗" if _supports_unicode_output() else "X"
+
+
+def _warn_icon() -> str:
+    return "⚠" if _supports_unicode_output() else "WARN"
+
+
 console = Console()
 
 
@@ -1297,7 +1316,7 @@ def context_replay_cmd(
                 # Header with status
                 freshness = meta.get("freshness_status", "unknown")
                 status_color = "green" if freshness == "guaranteed" else "yellow"
-                status_icon = "✓" if freshness == "guaranteed" else "⚠"
+                status_icon = _ok_icon() if freshness == "guaranteed" else _warn_icon()
 
                 console.print(
                     Panel(
@@ -1473,30 +1492,30 @@ def context_verify_cmd(
             console.print("\n[bold]Integrity Check Results:[/bold]")
 
             if content_valid:
-                console.print("  [green]✓[/green] Content hash matches")
+                console.print(f"  [green]{_ok_icon()}[/green] Content hash matches")
                 console.print(
                     f"    [dim]Hash: {record.integrity.content_hash[:40]}...[/dim]"
                 )
             else:
-                console.print("  [red]✗[/red] Content hash mismatch!")
+                console.print(f"  [red]{_fail_icon()}[/red] Content hash mismatch!")
                 console.print(
                     f"    [dim]Stored:   {record.integrity.content_hash[:40]}...[/dim]"
                 )
 
             if record_valid:
-                console.print("  [green]✓[/green] Record hash matches")
+                console.print(f"  [green]{_ok_icon()}[/green] Record hash matches")
                 console.print(
                     f"    [dim]Hash: {record.integrity.record_hash[:40]}...[/dim]"
                 )
             else:
-                console.print("  [red]✗[/red] Record hash mismatch!")
+                console.print(f"  [red]{_fail_icon()}[/red] Record hash mismatch!")
 
             console.print()
 
             if content_valid and record_valid:
                 console.print(
                     Panel(
-                        "[bold green]✓ Integrity verified[/bold green]\n"
+                        f"[bold green]{_ok_icon()} Integrity verified[/bold green]\n"
                         "Record and content hashes match.",
                         border_style="green",
                     )
@@ -1504,7 +1523,7 @@ def context_verify_cmd(
             else:
                 console.print(
                     Panel(
-                        "[bold red]✗ Integrity check failed[/bold red]\n"
+                        f"[bold red]{_fail_icon()} Integrity check failed[/bold red]\n"
                         "Record may have been modified or corrupted.",
                         border_style="red",
                     )
@@ -2298,13 +2317,13 @@ def demo_cmd(
 
                     if mode == "features":
                         console.print(
-                            "\n[green]✓[/green] Feature Store working! "
+                            f"\n[green]{_ok_icon()}[/green] Feature Store working! "
                             f"Got value: [bold]{result.get('value')}[/bold]"
                         )
                     else:
                         ctx_id = result.get("id")
                         console.print(
-                            "\n[green]✓[/green] Context Store working! "
+                            f"\n[green]{_ok_icon()}[/green] Context Store working! "
                             f"Context ID: [bold]{ctx_id}[/bold]"
                         )
                         if ctx_id:
@@ -2400,12 +2419,12 @@ def doctor_cmd(
     def check_pass(msg: str) -> None:
         nonlocal checks_passed
         checks_passed += 1
-        console.print(f"  [green]✓[/green] {msg}")
+        console.print(f"  [green]{_ok_icon()}[/green] {msg}")
 
     def check_fail(msg: str, fix: str = "") -> None:
         nonlocal checks_failed
         checks_failed += 1
-        console.print(f"  [red]✗[/red] {msg}")
+        console.print(f"  [red]{_fail_icon()}[/red] {msg}")
         if fix:
             console.print(f"    [dim]→ Fix: {fix}[/dim]")
 

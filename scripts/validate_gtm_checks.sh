@@ -80,10 +80,12 @@ assert_help_contains() {
   local pattern="$2"
   shift 2
   local out
-  out="$("$@" 2>&1)" || { echo "ERROR: ${label} failed"; echo "$out"; exit 1; }
-  echo "$out" | grep -q -- "$pattern" || {
+  out="$(NO_COLOR=1 TERM=dumb "$@" 2>&1)" || { echo "ERROR: ${label} failed"; echo "$out"; exit 1; }
+  local stripped
+  stripped="$(printf '%s' "$out" | sed -E $'s/\x1B\\[[0-9;]*[A-Za-z]//g')"
+  echo "$stripped" | grep -q -- "$pattern" || {
     echo "ERROR: ${label} missing: ${pattern}"
-    echo "$out"
+    echo "$stripped"
     exit 1
   }
 }
@@ -111,7 +113,7 @@ serve_and_assert_feature() {
   local port="$2"
   local url="$3"
   echo "serve: ${file} (${port})"
-  "$FABRA" serve "${ROOT_DIR}/${file}" --port "$port" >/dev/null 2>&1 &
+  FABRA_DUCKDB_PATH="${TMPDIR}/serve-${port}.duckdb" "$FABRA" serve "${ROOT_DIR}/${file}" --port "$port" >/dev/null 2>&1 &
   local pid=$!
   PIDS="${PIDS:-} ${pid}"
   wait_health "$port"
@@ -124,7 +126,7 @@ serve_and_assert_context() {
   local file="$1"
   local port="$2"
   echo "serve: ${file} (${port})"
-  "$FABRA" serve "${ROOT_DIR}/${file}" --port "$port" >/dev/null 2>&1 &
+  FABRA_DUCKDB_PATH="${TMPDIR}/serve-${port}.duckdb" "$FABRA" serve "${ROOT_DIR}/${file}" --port "$port" >/dev/null 2>&1 &
   local pid=$!
   PIDS="${PIDS:-} ${pid}"
   wait_health "$port"
@@ -152,7 +154,7 @@ if echo "$DEMO_HELP" | grep -q -- "--no-test"; then
   NO_TEST=(--no-test)
 fi
 
-"$FABRA" demo --mode context --port "$PORT_DEMO" "${NO_TEST[@]}" >/dev/null 2>&1 &
+FABRA_DUCKDB_PATH="${TMPDIR}/demo-${PORT_DEMO}.duckdb" "$FABRA" demo --mode context --port "$PORT_DEMO" "${NO_TEST[@]}" >/dev/null 2>&1 &
 DEMO_PID=$!
 PIDS="${PIDS:-} ${DEMO_PID}"
 wait_health "$PORT_DEMO"

@@ -89,10 +89,11 @@ test_features() {
     echo -e "\n${BLUE}--- Testing Feature Store Demo ---${NC}"
     local START=$(date +%s)
     local LOG="${TMPDIR}/demo_features.log"
+    local DUCKDB_PATH="${TMPDIR}/demo_features.duckdb"
 
     # Start server in background
     echo -e "${YELLOW}Starting demo server (features)...${NC}"
-    "$VENV_FABRA" demo --mode features --port $PORT_FEATURE >"${LOG}" 2>&1 &
+    FABRA_DUCKDB_PATH="${DUCKDB_PATH}" "$VENV_FABRA" demo --mode features --port $PORT_FEATURE >"${LOG}" 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready (poll health endpoint)
@@ -156,10 +157,11 @@ test_context() {
     echo -e "\n${BLUE}--- Testing Context Store Demo ---${NC}"
     local START=$(date +%s)
     local LOG="${TMPDIR}/demo_context.log"
+    local DUCKDB_PATH="${TMPDIR}/demo_context.duckdb"
 
     # Start server in background
     echo -e "${YELLOW}Starting demo server (context)...${NC}"
-    "$VENV_FABRA" demo --mode context --port $PORT_CONTEXT >"${LOG}" 2>&1 &
+    FABRA_DUCKDB_PATH="${DUCKDB_PATH}" "$VENV_FABRA" demo --mode context --port $PORT_CONTEXT >"${LOG}" 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready
