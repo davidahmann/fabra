@@ -74,6 +74,27 @@ FABRA="${VENV_DIR}/bin/fabra"
 "$PIP" install -U pip >/dev/null
 "$PIP" install -e "$ROOT_DIR" >/dev/null
 
+echo "== CLI help coverage =="
+assert_help_contains() {
+  local label="$1"
+  local pattern="$2"
+  shift 2
+  local out
+  out="$("$@" 2>&1)" || { echo "ERROR: ${label} failed"; echo "$out"; exit 1; }
+  echo "$out" | grep -q -- "$pattern" || {
+    echo "ERROR: ${label} missing: ${pattern}"
+    echo "$out"
+    exit 1
+  }
+}
+
+assert_help_contains "fabra --help" "demo" "$FABRA" --help
+assert_help_contains "fabra --help" "context" "$FABRA" --help
+assert_help_contains "fabra context --help" "show" "$FABRA" context --help
+assert_help_contains "fabra context --help" "export" "$FABRA" context --help
+assert_help_contains "fabra context export --help" "--bundle" "$FABRA" context export --help
+echo
+
 wait_health() {
   local port="$1"
   for _ in $(seq 1 80); do
@@ -147,8 +168,33 @@ CTX2="$(curl -fsS -X POST "http://127.0.0.1:${PORT_DEMO}/v1/context/chat_context
 "$FABRA" context list --host 127.0.0.1 --port "$PORT_DEMO" --limit 5 >/dev/null
 "$FABRA" context show "$CTX1" --host 127.0.0.1 --port "$PORT_DEMO" >/dev/null
 "$FABRA" context diff "$CTX1" "$CTX2" --host 127.0.0.1 --port "$PORT_DEMO" --json >/dev/null
+"$FABRA" context verify "$CTX1" --host 127.0.0.1 --port "$PORT_DEMO" >/dev/null
 "$FABRA" context export "$CTX1" --host 127.0.0.1 --port "$PORT_DEMO" --format json --output "${TMPDIR}/context.json" >/dev/null
 "$PY" -c "import json; json.load(open('${TMPDIR}/context.json'))"
+
+# Incident bundle export (CRS-001 record + hashes)
+BUNDLE_PATH="${TMPDIR}/incident_bundle.zip"
+"$FABRA" context export "$CTX1" --host 127.0.0.1 --port "$PORT_DEMO" --bundle --output "$BUNDLE_PATH" >/dev/null
+"$PY" - <<PY
+import json
+import zipfile
+from pathlib import Path
+
+bundle = Path("${BUNDLE_PATH}")
+assert bundle.exists(), f"missing bundle: {bundle}"
+with zipfile.ZipFile(bundle, "r") as zf:
+    names = set(zf.namelist())
+    assert "manifest.json" in names, f"bundle missing manifest.json: {sorted(names)}"
+    manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+    record_id = manifest["id"]
+    assert f"{record_id}.json" in names, f"bundle missing {record_id}.json"
+
+    # When exporting CRS-001 records, the bundle should be self-verifiable.
+    if manifest.get("exported_kind") == "record":
+        assert "verification_error" not in manifest, manifest.get("verification_error")
+        assert manifest.get("stored_content_hash") == manifest.get("computed_content_hash")
+        assert manifest.get("stored_record_hash") == manifest.get("computed_record_hash")
+PY
 
 # Deploy requirements sanity: no hardcoded fabra>=2.2.0 and includes fabra-ai
 DEPLOY_OUT="$("$FABRA" deploy fly --dry-run 2>&1 || true)"

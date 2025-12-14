@@ -8,6 +8,7 @@ __all__ = [
     "get_config",
     "get_store_factory",
     "get_redis_url",
+    "get_duckdb_path",
     "OfflineStore",
     "OnlineStore",
     "DuckDBOfflineStore",
@@ -36,6 +37,29 @@ def get_redis_url() -> str:
     return os.environ.get("FABRA_REDIS_URL", "redis://localhost:6379")
 
 
+def get_duckdb_path() -> str:
+    """
+    Returns the configured DuckDB file path.
+
+    Defaults to a durable per-user location so Context IDs survive restarts.
+    Set `FABRA_DUCKDB_PATH=:memory:` to force in-memory behavior.
+    """
+    configured = os.environ.get("FABRA_DUCKDB_PATH")
+    if configured:
+        return configured
+
+    home = os.path.expanduser("~")
+    return os.path.join(home, ".fabra", "fabra.duckdb")
+
+
+def _ensure_parent_dir(file_path: str) -> None:
+    if file_path == ":memory:":
+        return
+    parent = os.path.dirname(file_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
 class BaseConfig(ABC):
     @abstractmethod
     def get_offline_store(self) -> OfflineStore:
@@ -48,7 +72,9 @@ class BaseConfig(ABC):
 
 class DevConfig(BaseConfig):
     def get_offline_store(self) -> OfflineStore:
-        return DuckDBOfflineStore()
+        duckdb_path = get_duckdb_path()
+        _ensure_parent_dir(duckdb_path)
+        return DuckDBOfflineStore(database=duckdb_path)
 
     def get_online_store(self) -> OnlineStore:
         # Auto-detect Redis

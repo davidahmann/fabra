@@ -14,7 +14,8 @@ from fabra.store.online import InMemoryOnlineStore
 
 def test_default_config() -> None:
     """Test that default config is DevConfig."""
-    with patch.dict(os.environ, {}, clear=True):
+    # Keep tests hermetic: do not write to a developer's home directory.
+    with patch.dict(os.environ, {"FABRA_DUCKDB_PATH": ":memory:"}, clear=True):
         config = get_config()
         assert isinstance(config, DevConfig)
 

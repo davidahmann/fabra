@@ -385,7 +385,7 @@ class PostgresOfflineStore(OfflineStore):
                 text(
                     """
                     CREATE TABLE IF NOT EXISTS context_log (
-                        context_id VARCHAR(36) PRIMARY KEY,
+                        context_id VARCHAR(255) PRIMARY KEY,
                         timestamp TIMESTAMPTZ NOT NULL,
                         content TEXT NOT NULL,
                         lineage JSONB NOT NULL,
@@ -395,6 +395,15 @@ class PostgresOfflineStore(OfflineStore):
                     """
                 )
             )
+            # If the table already existed with a smaller varchar, widen it.
+            try:
+                await conn.execute(
+                    text(
+                        "ALTER TABLE context_log ALTER COLUMN context_id TYPE VARCHAR(255)"
+                    )
+                )
+            except Exception as e:
+                logger.debug("context_log_alter_skipped", error=str(e))
             # Create index for timestamp-based queries
             await conn.execute(
                 text(

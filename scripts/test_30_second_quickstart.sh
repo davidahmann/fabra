@@ -20,7 +20,7 @@
 #   - Python 3.10+
 #   - pip
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,6 +33,7 @@ NC='\033[0m' # No Color
 PORT_FEATURE=8765  # Use non-standard ports to avoid conflicts
 PORT_CONTEXT=8766
 TIMEOUT=30
+STARTUP_TIMEOUT=${FABRA_STARTUP_TIMEOUT:-20}
 MODE=${1:-all}  # all, features, or context
 INSTALL_MODE=${FABRA_INSTALL_MODE:-pypi} # pypi|source
 
@@ -87,21 +88,25 @@ TOTAL_START=$(date +%s)
 test_features() {
     echo -e "\n${BLUE}--- Testing Feature Store Demo ---${NC}"
     local START=$(date +%s)
+    local LOG="${TMPDIR}/demo_features.log"
 
     # Start server in background
     echo -e "${YELLOW}Starting demo server (features)...${NC}"
-    "$VENV_FABRA" demo --mode features --port $PORT_FEATURE >/dev/null 2>&1 &
+    "$VENV_FABRA" demo --mode features --port $PORT_FEATURE >"${LOG}" 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready (poll health endpoint)
     echo -e "${YELLOW}Waiting for server to be ready...${NC}"
-    for i in {1..20}; do
-        if curl -s "http://localhost:$PORT_FEATURE/health" > /dev/null 2>&1; then
+    local max_tries=$((STARTUP_TIMEOUT * 2))
+    for i in $(seq 1 "$max_tries"); do
+        if curl -fsS "http://127.0.0.1:$PORT_FEATURE/health" >/dev/null 2>&1; then
             echo -e "${GREEN}Server is ready!${NC}"
             break
         fi
-        if [ $i -eq 20 ]; then
-            echo -e "${RED}ERROR: Server failed to start within 10 seconds${NC}"
+        if [ "$i" -eq "$max_tries" ]; then
+            echo -e "${RED}ERROR: Server failed to start within ${STARTUP_TIMEOUT} seconds${NC}"
+            echo -e "${YELLOW}Last demo logs:${NC}"
+            tail -n 80 "${LOG}" || true
             kill $SERVER_PID 2>/dev/null || true
             wait $SERVER_PID 2>/dev/null || true
             unset SERVER_PID
@@ -112,7 +117,7 @@ test_features() {
 
     # Test feature endpoint
     echo -e "${YELLOW}Testing feature endpoint...${NC}"
-    RESPONSE=$(curl -s "http://localhost:$PORT_FEATURE/features/user_engagement?entity_id=user_123")
+    RESPONSE=$(curl -fsS "http://127.0.0.1:$PORT_FEATURE/features/user_engagement?entity_id=user_123")
     echo -e "Response: ${RESPONSE}"
 
     # Validate response has value
@@ -150,21 +155,25 @@ test_features() {
 test_context() {
     echo -e "\n${BLUE}--- Testing Context Store Demo ---${NC}"
     local START=$(date +%s)
+    local LOG="${TMPDIR}/demo_context.log"
 
     # Start server in background
     echo -e "${YELLOW}Starting demo server (context)...${NC}"
-    "$VENV_FABRA" demo --mode context --port $PORT_CONTEXT >/dev/null 2>&1 &
+    "$VENV_FABRA" demo --mode context --port $PORT_CONTEXT >"${LOG}" 2>&1 &
     SERVER_PID=$!
 
     # Wait for server to be ready
     echo -e "${YELLOW}Waiting for server to be ready...${NC}"
-    for i in {1..20}; do
-        if curl -s "http://localhost:$PORT_CONTEXT/health" > /dev/null 2>&1; then
+    local max_tries=$((STARTUP_TIMEOUT * 2))
+    for i in $(seq 1 "$max_tries"); do
+        if curl -fsS "http://127.0.0.1:$PORT_CONTEXT/health" >/dev/null 2>&1; then
             echo -e "${GREEN}Server is ready!${NC}"
             break
         fi
-        if [ $i -eq 20 ]; then
-            echo -e "${RED}ERROR: Server failed to start within 10 seconds${NC}"
+        if [ "$i" -eq "$max_tries" ]; then
+            echo -e "${RED}ERROR: Server failed to start within ${STARTUP_TIMEOUT} seconds${NC}"
+            echo -e "${YELLOW}Last demo logs:${NC}"
+            tail -n 80 "${LOG}" || true
             kill $SERVER_PID 2>/dev/null || true
             wait $SERVER_PID 2>/dev/null || true
             unset SERVER_PID
@@ -175,7 +184,7 @@ test_context() {
 
     # Test context endpoint
     echo -e "${YELLOW}Testing context endpoint...${NC}"
-    RESPONSE=$(curl -s -X POST "http://localhost:$PORT_CONTEXT/v1/context/chat_context" \
+    RESPONSE=$(curl -fsS -X POST "http://127.0.0.1:$PORT_CONTEXT/v1/context/chat_context" \
         -H "Content-Type: application/json" \
         -d '{"user_id":"user_123","query":"how do features work?"}')
 

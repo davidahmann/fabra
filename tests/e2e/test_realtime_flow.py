@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pytest
 import asyncio
+import json
 from httpx import AsyncClient, ASGITransport
 from redis.asyncio import Redis
 from typing import Dict, Any
@@ -63,7 +64,10 @@ async def test_event_triggers_refresh(redis_client: Redis[str]) -> None:
                 await asyncio.sleep(0.1)
 
             # 6. Assert Final State
-            assert val == "500"
+            assert val is not None
+            # Online store values include metadata for freshness/replay.
+            payload = json.loads(val)
+            assert payload["value"] == 500
 
     finally:
         # Stop worker

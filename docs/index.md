@@ -53,7 +53,14 @@ This is "write path ownership": we ingest and manage your context data, not just
 pip install fabra-ai && fabra demo
 ```
 
-That's it. Server starts, makes a test request, shows you the result. No Docker. No config files. No API keys.
+That's it. Server starts, makes a test request, and prints a `context_id` (your receipt). No Docker. No config files. No API keys.
+
+Next:
+
+```bash
+fabra context show <context_id>
+fabra context verify <context_id>
+```
 
 ### Build Your Own
 

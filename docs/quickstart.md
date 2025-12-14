@@ -50,7 +50,7 @@ You're building LLM apps and need:
 ### Fastest Path: `fabra demo`
 
 ```bash
-pip install fabra-ai && fabra demo
+pip install fabra-ai && fabra demo --mode features
 ```
 
 That's it. Server starts, makes a test request, shows you the result. No Docker. No config files. No API keys.
@@ -105,8 +105,16 @@ curl localhost:8000/features/purchase_count?entity_id=user123
 
 > **For AI Engineers** — Build RAG with audit trails and compliance.
 
-> [!IMPORTANT]
-> **Prerequisites:** To use Vector Search, you need an API Key (OpenAI, Anthropic, or Cohere).
+### Fastest Path (no API keys): `fabra demo`
+
+```bash
+pip install fabra-ai && fabra demo
+```
+
+This prints a `context_id` (your receipt) and the next commands to prove value:
+`show`, `diff`, and `verify`.
+
+### Build Your Own Context Assembly
 
 ```bash
 pip install fabra-ai

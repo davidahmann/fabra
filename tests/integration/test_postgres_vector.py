@@ -7,7 +7,7 @@ from typing import Dict, Any, AsyncGenerator
 
 @pytest_asyncio.fixture
 async def vector_store(
-    infrastructure: Dict[str, Any]
+    infrastructure: Dict[str, Any],
 ) -> AsyncGenerator[PostgresOfflineStore, None]:
     url = infrastructure["postgres_url"]
     store = PostgresOfflineStore(url)

@@ -1,0 +1,63 @@
+{
+  "base_content_hash": null,
+  "base_context_id": "ctx_a",
+  "base_freshness_status": "guaranteed",
+  "change_summary": "1 features added; 1 features modified; content: ~1 lines modified; tokens: +20",
+  "comparison_content_hash": null,
+  "comparison_context_id": "ctx_b",
+  "comparison_freshness_status": "degraded",
+  "content_diff": {
+    "diff_summary": "~1 lines modified",
+    "lines_added": 0,
+    "lines_changed": 1,
+    "lines_removed": 0,
+    "similarity_score": 0.0
+  },
+  "cost_delta_usd": 0.0001,
+  "feature_diffs": [
+    {
+      "change_type": "modified",
+      "entity_id": "u1",
+      "feature_name": "user_tier",
+      "new_freshness_ms": 2000,
+      "new_value": "premium",
+      "old_freshness_ms": 1000,
+      "old_value": "free"
+    },
+    {
+      "change_type": "added",
+      "entity_id": "u1",
+      "feature_name": "purchase_count",
+      "new_freshness_ms": 2000,
+      "new_value": 3,
+      "old_freshness_ms": null,
+      "old_value": null
+    }
+  ],
+  "features_added": 1,
+  "features_modified": 1,
+  "features_removed": 0,
+  "freshness_improved": false,
+  "has_changes": true,
+  "items_dropped_base": [],
+  "items_dropped_comparison": [],
+  "items_dropped_delta": 0,
+  "retriever_diffs": [
+    {
+      "change_type": "unchanged",
+      "chunks_added": [],
+      "chunks_removed": [],
+      "new_query": "test",
+      "new_results_count": 3,
+      "old_query": "test",
+      "old_results_count": 2,
+      "query_changed": false,
+      "retriever_name": "demo_docs"
+    }
+  ],
+  "retrievers_added": 0,
+  "retrievers_modified": 0,
+  "retrievers_removed": 0,
+  "time_delta_ms": 300000,
+  "token_delta": 20
+}

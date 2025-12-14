@@ -4,7 +4,7 @@ import duckdb
 import pandas as pd
 import asyncio
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 import structlog
@@ -642,6 +642,9 @@ class DuckDBOfflineStore(OfflineStore):
             created_at = row["created_at"]
             if isinstance(created_at, str):
                 created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            elif isinstance(created_at, datetime) and created_at.tzinfo is None:
+                # DuckDB TIMESTAMP is timezone-naive; records are always authored in UTC.
+                created_at = created_at.replace(tzinfo=timezone.utc)
 
             return ContextRecord(
                 context_id=row["context_id"],

@@ -1,7 +1,8 @@
 from typing import Dict, Any, List, Optional
 import redis.asyncio as redis
 import json
-from .online import OnlineStore
+from .online import OnlineStore, _wrap_feature_value
+from datetime import datetime, timezone
 
 
 class RedisOnlineStore(OnlineStore):
@@ -56,15 +57,44 @@ class RedisOnlineStore(OnlineStore):
         # Use HMGET to fetch specific fields
         values = await self.client.hmget(key, feature_names)
 
-        result = {}
+        result: Dict[str, Any] = {}
         for name, value in zip(feature_names, values):
             if value is not None:
                 # Redis stores strings, so we might need to infer types or store as JSON.
                 # For MVP, we'll try to parse as JSON, fallback to string.
                 try:
-                    result[name] = json.loads(value)
+                    parsed = json.loads(value)
+                    if (
+                        isinstance(parsed, dict)
+                        and parsed.get("__fabra_feature_value__") is True
+                    ):
+                        result[name] = parsed.get("value")
+                    else:
+                        result[name] = parsed
                 except (json.JSONDecodeError, TypeError):
                     result[name] = value
+        return result
+
+    async def get_online_features_with_meta(
+        self, entity_name: str, entity_id: str, feature_names: List[str]
+    ) -> Dict[str, Dict[str, Any]]:
+        key = f"{entity_name}:{entity_id}"
+        values = await self.client.hmget(key, feature_names)
+        result: Dict[str, Dict[str, Any]] = {}
+        for name, value in zip(feature_names, values):
+            if value is None:
+                continue
+            try:
+                parsed = json.loads(value)
+                if (
+                    isinstance(parsed, dict)
+                    and parsed.get("__fabra_feature_value__") is True
+                ):
+                    result[name] = parsed
+                else:
+                    result[name] = _wrap_feature_value(parsed)
+            except (json.JSONDecodeError, TypeError):
+                result[name] = _wrap_feature_value(value)
         return result
 
     async def set_online_features(
@@ -79,7 +109,8 @@ class RedisOnlineStore(OnlineStore):
         # Convert values to JSON strings for storage
         serialized_features = {}
         for k, v in features.items():
-            serialized_features[k] = json.dumps(v)
+            wrapped = _wrap_feature_value(v, as_of=datetime.now(timezone.utc))
+            serialized_features[k] = json.dumps(wrapped)
 
         # Cast to Any to satisfy mypy's strict check on hset mapping
         await self.client.hset(key, mapping=serialized_features)  # type: ignore
@@ -104,7 +135,8 @@ class RedisOnlineStore(OnlineStore):
                 key = f"{entity_name}:{entity_id}"
 
                 # Serialize value
-                serialized_value = json.dumps(value)
+                wrapped = _wrap_feature_value(value, as_of=datetime.now(timezone.utc))
+                serialized_value = json.dumps(wrapped)
 
                 # Add to pipeline
                 pipe.hset(key, feature_name, serialized_value)

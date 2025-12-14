@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -99,10 +100,14 @@ def _terminate_demo(proc: subprocess.Popen[str], timeout_s: float = 10.0) -> Non
 def main() -> int:
     default_port = 12000 + secrets.randbelow(40001)
     port = int(os.getenv("FABRA_SMOKE_PORT", str(default_port)))
+    duckdb_path = os.getenv(
+        "FABRA_SMOKE_DUCKDB_PATH", str(Path.cwd() / f".fabra-smoke-{port}.duckdb")
+    )
 
     started_at = time.time()
     _append_summary("## Quickstart Smoke Test")
     _append_summary(f"- Port: `{port}`")
+    _append_summary(f"- DuckDB: `{duckdb_path}`")
 
     demo_cmd = [
         sys.executable,
@@ -118,6 +123,7 @@ def main() -> int:
 
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
+    env["FABRA_DUCKDB_PATH"] = duckdb_path
     creationflags = 0
     if os.name == "nt":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
@@ -148,6 +154,15 @@ def main() -> int:
             "--port",
             str(port),
         )
+        _run_cli(
+            "context",
+            "verify",
+            first.context_id,
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        )
 
         second = _post_context(
             port,
@@ -168,10 +183,45 @@ def main() -> int:
             "--json",
         )
 
+        # Persistence check: restart server and ensure the record is still retrievable.
+        _append_summary("- Restarting server to validate durability")
+        _terminate_demo(proc)
+        proc = None
+
+        proc = subprocess.Popen(  # nosec B603
+            demo_cmd,
+            env=env,
+            creationflags=creationflags,
+        )
+        _wait_for_health(port)
+
+        _run_cli(
+            "context",
+            "show",
+            first.context_id,
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        )
+        _run_cli(
+            "context",
+            "verify",
+            first.context_id,
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        )
+
         return 0
     finally:
         if proc is not None:
             _terminate_demo(proc)
+        try:
+            Path(duckdb_path).unlink(missing_ok=True)
+        except Exception as e:
+            print(f"Warning: failed to delete duckdb: {e}")
 
 
 if __name__ == "__main__":

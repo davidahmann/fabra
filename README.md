@@ -1,7 +1,7 @@
 <div align="center">
   <h1>Fabra</h1>
   <p><strong>Stop spending hours debugging AI decisions you can't reproduce.</strong></p>
-  <p>When your AI gives a bad answer, you need to know: What did it see? What got dropped?<br/>Can I replay this exact decision? Fabra gives you the answer.</p>
+  <p>Fabra makes AI context durable. Every request becomes a replayable Context Record.<br/>Record → replay → diff. Turn “the AI was wrong” into a fixable ticket.</p>
 
   <p>
     <a href="https://pypi.org/project/fabra-ai/"><img src="https://img.shields.io/pypi/v/fabra-ai?color=blue&label=pypi" alt="PyPI version" /></a>
@@ -30,7 +30,20 @@ Every AI team hits this wall: **you can't fix what you can't reproduce.**
 pip install fabra-ai && fabra demo
 ```
 
-That's it. Server starts, makes a test request, shows you the result. No Docker. No config files. No API keys.
+That's it. Server starts, makes a test request, prints a `context_id` (your receipt). No Docker. No config files. No API keys.
+
+By default, Context Records are stored durably in DuckDB at `~/.fabra/fabra.duckdb` (override with `FABRA_DUCKDB_PATH`).
+
+Need help or want to see everything Fabra can do?
+
+```bash
+fabra --help
+fabra context --help
+```
+
+Already using LangChain or calling OpenAI directly? Add receipts without a rewrite:
+
+- `docs/exporters-and-adapters.md` (LangChain-style callbacks, OpenAI wrapper, logs/OTEL)
 
 <details>
 <summary><strong>What you'll see</strong></summary>
@@ -38,15 +51,15 @@ That's it. Server starts, makes a test request, shows you the result. No Docker.
 ```
   Fabra Demo Server
 
-  Testing feature retrieval...
-  curl localhost:8000/features/user_engagement?entity_id=user_123
+  Context Store working!
+  Context ID: ctx_...
 
-  Response:
-  {
-    "value": 87.5,
-    "freshness_ms": 0,
-    "served_from": "online"
-  }
+  Receipt (paste into a ticket):
+    ctx_...
+
+  Next (proves the value):
+    fabra context show ctx_...
+    fabra context verify ctx_...
 
   Press Ctrl+C to stop, or visit http://localhost:8000/docs
 ```
@@ -71,6 +84,9 @@ That `ctx.id` is permanent. Days later, you can:
 ```bash
 # See exactly what the AI knew
 fabra context show ctx_018f3a2b-...
+
+# Verify the record hasn't been tampered with
+fabra context verify ctx_018f3a2b-...
 
 # Compare two decisions side-by-side
 fabra context diff ctx_a ctx_b

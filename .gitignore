@@ -88,3 +88,6 @@ yarn-error.log*
 .env.production.local
 context_record.md
 ui.md
+
+# Supabase CLI artifacts
+supabase/.temp/

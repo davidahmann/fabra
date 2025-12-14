@@ -1,5 +1,20 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone
+
+
+def _wrap_feature_value(value: Any, as_of: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Wrap a feature value with metadata so we can compute freshness and replay.
+
+    This wrapper is internal to online stores; callers should unwrap before returning
+    values to application code.
+    """
+    if isinstance(value, dict) and value.get("__fabra_feature_value__") is True:
+        return value
+
+    ts = (as_of or datetime.now(timezone.utc)).isoformat()
+    return {"__fabra_feature_value__": True, "value": value, "as_of": ts}
 
 
 class OnlineStore(ABC):
@@ -69,6 +84,13 @@ class OnlineStore(ABC):
     def pipeline(self) -> Any:
         pass
 
+    # --- Optional Metadata Path ---
+    # Used to compute freshness and build lineage without changing the public return values.
+    async def get_online_features_with_meta(
+        self, entity_name: str, entity_id: str, feature_names: List[str]
+    ) -> Dict[str, Dict[str, Any]]:
+        raise NotImplementedError
+
 
 class InMemoryOnlineStore(OnlineStore):
     def __init__(self) -> None:
@@ -82,7 +104,32 @@ class InMemoryOnlineStore(OnlineStore):
     ) -> Dict[str, Any]:
         entity_storage = self._storage.get(entity_name, {})
         features = entity_storage.get(entity_id, {})
-        return {name: features.get(name) for name in feature_names if name in features}
+        result: Dict[str, Any] = {}
+        for name in feature_names:
+            if name not in features:
+                continue
+            raw = features.get(name)
+            if isinstance(raw, dict) and raw.get("__fabra_feature_value__") is True:
+                result[name] = raw.get("value")
+            else:
+                result[name] = raw
+        return result
+
+    async def get_online_features_with_meta(
+        self, entity_name: str, entity_id: str, feature_names: List[str]
+    ) -> Dict[str, Dict[str, Any]]:
+        entity_storage = self._storage.get(entity_name, {})
+        features = entity_storage.get(entity_id, {})
+        result: Dict[str, Dict[str, Any]] = {}
+        for name in feature_names:
+            if name not in features:
+                continue
+            raw = features.get(name)
+            if isinstance(raw, dict) and raw.get("__fabra_feature_value__") is True:
+                result[name] = raw
+            else:
+                result[name] = _wrap_feature_value(raw)
+        return result
 
     async def set_online_features(
         self,
@@ -97,7 +144,8 @@ class InMemoryOnlineStore(OnlineStore):
         if entity_id not in self._storage[entity_name]:
             self._storage[entity_name][entity_id] = {}
 
-        self._storage[entity_name][entity_id].update(features)
+        wrapped = {k: _wrap_feature_value(v) for k, v in features.items()}
+        self._storage[entity_name][entity_id].update(wrapped)
 
     async def set_online_features_bulk(
         self,

@@ -13,7 +13,16 @@ from .core import FeatureStore
 from .server import create_app
 
 
-app = typer.Typer()
+app = typer.Typer(
+    help=(
+        "Fabra CLI — turn AI incidents into reproducible tickets.\n\n"
+        "Primary workflow:\n"
+        "  fabra demo\n"
+        "  fabra context show <context_id>\n"
+        "  fabra context diff <id1> <id2>\n"
+        "  fabra context verify <context_id>\n"
+    )
+)
 console = Console()
 
 
@@ -27,8 +36,12 @@ def events_cmd(
     ),
 ) -> None:
     """
-    Manage or listen to Fabra events.
-    Usage: fabra events listen --stream=my_stream
+    Listen to Fabra event streams (advanced / debugging).
+
+    Examples:
+      fabra events listen
+      fabra events listen --stream meridian:events:transaction
+      fabra events listen --stream fabra_events --count 10
     """
     if action != "listen":
         console.print(f"[bold red]Unknown action:[/bold red] {action}")
@@ -71,18 +84,13 @@ def events_cmd(
         console.print("\nStopped.")
 
 
-console = Console()
-
-
 @app.callback()
 def callback(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
 ) -> None:
-    """
-    Fabra CLI
-    """
+    """Global CLI options."""
     if verbose:
         import logging
 
@@ -104,7 +112,11 @@ def worker_cmd(
     ),
 ) -> None:
     """
-    Starts the Axiom background worker.
+    Start the background worker that processes events and updates triggered features.
+
+    Examples:
+      fabra worker features.py
+      FABRA_REDIS_URL=redis://localhost:6379 fabra worker features.py
     """
     import asyncio
     from .worker import AxiomWorker
@@ -837,7 +849,15 @@ def ui(
         console.print("\nUI stopped.")
 
 
-context_app = typer.Typer(help="Manage and inspect Context Store assemblies.")
+context_app = typer.Typer(
+    help=(
+        "Context Records — inspect what the AI saw.\n\n"
+        "Common workflow:\n"
+        "  fabra context show <context_id>\n"
+        "  fabra context diff <id1> <id2>\n"
+        "  fabra context verify <context_id>\n"
+    )
+)
 app.add_typer(context_app, name="context")
 
 
@@ -851,46 +871,67 @@ def context_show_cmd(
     ),
 ) -> None:
     """
-    Retrieve and display a historical context by ID.
+    Retrieve and display a historical Context Record by ID.
 
-    Example:
-      fabra context show 01912345-6789-7abc-def0-123456789abc
-      fabra context show <context_id> --lineage
+    By default, this uses the CRS-001 record endpoint (`/v1/record/ctx_<uuid>`).
+    If the server doesn't expose records yet, it falls back to the legacy
+    context endpoint (`/v1/context/<uuid>`).
+
+    Examples:
+      fabra context show <context_id>  # accepts UUID or ctx_<UUID>
+      fabra context show <context_id> --host 127.0.0.1 --port 8000
+      fabra context show <context_id> --lineage  # legacy lineage endpoint
     """
     import urllib.request
     import urllib.error
     import json
 
-    endpoint = "lineage" if lineage else ""
-    url = f"http://{host}:{port}/v1/context/{context_id}" + (
-        f"/{endpoint}" if endpoint else ""
-    )
-    console.print(f"Fetching context [bold cyan]{context_id}[/bold cyan] from {url}...")
-
-    if not url.lower().startswith(("http://", "https://")):
-        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
-        raise typer.Exit(1)
-
-    try:
+    def fetch(url: str) -> dict[str, Any]:
+        if not url.lower().startswith(("http://", "https://")):
+            raise ValueError("Invalid URL scheme")
         req = urllib.request.Request(url)
         api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
-
         with urllib.request.urlopen(req) as response:  # nosec B310
             if response.status != 200:
-                console.print(
-                    f"[bold red]Error:[/bold red] Server returned {response.status}"
-                )
-                raise typer.Exit(1)
+                raise Exception(f"Server returned {response.status}")
+            payload = json.loads(response.read().decode())
+            if not isinstance(payload, dict):
+                raise Exception("Invalid JSON response (expected object)")
+            return payload
 
-            data = json.loads(response.read().decode())
+    # Lineage view uses the legacy endpoint (it returns ContextLineage).
+    record_id = context_id if context_id.startswith("ctx_") else f"ctx_{context_id}"
+    if lineage:
+        url = f"http://{host}:{port}/v1/context/{context_id}/lineage"
+        console.print(
+            f"Fetching lineage [bold cyan]{context_id}[/bold cyan] from {url}..."
+        )
+    else:
+        url = f"http://{host}:{port}/v1/record/{record_id}"
+        console.print(
+            f"Fetching record [bold cyan]{record_id}[/bold cyan] from {url}..."
+        )
 
-            # Pretty print with Rich
+    try:
+        try:
+            data = fetch(url)
             if lineage:
                 title = f"Lineage: {context_id}"
             else:
+                title = f"Record: {record_id}"
+        except urllib.error.HTTPError as e:
+            if not lineage and e.code in (404, 501):
+                legacy_url = f"http://{host}:{port}/v1/context/{context_id}"
+                console.print(
+                    f"[yellow]Note:[/yellow] CRS-001 record not available, falling back to legacy context endpoint.\n"
+                    f"[dim]{legacy_url}[/dim]"
+                )
+                data = fetch(legacy_url)
                 title = f"Context: {context_id}"
+            else:
+                raise
 
             console.print(
                 Panel(
@@ -1010,64 +1051,164 @@ def context_export_cmd(
     output: str = typer.Option(
         None, "--output", "-o", help="Output file (default: stdout)"
     ),
+    bundle: bool = typer.Option(
+        False,
+        "--bundle",
+        help="Write an incident bundle (.zip) containing the CRS-001 record and hashes",
+    ),
 ) -> None:
     """
-    Export a context for audit/debugging.
+    Export a Context Record for audit/debugging.
 
-    Example:
-      fabra context export <context_id> --format json
+    By default, this exports the CRS-001 record. If the server doesn't expose
+    records yet, it falls back to the legacy context export unless `--bundle`
+    is requested (bundles require records).
+
+    Examples:
+      fabra context export <context_id> --format json  # accepts UUID or ctx_<UUID>
       fabra context export <context_id> --output context.json
       fabra context export <context_id> --format yaml -o context.yaml
+      fabra context export <context_id> --bundle -o incident_bundle.zip
     """
     import urllib.request
     import urllib.error
     import json
 
-    url = f"http://{host}:{port}/v1/context/{context_id}"
-    console.print(f"Exporting context [bold cyan]{context_id}[/bold cyan]...")
-
-    if not url.lower().startswith(("http://", "https://")):
-        console.print("[bold red]Error:[/bold red] Invalid URL scheme")
-        raise typer.Exit(1)
-
-    try:
+    def fetch(url: str) -> dict[str, Any]:
+        if not url.lower().startswith(("http://", "https://")):
+            raise ValueError("Invalid URL scheme")
         req = urllib.request.Request(url)
         api_key = os.getenv("FABRA_API_KEY")
         if api_key:
             req.add_header("X-API-Key", api_key)
-
         with urllib.request.urlopen(req) as response:  # nosec B310
             if response.status != 200:
+                raise Exception(f"Server returned {response.status}")
+            payload = json.loads(response.read().decode())
+            if not isinstance(payload, dict):
+                raise Exception("Invalid JSON response (expected object)")
+            return payload
+
+    record_id = context_id if context_id.startswith("ctx_") else f"ctx_{context_id}"
+    record_url = f"http://{host}:{port}/v1/record/{record_id}"
+    legacy_url = f"http://{host}:{port}/v1/context/{context_id}"
+
+    if bundle:
+        console.print(f"Building incident bundle [bold cyan]{record_id}[/bold cyan]...")
+    else:
+        console.print(f"Exporting record [bold cyan]{record_id}[/bold cyan]...")
+
+    try:
+        exported_kind = "record"
+        try:
+            data = fetch(record_url)
+        except urllib.error.HTTPError as e:
+            if e.code in (404, 501):
+                if bundle:
+                    console.print(
+                        "[bold red]Error:[/bold red] CRS-001 record not available; cannot build a verifiable incident bundle."
+                    )
+                    raise typer.Exit(1)
                 console.print(
-                    f"[bold red]Error:[/bold red] Server returned {response.status}"
+                    f"[yellow]Note:[/yellow] CRS-001 record not available, exporting legacy context instead.\n"
+                    f"[dim]{legacy_url}[/dim]"
                 )
-                raise typer.Exit(1)
+                data = fetch(legacy_url)
+                exported_kind = "context"
+            else:
+                raise
 
-            data = json.loads(response.read().decode())
+        if bundle:
+            import zipfile
+            from datetime import datetime, timezone
 
-            # Format output
-            if format == "yaml":
+            bundle_output = output or f"{record_id}.zip"
+            record_json = json.dumps(data, indent=2, default=str)
+
+            manifest: dict[str, Any] = {
+                "id": record_id,
+                "exported_kind": exported_kind,
+                "computed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            if exported_kind == "record":
+                try:
+                    from fabra.models import ContextRecord
+                    from fabra.utils.integrity import (
+                        compute_content_hash,
+                        compute_record_hash,
+                    )
+
+                    record_obj = ContextRecord.model_validate(data)
+                    manifest.update(
+                        {
+                            "stored_content_hash": record_obj.integrity.content_hash,
+                            "stored_record_hash": record_obj.integrity.record_hash,
+                            "computed_content_hash": compute_content_hash(
+                                record_obj.content
+                            ),
+                            "computed_record_hash": compute_record_hash(record_obj),
+                        }
+                    )
+                except Exception as e:
+                    manifest["verification_error"] = str(e)
+
+            yaml_text = None
+            if exported_kind == "record" and format == "yaml":
                 try:
                     import yaml  # type: ignore[import-untyped]
 
-                    formatted = yaml.dump(
+                    yaml_text = yaml.dump(
                         data, default_flow_style=False, allow_unicode=True
                     )
-                except ImportError:
-                    console.print(
-                        "[yellow]Warning:[/yellow] PyYAML not installed. Falling back to JSON."
-                    )
-                    formatted = json.dumps(data, indent=2, default=str)
-            else:
-                formatted = json.dumps(data, indent=2, default=str)
+                except Exception:
+                    yaml_text = None
 
-            # Output to file or stdout
-            if output:
-                with open(output, "w") as f:
-                    f.write(formatted)
-                console.print(f"[green]Exported to {output}[/green]")
-            else:
-                console.print(formatted)
+            with zipfile.ZipFile(
+                bundle_output, "w", compression=zipfile.ZIP_DEFLATED
+            ) as zf:
+                zf.writestr(f"{record_id}.json", record_json)
+                if yaml_text:
+                    zf.writestr(f"{record_id}.yaml", yaml_text)
+                zf.writestr(
+                    "manifest.json", json.dumps(manifest, indent=2, default=str)
+                )
+                zf.writestr(
+                    "README.txt",
+                    "Fabra incident bundle\n\n"
+                    f"ID: {record_id}\n"
+                    "\nContents:\n"
+                    "- <id>.json: exported CRS-001 record (or legacy context)\n"
+                    "- <id>.yaml: optional YAML representation\n"
+                    "- manifest.json: stored vs computed hashes\n",
+                )
+
+            console.print(f"[green]Wrote bundle to {bundle_output}[/green]")
+            return
+
+        # Format output
+        if format == "yaml":
+            try:
+                import yaml
+
+                formatted = yaml.dump(
+                    data, default_flow_style=False, allow_unicode=True
+                )
+            except ImportError:
+                console.print(
+                    "[yellow]Warning:[/yellow] PyYAML not installed. Falling back to JSON."
+                )
+                formatted = json.dumps(data, indent=2, default=str)
+        else:
+            formatted = json.dumps(data, indent=2, default=str)
+
+        # Output to file or stdout
+        if output:
+            with open(output, "w") as f:
+                f.write(formatted)
+            console.print(f"[green]Exported to {output}[/green]")
+        else:
+            console.print(formatted)
 
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -1268,20 +1409,26 @@ def context_verify_cmd(
     port: int = typer.Option(8000, help="Fabra server port"),
 ) -> None:
     """
-    Verify the cryptographic integrity of a context record.
+    Verify the cryptographic integrity of a Context Record (CRS-001).
 
     Checks that the record_hash and content_hash match the actual content,
     ensuring the context has not been tampered with.
 
-    Example:
-      fabra context verify ctx_018f3a2b-...
+    This requires the server to provide a CRS-001 record at `/v1/record/<id>`.
+    If a record is not available, this command fails (non-zero) rather than
+    reporting a best-effort success.
+
+    Examples:
+      fabra context verify <context_id>
+      fabra context verify <context_id> --host 127.0.0.1 --port 8000
     """
     import urllib.request
     import urllib.error
     import json
 
-    url = f"http://{host}:{port}/v1/context/{context_id}"
-    console.print(f"Verifying context [bold cyan]{context_id}[/bold cyan]...")
+    record_id = context_id if context_id.startswith("ctx_") else f"ctx_{context_id}"
+    url = f"http://{host}:{port}/v1/record/{record_id}"
+    console.print(f"Verifying record [bold cyan]{record_id}[/bold cyan]...")
 
     if not url.lower().startswith(("http://", "https://")):
         console.print("[bold red]Error:[/bold red] Invalid URL scheme")
@@ -1302,57 +1449,55 @@ def context_verify_cmd(
 
             data = json.loads(response.read().decode())
 
-            # Check if this is a ContextRecord with integrity metadata
-            integrity = data.get("integrity", {})
-            record_hash = integrity.get("record_hash", "")
-            content_hash = integrity.get("content_hash", "")
+            from fabra.models import ContextRecord
+            from fabra.utils.integrity import (
+                verify_content_integrity,
+                verify_record_integrity,
+            )
 
-            if not record_hash and not content_hash:
-                # Try to verify from legacy format
+            try:
+                record = ContextRecord.model_validate(data)
+            except Exception:
                 console.print(
-                    "[yellow]Note:[/yellow] This context was stored in legacy format "
-                    "(no integrity metadata). Cannot verify cryptographic integrity."
+                    "[bold red]Error:[/bold red] No CRS-001 record available for this ID; "
+                    "cannot verify cryptographic integrity."
                 )
                 console.print(
-                    "\n[dim]Tip: Contexts stored with Fabra 2.1+ include integrity hashes.[/dim]"
+                    "\n[dim]Tip: Ensure the server is running a version that persists Context Records.[/dim]"
                 )
-                raise typer.Exit(0)
+                raise typer.Exit(1)
 
-            # Verify content hash
-            from fabra.utils.integrity import compute_content_hash
-
-            content = data.get("content", "")
-            computed_content_hash = compute_content_hash(content)
-
-            content_valid = content_hash == computed_content_hash
+            content_valid = verify_content_integrity(record)
+            record_valid = verify_record_integrity(record)
 
             console.print("\n[bold]Integrity Check Results:[/bold]")
 
             if content_valid:
                 console.print("  [green]✓[/green] Content hash matches")
-                console.print(f"    [dim]Hash: {content_hash[:40]}...[/dim]")
+                console.print(
+                    f"    [dim]Hash: {record.integrity.content_hash[:40]}...[/dim]"
+                )
             else:
                 console.print("  [red]✗[/red] Content hash mismatch!")
-                console.print(f"    [dim]Stored:   {content_hash[:40]}...[/dim]")
                 console.print(
-                    f"    [dim]Computed: {computed_content_hash[:40]}...[/dim]"
+                    f"    [dim]Stored:   {record.integrity.content_hash[:40]}...[/dim]"
                 )
 
-            # Record hash verification would require full record reconstruction
-            # which is complex - we just report what's stored
-            if record_hash:
-                console.print(f"  [dim]•[/dim] Record hash: {record_hash[:40]}...")
+            if record_valid:
+                console.print("  [green]✓[/green] Record hash matches")
                 console.print(
-                    "    [dim](Full record hash verification requires local record)[/dim]"
+                    f"    [dim]Hash: {record.integrity.record_hash[:40]}...[/dim]"
                 )
+            else:
+                console.print("  [red]✗[/red] Record hash mismatch!")
 
             console.print()
 
-            if content_valid:
+            if content_valid and record_valid:
                 console.print(
                     Panel(
                         "[bold green]✓ Integrity verified[/bold green]\n"
-                        "Content has not been modified since recording.",
+                        "Record and content hashes match.",
                         border_style="green",
                     )
                 )
@@ -1360,7 +1505,7 @@ def context_verify_cmd(
                 console.print(
                     Panel(
                         "[bold red]✗ Integrity check failed[/bold red]\n"
-                        "Content may have been modified or corrupted.",
+                        "Record may have been modified or corrupted.",
                         border_style="red",
                     )
                 )
@@ -1370,6 +1515,11 @@ def context_verify_cmd(
         if e.code == 404:
             console.print(
                 f"[bold red]Not Found:[/bold red] Context '{context_id}' does not exist."
+            )
+        elif e.code == 501:
+            console.print(
+                "[bold red]Error:[/bold red] Server does not expose the CRS-001 record endpoint.\n"
+                "[dim]Tip: Upgrade the server and retry, or use `fabra context show <id>` for a best-effort legacy view.[/dim]"
             )
         else:
             console.print(f"[bold red]Error:[/bold red] HTTP {e.code}: {e.reason}")
@@ -1454,6 +1604,9 @@ def context_diff_cmd(
 ) -> None:
     """
     Compare two context assemblies and show what changed.
+
+    This compares legacy context assemblies (`/v1/context/<id>`) and their lineage.
+    For CRS-001 records, use `fabra context show` to inspect the durable record.
 
     Examples:
         fabra context diff ctx_abc123 ctx_def456
@@ -1976,7 +2129,7 @@ services:
 @app.command(name="demo")
 def demo_cmd(
     mode: str = typer.Option(
-        "features",
+        "context",
         "--mode",
         "-m",
         help="Demo mode: 'features' (Feature Store) or 'context' (Context Store)",
@@ -1995,9 +2148,9 @@ def demo_cmd(
     tests an endpoint to show you a working response. No API keys required!
 
     Examples:
-        fabra demo                    # Feature Store demo
-        fabra demo --mode features    # Explicit Feature Store demo
-        fabra demo --mode context     # Context Store demo (RAG without API keys)
+        fabra demo                    # Context Store demo (no API keys)
+        fabra demo --mode context     # Explicit Context Store demo
+        fabra demo --mode features    # Feature Store demo
     """
     import threading
     import time
@@ -2149,10 +2302,28 @@ def demo_cmd(
                             f"Got value: [bold]{result.get('value')}[/bold]"
                         )
                     else:
+                        ctx_id = result.get("id")
                         console.print(
                             "\n[green]✓[/green] Context Store working! "
-                            f"Context ID: [bold]{result.get('id', 'N/A')[:12]}...[/bold]"
+                            f"Context ID: [bold]{ctx_id}[/bold]"
                         )
+                        if ctx_id:
+                            console.print(
+                                "\n[bold]Receipt (paste into a ticket):[/bold]\n"
+                                f"  [cyan]{ctx_id}[/cyan]\n"
+                            )
+                            console.print("[bold]Next (proves the value):[/bold]")
+                            console.print(f"  [cyan]fabra context show {ctx_id}[/cyan]")
+                            console.print(
+                                f"  [cyan]fabra context verify {ctx_id}[/cyan]"
+                            )
+                            console.print(
+                                "\n[bold]Then generate a second record and diff:[/bold]"
+                            )
+                            console.print(f"  [cyan]{curl_cmd}[/cyan]")
+                            console.print(
+                                f"  [cyan]fabra context diff {ctx_id} <second_context_id>[/cyan]\n"
+                            )
 
             except urllib.error.URLError as e:
                 console.print(f"[yellow]Warning:[/yellow] Could not test endpoint: {e}")

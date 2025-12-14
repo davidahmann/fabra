@@ -18,7 +18,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from .core import FeatureStore
 from .models import ContextTrace
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import html
 
@@ -203,23 +203,58 @@ def create_app(store: FeatureStore) -> FastAPI:
 
             entity_name = feature_def.entity_name
 
-            # Get the feature value
-            features = await store.get_online_features(
-                entity_name=entity_name,
-                entity_id=entity_id,
-                features=[feature_name],
-            )
+            # Fetch from online store (prefer metadata path) so we can compute freshness.
+            raw_meta = None
+            if hasattr(store.online_store, "get_online_features_with_meta"):
+                try:
+                    raw_meta = await store.online_store.get_online_features_with_meta(
+                        entity_name=entity_name,
+                        entity_id=entity_id,
+                        feature_names=[feature_name],
+                    )
+                except NotImplementedError:
+                    raw_meta = None
 
-            if feature_name not in features:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Feature '{feature_name}' not found for entity '{entity_id}'",
+            freshness_ms = 0
+            served_from = "online"
+
+            if raw_meta is not None:
+                if feature_name not in raw_meta:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Feature '{feature_name}' not found for entity '{entity_id}'",
+                    )
+                val = raw_meta[feature_name]
+                as_of_raw = val.get("as_of") if isinstance(val, dict) else None
+                if isinstance(as_of_raw, str):
+                    try:
+                        as_of_dt = datetime.fromisoformat(
+                            as_of_raw.replace("Z", "+00:00")
+                        )
+                        freshness_ms = int(
+                            (datetime.now(timezone.utc) - as_of_dt).total_seconds()
+                            * 1000
+                        )
+                    except Exception:
+                        freshness_ms = 0
+                value = val.get("value") if isinstance(val, dict) else val
+            else:
+                raw = await store.online_store.get_online_features(
+                    entity_name=entity_name,
+                    entity_id=entity_id,
+                    feature_names=[feature_name],
                 )
+                if feature_name not in raw:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Feature '{feature_name}' not found for entity '{entity_id}'",
+                    )
+                value = raw[feature_name]
 
             return {
-                "value": features[feature_name],
-                "freshness_ms": 0,
-                "served_from": "online",
+                "value": value,
+                "freshness_ms": freshness_ms,
+                "served_from": served_from,
             }
         except HTTPException:
             raise
@@ -423,6 +458,32 @@ def create_app(store: FeatureStore) -> FastAPI:
             raise
         except Exception as e:
             logger.error("get_context_failed", context_id=context_id, error=str(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @v1_router.get("/record/{context_id}")
+    async def get_record_by_id(
+        context_id: str, api_key: str = Depends(get_api_key)
+    ) -> Dict[str, Any]:
+        """
+        Retrieve an immutable CRS-001 ContextRecord by ID for audit/verification.
+        """
+        if not hasattr(store.offline_store, "get_record"):
+            raise HTTPException(
+                status_code=501,
+                detail="Offline store does not support Context Records",
+            )
+
+        record_id = context_id if context_id.startswith("ctx_") else f"ctx_{context_id}"
+
+        try:
+            record = await store.offline_store.get_record(record_id)
+            if not record:
+                raise HTTPException(status_code=404, detail="Record not found")
+            return record.model_dump(mode="json")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("get_record_failed", context_id=record_id, error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
     @v1_router.get("/context/{context_id}/lineage")

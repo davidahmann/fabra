@@ -172,9 +172,7 @@ async def chat_context(user_id: str, query: str) -> List[ContextItem]:
         ),
         # User context (high priority)
         ContextItem(
-            content=f"User Profile:\n"
-            f"- Tier: {tier}\n"
-            f"- Engagement Score: {score}",
+            content=f"User Profile:\n- Tier: {tier}\n- Engagement Score: {score}",
             priority=90,
             required=False,
             source_id="user_features",

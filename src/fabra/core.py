@@ -8,11 +8,10 @@ from typing import (
     Union,
     List,
     get_type_hints,
-    Generator,
     cast,
 )
 from dataclasses import dataclass
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 import pandas as pd
 from .store import (
     InMemoryOnlineStore,
@@ -35,9 +34,6 @@ from .retrieval import RetrieverRegistry
 from .index import Index, IndexRegistry
 from .embeddings import OpenAIEmbedding
 
-import contextvars
-from contextlib import contextmanager
-
 # Metrics
 FEATURE_REQUESTS = Counter(
     "fabra_feature_requests_total", "Total feature requests", ["feature", "status"]
@@ -55,25 +51,13 @@ FEATURE_MATERIALIZE_FAILURES = Counter(
 
 logger = structlog.get_logger()
 
-# Time Travel Context Variable
-# Stores the timestamp for the current execution context. if set, all queries should be historical.
-_context_timestamp: contextvars.ContextVar[Optional[datetime]] = contextvars.ContextVar(
-    "fabra_context_timestamp", default=None
-)
-
 
 def get_current_timestamp() -> Optional[datetime]:
     """Returns the current Time Travel timestamp, or None if real-time."""
-    return _context_timestamp.get()
+    # Single source of truth: time travel is controlled by fabra.context.
+    from fabra.context import get_time_travel_timestamp
 
-
-@contextmanager
-def _with_timestamp(timestamp: datetime) -> Generator[None, None, None]:
-    token = _context_timestamp.set(timestamp)
-    try:
-        yield
-    finally:
-        _context_timestamp.reset(token)
+    return get_time_travel_timestamp()
 
 
 async def get_context(
@@ -90,8 +74,13 @@ async def get_context(
     timestamp = kwargs.pop("timestamp", None)
 
     if timestamp:
-        with _with_timestamp(timestamp):
+        from fabra.context import set_time_travel_context, clear_time_travel_context
+
+        set_time_travel_context(timestamp)
+        try:
             return await func(**kwargs)
+        finally:
+            clear_time_travel_context()
     else:
         return await func(**kwargs)
 
@@ -107,7 +96,7 @@ class Entity:
         <div style="font-family: sans-serif; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; max-width: 600px;">
             <h3 style="margin-top: 0; color: #333;">📦 Entity: {self.name}</h3>
             <p><strong>ID Column:</strong> <code>{self.id_column}</code></p>
-            <p><strong>Description:</strong> {self.description or '<em>No description</em>'}</p>
+            <p><strong>Description:</strong> {self.description or "<em>No description</em>"}</p>
         </div>
         """
 
@@ -427,41 +416,87 @@ class FeatureStore:
                     )
                     return {}  # Or raise?
 
-                return await self.offline_store.get_historical_features(
+                historical = await self.offline_store.get_historical_features(
                     entity_name=entity_name,
                     entity_id=entity_id,
                     features=features,
                     timestamp=timestamp,
                 )
+                # Record lineage (best-effort): values are "as of" the replay timestamp.
+                for feature_name in features:
+                    if feature_name in historical:
+                        record_feature_usage(
+                            feature_name=feature_name,
+                            entity_id=entity_id,
+                            value=historical[feature_name],
+                            timestamp=timestamp,
+                            source="cache",
+                        )
+                return historical
             except Exception as e:
                 log.error("time_travel_failed", error=str(e))
                 return {}  # Fallback to empty (missing)
 
         # 1. Try Cache (Online Store)
+        results: Dict[str, Any] = {}
+        meta_results: Dict[str, Dict[str, Any]] = {}
         try:
             with FEATURE_LATENCY.labels(feature="all", step="cache").time():
-                results = await self.online_store.get_online_features(
-                    entity_name,
-                    entity_id,
-                    features,
+                from fabra.store.online import OnlineStore
+
+                use_meta = (
+                    isinstance(self.online_store, OnlineStore)
+                    and self.online_store.__class__.get_online_features_with_meta
+                    is not OnlineStore.get_online_features_with_meta
                 )
+
+                if use_meta:
+                    meta_results = (
+                        await self.online_store.get_online_features_with_meta(
+                            entity_name,
+                            entity_id,
+                            features,
+                        )
+                    )
+                    results = {
+                        k: v.get("value") for k, v in (meta_results or {}).items()
+                    }
+                else:
+                    results = await self.online_store.get_online_features(
+                        entity_name,
+                        entity_id,
+                        features,
+                    )
         except Exception as e:
             # If online store fails completely (e.g. Redis down), treat all as missing
             log.warning("online_store_failed", error=str(e))
             results = {}
+            meta_results = {}
 
         final_results = {}
         missing_features = []
 
         for feature_name in features:
             if feature_name in results:
-                final_results[feature_name] = results[feature_name]
+                val = results[feature_name]
+                as_of = None
+                if feature_name in meta_results:
+                    as_of_raw = meta_results[feature_name].get("as_of")
+                    if isinstance(as_of_raw, str):
+                        try:
+                            as_of = datetime.fromisoformat(
+                                as_of_raw.replace("Z", "+00:00")
+                            )
+                        except Exception:
+                            as_of = None
+                final_results[feature_name] = val
                 FEATURE_REQUESTS.labels(feature=feature_name, status="hit").inc()
                 # Record for lineage tracking (cache hit)
                 record_feature_usage(
                     feature_name=feature_name,
                     entity_id=entity_id,
-                    value=results[feature_name],
+                    value=val,
+                    timestamp=as_of,
                     source="cache",
                 )
             else:
@@ -494,11 +529,21 @@ class FeatureStore:
                     feature_name=feature_name,
                     entity_id=entity_id,
                     value=val,
+                    timestamp=datetime.now(timezone.utc),
                     source="compute",
                 )
 
                 # Optionally write back to cache?
-                # await self.online_store.set_online_features(entity_name, entity_id, {feature_name: val})
+                try:
+                    await self.online_store.set_online_features(
+                        entity_name, entity_id, {feature_name: val}
+                    )
+                except Exception as e:
+                    log.debug(
+                        "online_store_writeback_failed",
+                        feature=feature_name,
+                        error=str(e),
+                    )
 
             except Exception as e:
                 log.error("compute_failed", feature=feature_name, error=str(e))
@@ -517,6 +562,7 @@ class FeatureStore:
                         feature_name=feature_name,
                         entity_id=entity_id,
                         value=feature_def.default_value,
+                        timestamp=datetime.now(timezone.utc),
                         source="fallback",
                     )
                     log.info(

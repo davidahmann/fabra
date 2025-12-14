@@ -18,8 +18,9 @@ async def test_context_decorator_basic() -> None:
     assert isinstance(result, Context)
     assert result.content == "Hello World"
     assert result.id is not None
-    # Rudimentary check for UUIDv7 (time based, starts roughly same)
-    assert len(result.id) == 36
+    assert result.id.startswith("ctx_")
+    # Rudimentary check for UUIDv7 (36 chars after ctx_ prefix)
+    assert len(result.id[4:]) == 36
     assert result.meta["name"] == "test_ctx"
     assert "timestamp" in result.meta
 

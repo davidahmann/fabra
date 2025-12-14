@@ -4,20 +4,24 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 
 export const metadata: Metadata = {
-  title: 'Fabra - Record What Your AI Saw',
-  description: 'Fabra records what your AI saw — so you can replay and debug it. Creates a replayable Context Record for every AI call: what data was used, where it came from, what got dropped, and why.',
-  keywords: 'context record, ai debugging, rag audit trail, llm replay, feature store, context lineage, mlops, pgvector, vector search',
+  title: 'Fabra - Record → Replay → Diff',
+  description:
+    "Fabra makes AI context durable. Every request becomes a replayable Context Record, so you can answer: what did it see, and what changed? Record → replay → diff. Turn 'the AI was wrong' into a fixable ticket.",
+  keywords:
+    'context record, context_id, ai debugging, incident response, llm replay, rag audit trail, prompt provenance, context diff, feature store, context lineage, mlops, pgvector, vector search',
   openGraph: {
-    title: 'Fabra - Record What Your AI Saw',
-    description: 'Fabra records what your AI saw — so you can replay and debug it. Creates a replayable Context Record for every AI call.',
+    title: 'Fabra - Record → Replay → Diff',
+    description:
+      "Fabra makes AI context durable. Every request becomes a replayable Context Record, so incidents stop being vibes and screenshots.",
     url: 'https://davidahmann.github.io/fabra',
     siteName: 'Fabra',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fabra - Record What Your AI Saw',
-    description: 'Fabra records what your AI saw — so you can replay and debug it. Creates a replayable Context Record for every AI call.',
+    title: 'Fabra - Record → Replay → Diff',
+    description:
+      "Fabra makes AI context durable. Every request becomes a replayable Context Record. Record → replay → diff.",
   },
 };
 

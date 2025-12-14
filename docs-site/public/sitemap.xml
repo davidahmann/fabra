@@ -19,6 +19,16 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://davidahmann.github.io/fabra/docs/incident-playbook/</loc>
+    <lastmod>2025-12-14</lastmod>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/fabra/docs/replay-guarantees/</loc>
+    <lastmod>2025-12-14</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://davidahmann.github.io/fabra/docs/context-store/</loc>
     <lastmod>2025-12-09</lastmod>
     <priority>0.9</priority>
@@ -82,6 +92,21 @@
   <url>
     <loc>https://davidahmann.github.io/fabra/docs/context-assembly/</loc>
     <lastmod>2025-12-09</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/fabra/docs/token-budget-management/</loc>
+    <lastmod>2025-12-14</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/fabra/docs/integrity-and-verification/</loc>
+    <lastmod>2025-12-14</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://davidahmann.github.io/fabra/docs/exporters-and-adapters/</loc>
+    <lastmod>2025-12-14</lastmod>
     <priority>0.8</priority>
   </url>
   <url>

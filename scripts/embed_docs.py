@@ -14,6 +14,7 @@ Requires:
 import os
 import re
 from pathlib import Path
+import sys
 
 # Load env from docs-site/.env.local if not already set
 env_file = Path(__file__).parent.parent / "docs-site" / ".env.local"
@@ -146,6 +147,22 @@ def main() -> None:
     # Initialize clients
     openai_client = get_openai_client()
     supabase = get_supabase_client()
+
+    # Safety check: validate OpenAI credentials BEFORE clearing the embeddings table.
+    # This prevents wiping search if the API key is missing/invalid.
+    try:
+        _ = get_embedding(openai_client, "fabra embeddings smoke test")
+    except Exception as e:
+        msg = str(e)
+        print(
+            "ERROR: OpenAI embedding call failed; refusing to clear existing embeddings."
+        )
+        print(f"Cause: {msg}")
+        if "401" in msg or "Unauthorized" in msg or "invalid_api_key" in msg:
+            print(
+                "Tip: Your OPENAI_API_KEY looks invalid. Fix it (docs-site/.env.local or env) and re-run."
+            )
+        sys.exit(1)
 
     # Find all markdown files
     md_files = list(DOCS_DIR.glob("**/*.md"))

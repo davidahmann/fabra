@@ -1,32 +1,15 @@
 import Link from 'next/link';
 import CodeBlock from '@/components/CodeBlock';
 
-const QUICKSTART_CODE = `from fabra.core import FeatureStore, entity, feature
-from fabra.context import context, ContextItem
-from fabra.retrieval import retriever
+const QUICKSTART_CODE = `pip install fabra-ai
+fabra demo
 
-store = FeatureStore()
+# You'll see a context_id printed (your receipt)
+fabra context show <context_id>
+fabra context verify <context_id>
 
-@entity(store)
-class User:
-    user_id: str
-
-@feature(entity=User, refresh="daily")
-def user_tier(user_id: str) -> str:
-    return "premium" if hash(user_id) % 2 == 0 else "free"
-
-@retriever(index="docs", top_k=3)
-async def find_docs(query: str):
-    pass  # Automatic vector search
-
-@context(store, max_tokens=4000)
-async def build_prompt(user_id: str, query: str):
-    tier = await store.get_feature("user_tier", user_id)
-    docs = await find_docs(query)
-    return [
-        ContextItem(content=f"User is {tier}.", priority=0),
-        ContextItem(content=str(docs), priority=1),
-    ]`;
+# Generate a second record, then diff drift
+fabra context diff <context_id_A> <context_id_B>`;
 
 export default function Home() {
   return (
@@ -34,14 +17,14 @@ export default function Home() {
       {/* Hero Section */}
       <div className="text-center py-12 lg:py-20">
         <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6">
-          Stop Debugging AI Decisions{' '}
+          Turn AI Incidents Into{' '}
           <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-            You Can&apos;t Reproduce
+            Reproducible Tickets
           </span>
         </h1>
         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-          When your AI gives a bad answer, you need to know: What did it see? What got dropped?
-          Fabra turns &quot;the AI was wrong&quot; into a fixable ticket.
+          When your AI misbehaves, you need evidence: what did it see, and what changed?
+          No more vibes and screenshots. Fabra makes inference context a durable artifact you can replay, diff, and verify.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
@@ -64,7 +47,7 @@ export default function Home() {
       {/* Quick Install */}
       <div className="max-w-xl mx-auto mb-16">
         <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
-          <code className="text-cyan-400 text-sm">pip install fabra-ai</code>
+          <code className="text-cyan-400 text-sm">pip install fabra-ai &amp;&amp; fabra demo</code>
         </div>
       </div>
 
@@ -74,7 +57,7 @@ export default function Home() {
           icon="🔄"
           title="Replay Any Decision"
           description="See exactly what your AI knew at any point in time. Reproduce incidents in seconds."
-          href="/docs/context-accountability"
+          href="/docs/incident-playbook"
         />
         <FeatureCard
           icon="📋"
@@ -104,19 +87,14 @@ export default function Home() {
           icon="🛡️"
           title="Prove What Happened"
           description="Cryptographic integrity. When compliance asks, you have the answer."
-          href="/docs/freshness-sla"
+          href="/docs/integrity-and-verification"
         />
       </div>
 
       {/* Code Example */}
       <div className="mb-16">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">30-Second Quickstart</h2>
-        <CodeBlock code={QUICKSTART_CODE} language="python" filename="features.py" />
-        <div className="text-center mt-4">
-          <code className="text-gray-400 text-sm">
-            $ fabra serve features.py
-          </code>
-        </div>
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">2 Minutes to Your First Context Record</h2>
+        <CodeBlock code={QUICKSTART_CODE} language="bash" filename="quickstart.sh" />
       </div>
 
       {/* Comparison Table */}

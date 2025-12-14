@@ -1,6 +1,5 @@
 """Tests for enhanced assembly tracking (Phase 2 of CRS-001)."""
 
-
 from fabra.context import (
     AssemblyTracker,
     Context,

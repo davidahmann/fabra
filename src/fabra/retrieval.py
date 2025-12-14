@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import functools
 import structlog
 from datetime import timedelta
+import time
 
 logger = structlog.get_logger()
 
@@ -56,7 +57,7 @@ def retriever(
     """
 
     def decorator(
-        func: Callable[..., List[Dict[str, Any]]]
+        func: Callable[..., List[Dict[str, Any]]],
     ) -> Callable[..., List[Dict[str, Any]]]:
         # Resolve effective name
         r_name = name or func.__name__
@@ -170,12 +171,46 @@ def retriever(
                         cached = await store_backend.get(cache_key)
                         if cached:
                             logger.info(f"Retriever Cache Hit: {r_name}")
-                            return cast(List[Dict[str, Any]], json.loads(cached))
+                            parsed = cast(List[Dict[str, Any]], json.loads(cached))
+                            try:
+                                from fabra.context import record_retriever_usage
+
+                                query_str = ""
+                                if args and isinstance(args[0], str):
+                                    query_str = args[0]
+                                elif isinstance(kwargs.get("query"), str):
+                                    query_str = cast(str, kwargs.get("query"))
+
+                                record_retriever_usage(
+                                    retriever_name=r_name,
+                                    query=query_str,
+                                    results_count=len(parsed)
+                                    if isinstance(parsed, list)
+                                    else 0,
+                                    latency_ms=0.0,
+                                    index_name=index,
+                                    chunks=[
+                                        item
+                                        if isinstance(item, dict)
+                                        else {"content": str(item)}
+                                        for item in (
+                                            parsed if isinstance(parsed, list) else []
+                                        )
+                                    ],
+                                )
+                            except Exception as e:
+                                logger.debug(
+                                    "record_retriever_usage_failed",
+                                    retriever_name=r_name,
+                                    error=str(e),
+                                )
+                            return parsed
                     except Exception as e:
                         logger.warning(f"Retriever Caching Error: {e}")
 
                 # Execute Logic
                 result: List[Dict[str, Any]] = []
+                started = time.perf_counter()
 
                 # AUTO-WIRING LOGIC
                 if index is not None:
@@ -210,6 +245,78 @@ def retriever(
                 else:
                     # Normal Execution
                     result = await func(*args, **kwargs)
+
+                latency_ms = (time.perf_counter() - started) * 1000.0
+
+                # Best-effort lineage capture (only records if we're inside a @context call).
+                try:
+                    from fabra.context import record_retriever_usage
+
+                    def normalize_chunks(items: Any) -> List[Dict[str, Any]]:
+                        if not isinstance(items, list):
+                            return []
+                        chunks: List[Dict[str, Any]] = []
+                        for i, item in enumerate(items):
+                            if isinstance(item, dict):
+                                meta: Dict[str, Any] = {}
+                                raw_meta = item.get("metadata")
+                                if isinstance(raw_meta, dict):
+                                    meta = raw_meta
+                                chunks.append(
+                                    {
+                                        "chunk_id": item.get("chunk_id")
+                                        or meta.get("chunk_id")
+                                        or f"chunk_{i}",
+                                        "document_id": item.get("document_id")
+                                        or meta.get("document_id")
+                                        or meta.get("source_id")
+                                        or item.get("id")
+                                        or "unknown",
+                                        "content": item.get("content")
+                                        or meta.get("content")
+                                        or "",
+                                        "content_hash": meta.get("content_hash")
+                                        or item.get("content_hash"),
+                                        "indexed_at": meta.get("ingestion_timestamp")
+                                        or meta.get("indexed_at")
+                                        or meta.get("created_at"),
+                                        "similarity_score": item.get("score")
+                                        or item.get("similarity_score")
+                                        or 0.0,
+                                        "source_url": meta.get("source_url")
+                                        or meta.get("url"),
+                                    }
+                                )
+                            else:
+                                chunks.append(
+                                    {
+                                        "chunk_id": f"chunk_{i}",
+                                        "document_id": "unknown",
+                                        "content": str(item),
+                                    }
+                                )
+                        return chunks
+
+                    query_str = ""
+                    if args and isinstance(args[0], str):
+                        query_str = args[0]
+                    elif isinstance(kwargs.get("query"), str):
+                        query_str = cast(str, kwargs.get("query"))
+
+                    record_retriever_usage(
+                        retriever_name=r_name,
+                        query=query_str,
+                        results_count=len(result) if isinstance(result, list) else 0,
+                        latency_ms=latency_ms,
+                        index_name=index,
+                        chunks=normalize_chunks(result),
+                    )
+                except Exception as e:
+                    logger.debug(
+                        "record_retriever_usage_failed",
+                        retriever_name=r_name,
+                        error=str(e),
+                    )
 
                 # Store in Cache
                 if cache_key and store_backend:

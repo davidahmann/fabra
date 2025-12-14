@@ -1,4 +1,5 @@
 .PHONY: help setup install test test-unit test-integration test-perf test-e2e test-ui test-all \
+        quickstart-smoke fixtures-verify incident-bundle-smoke clean-dev-store \
         lint format clean ui serve docker-up docker-down pre-commit build \
         build-ui build-docs build-playground build-docker build-all
 
@@ -17,6 +18,8 @@ help:
 	@echo "  make test-e2e       - Run end-to-end tests"
 	@echo "  make test-ui        - Run Playwright UI tests"
 	@echo "  make test-all       - Run all tests including e2e/ui"
+	@echo "  make quickstart-smoke - Run incident-path smoke (demo/show/diff/verify)"
+	@echo "  make fixtures-verify - Verify golden record/diff fixtures"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint           - Run linters (ruff, mypy, bandit)"
@@ -39,6 +42,7 @@ help:
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean          - Clean build artifacts"
+	@echo "  make clean-dev-store - Remove default dev DuckDB file (~/.fabra/fabra.duckdb)"
 
 setup:
 	uv venv
@@ -69,6 +73,18 @@ test-ui:
 
 test-all:
 	uv run pytest tests/ -m "" -v
+
+quickstart-smoke:
+	uv run python scripts/ci/quickstart_smoke.py
+
+fixtures-verify:
+	uv run pytest tests/unit/test_golden_fixtures.py -q
+
+incident-bundle-smoke:
+	uv run python scripts/ci/incident_bundle_smoke.py
+
+clean-dev-store:
+	rm -f ~/.fabra/fabra.duckdb
 
 lint:
 	uv run ruff check .

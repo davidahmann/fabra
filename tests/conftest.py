@@ -7,6 +7,10 @@ from testcontainers.postgres import PostgresContainer
 from redis.asyncio import Redis as AsyncRedis
 import pytest_asyncio
 
+# Ensure hermetic defaults during test *collection* (module import time).
+# Some tests instantiate stores at import time, before fixtures run.
+os.environ.setdefault("FABRA_DUCKDB_PATH", ":memory:")
+
 # NOTE: We will import AxiomWorker later once we create it.
 # For now, we mock the worker start/stop or use a placeholder if the file implies it needs to be there.
 # Since we are doing TDD, we might need to create a dummy worker class or just comment it out
@@ -22,9 +26,10 @@ def infrastructure() -> Generator[Dict[str, Any], None, None]:
     Spins up the real world: Redis and Postgres.
     """
     # 1. Spin up Containers
-    with RedisContainer() as redis, PostgresContainer(
-        "pgvector/pgvector:pg16"
-    ) as postgres:
+    with (
+        RedisContainer() as redis,
+        PostgresContainer("pgvector/pgvector:pg16") as postgres,
+    ):
         # Get URLs
         # testcontainers-python RedisContainer might not implement get_connection_url in all versions
         redis_host = redis.get_container_host_ip()
@@ -45,9 +50,20 @@ def infrastructure() -> Generator[Dict[str, Any], None, None]:
         yield {"redis_url": redis_url, "postgres_url": postgres_url}
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_duckdb_path() -> None:
+    """
+    Keep unit tests hermetic by default.
+
+    DevConfig now defaults to a durable DuckDB file; tests should not write to
+    a developer's home directory unless explicitly requested.
+    """
+    os.environ.setdefault("FABRA_DUCKDB_PATH", ":memory:")
+
+
 @pytest_asyncio.fixture
 async def redis_client(
-    infrastructure: Dict[str, Any]
+    infrastructure: Dict[str, Any],
 ) -> AsyncGenerator[AsyncRedis[str], None]:
     """
     Provides an async redis client connected to the container.

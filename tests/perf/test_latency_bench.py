@@ -38,4 +38,4 @@ async def test_feature_latency_sla() -> None:
     # Here we verify the Python layer overhead is negligible.
     assert (
         avg_latency < 0.005
-    ), f"Avg Latency {avg_latency*1000:.2f}ms exceeds 5ms overhead budget"
+    ), f"Avg Latency {avg_latency * 1000:.2f}ms exceeds 5ms overhead budget"

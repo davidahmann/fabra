@@ -11,6 +11,8 @@ export const navigation: NavItem[] = [
     children: [
       { title: 'Introduction', href: '/docs' },
       { title: 'Quickstart', href: '/docs/quickstart' },
+      { title: 'Incident Playbook', href: '/docs/incident-playbook' },
+      { title: 'Replay Guarantees', href: '/docs/replay-guarantees' },
       { title: 'Philosophy', href: '/docs/philosophy' },
       { title: 'Architecture', href: '/docs/architecture' },
       { title: 'Why We Built Fabra', href: '/docs/why-we-built-fabra' },
@@ -33,7 +35,10 @@ export const navigation: NavItem[] = [
     children: [
       { title: 'Context Store', href: '/docs/context-store' },
       { title: 'Context Records (CRS-001)', href: '/docs/context-record-spec' },
+      { title: 'Integrity & Verification', href: '/docs/integrity-and-verification' },
+      { title: 'Exporters & Adapters', href: '/docs/exporters-and-adapters' },
       { title: 'Context Assembly', href: '/docs/context-assembly' },
+      { title: 'Token Budget Management', href: '/docs/token-budget-management' },
       { title: 'Retrievers', href: '/docs/retrievers' },
       { title: 'Context Accountability', href: '/docs/context-accountability' },
       { title: 'Freshness SLAs', href: '/docs/freshness-sla' },

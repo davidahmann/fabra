@@ -115,9 +115,8 @@ class AssemblyTracker:
         source: str,
     ) -> None:
         """Record a feature retrieval during assembly."""
-        freshness_ms = int(
-            (datetime.now(timezone.utc) - timestamp).total_seconds() * 1000
-        )
+        reference_now = get_time_travel_timestamp() or datetime.now(timezone.utc)
+        freshness_ms = int((reference_now - timestamp).total_seconds() * 1000)
         self.features.append(
             FeatureLineage(
                 feature_name=feature_name,
@@ -266,7 +265,7 @@ def record_retriever_usage(
         oldest_ms = 0
 
         if chunks:
-            now = datetime.now(timezone.utc)
+            now = get_time_travel_timestamp() or datetime.now(timezone.utc)
             for i, chunk in enumerate(chunks):
                 # Parse indexed_at timestamp
                 indexed_at = chunk.get("indexed_at")
@@ -414,7 +413,7 @@ class Context(BaseModel):
                 <h3 style="margin: 0; color: var(--text-color, #202124);">Context Assembly</h3>
                 <div>
                     <span style="background-color: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">{status_text}</span>
-                    {'<span style="background-color: #673ab7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">⚡ CACHED</span>' if self.meta.get("is_cached_response") else ''}
+                    {'<span style="background-color: #673ab7; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 5px;">⚡ CACHED</span>' if self.meta.get("is_cached_response") else ""}
                 </div>
             </div>
 
@@ -423,8 +422,8 @@ class Context(BaseModel):
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 13px; color: var(--text-color, #5f6368); margin-bottom: 15px; background: var(--secondary-background-color, #f8f9fa); padding: 12px; border-radius: 6px;">
                 <div><strong>ID:</strong><br><code style="font-size: 11px;">{self.id[:12]}...</code></div>
                 <div><strong>Cost:</strong><br>{cost_html}</div>
-                <div><strong>Dropped:</strong><br>{self.meta.get('dropped_items', 0)} items</div>
-                <div><strong>Sources:</strong><br>{len(self.meta.get('source_ids', []))} refs</div>
+                <div><strong>Dropped:</strong><br>{self.meta.get("dropped_items", 0)} items</div>
+                <div><strong>Sources:</strong><br>{len(self.meta.get("source_ids", []))} refs</div>
             </div>
 
             <div style="background-color: var(--secondary-background-color, #f1f3f4); padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; color: var(--text-color, #333); max-height: 300px; overflow-y: auto; border: 1px solid var(--text-color-20, transparent);">
@@ -707,7 +706,7 @@ def context(
                     logger.warning("context_cache_read_error", error=str(e))
 
             # 1. Generate Identity
-            ctx_id = str(uuid6.uuid7())
+            ctx_id = generate_context_id()
             logger.info("context_assembly_start", context_id=ctx_id, name=context_name)
 
             # 1.5 Create Assembly Tracker for lineage collection
@@ -1027,6 +1026,11 @@ def context(
                             meta=ctx.meta,
                             version=version,
                         )
+
+                        # Persist a CRS-001 ContextRecord (immutable receipt) if supported.
+                        if hasattr(offline_store, "log_record"):
+                            record = ctx.to_record(include_content=True)
+                            await offline_store.log_record(record)
                     except Exception as e:
                         # Log but don't fail assembly - graceful degradation
                         logger.warning(
