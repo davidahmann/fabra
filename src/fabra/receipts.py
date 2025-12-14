@@ -35,9 +35,9 @@ class ReceiptRecorder:
     def __init__(
         self,
         *,
-        offline_store: Any | None = None,
-        duckdb_path: str | None = None,
-        environment: str | None = None,
+        offline_store: Optional[Any] = None,
+        duckdb_path: Optional[str] = None,
+        environment: Optional[str] = None,
     ) -> None:
         if offline_store is not None:
             self._offline_store = offline_store
