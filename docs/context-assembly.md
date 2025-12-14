@@ -155,7 +155,7 @@ Output:
 
 Or via HTTP:
 ```bash
-curl http://localhost:8000/context/ctx_abc123/explain
+curl http://localhost:8000/v1/context/ctx_abc123/explain
 ```
 
 ## Combining with Features

@@ -291,7 +291,7 @@ Export context lineage for regulatory review. Every AI decision traces back thro
 
 ```bash
 # Export all contexts for a time period
-for ctx_id in $(fabra context list --start 2024-01-01 --end 2024-01-31 --limit 10000 | jq -r '.[].context_id'); do
+for ctx_id in $(curl -fsS "http://127.0.0.1:8000/v1/contexts?start=2024-01-01T00:00:00Z&end=2024-01-31T23:59:59Z&limit=10000" | jq -r '.[].context_id'); do
     fabra context export $ctx_id --format json -o "audit/$ctx_id.json"
 done
 ```

@@ -190,10 +190,10 @@ When examiners arrive, export your audit data:
 
 ```bash
 # Export all AI interactions for Q4 2024
-fabra context list --start 2024-10-01 --end 2024-12-31 --format json > q4_ai_audit.json
+curl -fsS "http://127.0.0.1:8000/v1/contexts?start=2024-10-01T00:00:00Z&end=2024-12-31T23:59:59Z&limit=10000" > q4_ai_audit.json
 
 # Export specific interaction
-fabra context export 01912345-6789-7abc-def0-123456789abc --include-lineage --format json
+fabra context export 01912345-6789-7abc-def0-123456789abc --format json
 ```
 
 ## Compliance Checklist

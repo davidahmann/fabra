@@ -1,7 +1,7 @@
 <div align="center">
   <h1>Fabra</h1>
-  <p><strong>Stop spending hours debugging AI decisions you can't reproduce.</strong></p>
-  <p>Fabra makes AI context durable. Every request becomes a replayable Context Record.<br/>Record → replay → diff. Turn “the AI was wrong” into a fixable ticket.</p>
+  <p><strong>Context Records for LLM incidents.</strong></p>
+  <p>Capture what the model saw as a durable artifact you can replay, verify, and diff.<br/>record -> replay -> diff</p>
 
   <p>
     <a href="https://pypi.org/project/fabra-ai/"><img src="https://img.shields.io/pypi/v/fabra-ai?color=blue&label=pypi" alt="PyPI version" /></a>
@@ -12,25 +12,30 @@
 
 ---
 
-## The Problem
+## When An LLM Incident Happens
 
-**Incident risk:** Your AI shipped a bad answer and you can't explain why.
+- Support shares a screenshot.
+- Engineering tries to reconstruct prompts, retrieval, features, and runtime state.
+- Nobody can answer, precisely and repeatably: what did it see, what changed, why did it answer that way?
 
-**Credibility risk:** Support escalations are vibes and screenshots — not fixable tickets.
+Fabra's unit of evidence is a `context_id` (UUID or `ctx_<UUID>`). Paste it into the ticket, then:
 
-**Velocity risk:** You're scared to ship because you can't debug regressions.
-
-Every AI team hits this wall: **you can't fix what you can't reproduce.**
+```bash
+fabra context show <context_id>
+fabra context verify <context_id>
+fabra context diff <context_id_A> <context_id_B>
+```
 
 ---
 
-## 30 Seconds to Proof
+## Quickstart (No Keys, No Docker)
 
 ```bash
-pip install fabra-ai && fabra demo
+pip install fabra-ai
+fabra demo
 ```
 
-That's it. Server starts, makes a test request, prints a `context_id` (your receipt). No Docker. No config files. No API keys.
+`fabra demo` starts a local server, makes a test request, and prints a working `context_id` plus the next commands to run.
 
 By default, Context Records are stored durably in DuckDB at `~/.fabra/fabra.duckdb` (override with `FABRA_DUCKDB_PATH`).
 
@@ -43,7 +48,7 @@ By default, Context Records are stored durably in DuckDB at `~/.fabra/fabra.duck
   - Node.js (only for `fabra ui`)
   - Docker (only for Docker-based examples / local production stack)
 
-Need help or want to see everything Fabra can do?
+Help and diagnostics:
 
 ```bash
 fabra --help
@@ -51,70 +56,70 @@ fabra context --help
 fabra doctor
 ```
 
-Already using LangChain or calling OpenAI directly? Add receipts without a rewrite:
+Already using LangChain or calling OpenAI directly? Add receipts without changing your app architecture:
 
 - `docs/exporters-and-adapters.md` (LangChain-style callbacks, OpenAI wrapper, logs/OTEL)
 
-<details>
-<summary><strong>What you'll see</strong></summary>
-
-```
-  Fabra Demo Server
-
-  Context Store working!
-  Context ID: ctx_...
-
-  Receipt (paste into a ticket):
-    ctx_...
-
-  Next (proves the value):
-    fabra context show ctx_...
-    fabra context verify ctx_...
-
-  Press Ctrl+C to stop, or visit http://localhost:8000/docs
-```
-
-</details>
-
 ---
 
-## The Solution: Context Records
+## What A Context Record Is
 
-Fabra creates a **Context Record** for every AI decision — an immutable snapshot that turns "the AI was wrong" into a fixable ticket.
+A Context Record is a durable artifact for an AI request: assembled content plus lineage (features, retrieval, freshness decisions), and optional integrity metadata.
 
-```python
-ctx = await build_prompt("user_123", "how do I get a refund?")
-
-print(ctx.id)       # ctx_018f3a2b-... (your receipt)
-print(ctx.lineage)  # Exactly what data was used
-```
-
-That `ctx.id` is permanent. Days later, you can:
+Create a `context_id` locally using the shipped example:
 
 ```bash
-# See exactly what the AI knew
-fabra context show ctx_018f3a2b-...
-
-# Verify the record hasn't been tampered with
-fabra context verify ctx_018f3a2b-...
-
-# Compare two decisions side-by-side
-fabra context diff ctx_a ctx_b
+fabra serve examples/demo_context.py
 ```
 
-**This is the difference between "we think it worked" and "here's the proof."**
+In another terminal:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8000/v1/context/chat_context \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"u1","query":"test"}'
+```
+
+Core workflow (from a `context_id`):
+
+```bash
+fabra context show <context_id>
+fabra context verify <context_id>
+fabra context diff <context_id_A> <context_id_B>
+fabra context export <context_id> --bundle -o incident_bundle.zip
+```
+
+`incident_bundle.zip` includes the exported record (`<context_id>.json`) plus `manifest.json` with stored vs computed hashes.
+
+### Drop-In Receipts (No Keys)
+
+If you already build prompts but don’t use `@context` yet, emit a verifiable receipt:
+
+```python
+from fabra.receipts import ReceiptRecorder
+from fabra.exporters.logging import emit_context_id_json
+
+prompt = "system: ...\nuser: ..."
+recorder = ReceiptRecorder()
+receipt = recorder.record_sync(
+    context_function="my_llm_call",
+    content=prompt,
+    inputs={"model": "gpt-4.1-mini"},
+)
+emit_context_id_json(receipt.context_id, source="my-service", ticket="INC-1234")
+```
 
 ---
 
-## Two Entry Points, One Infrastructure
+## Two Entry Points
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-### For ML Engineers
+### ML Engineers (Features)
 
-**"I need features in production, not a platform team."**
+Define features in Python and serve them over HTTP.
 
 ```python
 from fabra import FeatureStore, entity, feature
@@ -128,26 +133,22 @@ class User:
 
 @feature(entity=User, refresh=timedelta(hours=1))
 def purchase_count(user_id: str) -> int:
-    return db.query(
-        "SELECT COUNT(*) FROM purchases WHERE user_id = ?",
-        user_id
-    )
+    # Replace with a real DB call
+    return 47
 ```
 
 ```bash
-fabra serve features.py
+fabra serve features.py   # or: fabra serve examples/demo_features.py
 curl localhost:8000/features/purchase_count?entity_id=u123
 # {"value": 47, "freshness_ms": 0, "served_from": "online"}
 ```
 
-**Python decorators. Not YAML.**
-
 </td>
 <td width="50%" valign="top">
 
-### For AI Engineers
+### AI Engineers (Context)
 
-**"Compliance asked what the AI knew. I need an answer."**
+Assemble prompts with features + retrieval, with lineage and budgets.
 
 ```python
 from fabra import FeatureStore
@@ -156,20 +157,19 @@ from fabra.context import context, ContextItem
 store = FeatureStore()
 
 @context(store, max_tokens=4000, freshness_sla="5m")
-async def build_prompt(user_id: str, query: str):
-    tier = await store.get_feature("user_tier", user_id)
-    docs = await search_docs(query)
+async def build_prompt(user_id: str, query: str) -> list[ContextItem]:
+    # Replace with your feature calls and retriever / RAG call
+    tier = "premium"
+    docs = "..."
     return [
         ContextItem(content=f"User tier: {tier}", priority=1),
         ContextItem(content=docs, priority=2),
     ]
 
 ctx = await build_prompt("user_123", "question")
-print(ctx.id)       # ctx_018f3a2b-... (stable Context Record ID)
-print(ctx.lineage)  # exact data used, full provenance
+print(ctx.id)
+print(ctx.lineage)
 ```
-
-**Full audit trail. Not a black box.**
 
 </td>
 </tr>
@@ -177,210 +177,35 @@ print(ctx.lineage)  # exact data used, full provenance
 
 ---
 
-## Why It Works
-
-### 1. You Own Your Data
-
-LangChain queries your vector DB. Fabra *is* your vector DB. We ingest, index, track freshness, and serve. When someone asks "what did the AI know?", we have the answer because we never lost sight of the data.
+## CLI (Most Used)
 
 ```bash
-# Replay any historical context
-fabra context show ctx_018f3a2b-7def-7abc-8901-234567890abc
-
-# Compare what changed between two decisions
-fabra context diff ctx_abc123 ctx_def456
+fabra demo                          # start demo + print a context_id
+fabra context show <id>             # inspect a record (or best-effort legacy view)
+fabra context verify <id>           # verify CRS-001 hashes (fails if unavailable)
+fabra context diff <a> <b>          # compare two contexts
+fabra context export <id>           # export json/yaml
+fabra context export <id> --bundle  # zip bundle for incident/audit
+fabra doctor                        # local diagnostics
+fabra serve <file.py>               # run server for examples/your code
+fabra deploy fly|cloudrun|ecs        # generate deployment config
+fabra ui <file.py>                  # local UI (requires Node.js)
 ```
 
-### 2. Same Code Everywhere
-
-Development uses DuckDB (zero setup). Production uses Postgres + Redis (just add env vars). Your feature definitions don't change.
-
-```bash
-# Development (right now, on your laptop)
-fabra serve features.py
-
-# Production (same code, different backends)
-FABRA_ENV=production \
-FABRA_POSTGRES_URL=postgresql://... \
-FABRA_REDIS_URL=redis://... \
-fabra serve features.py
-```
-
-### 3. Point-in-Time Correctness
-
-Training ML models? We use `ASOF JOIN` to ensure your training data reflects exactly what the model would have seen at prediction time. No data leakage. No training-serving skew.
-
-### 4. Token Budgets That Work
-
-No more prompt length errors in production. Set a budget, assign priorities, and low-priority items get dropped automatically.
-
-```python
-@context(store, max_tokens=4000)
-async def build_prompt(user_id: str, query: str):
-    return [
-        ContextItem(content=system_prompt, priority=0, required=True),
-        ContextItem(content=user_history, priority=1),  # dropped first if over budget
-        ContextItem(content=docs, priority=2),
-    ]
-```
+Note: `fabra ui` requires Node.js. If you’re running from source, install UI deps with `cd src/fabra/ui-next && npm install`.
 
 ---
 
-## What's Real
+## What Fabra Is / Isn’t
 
-This isn't a framework that wraps other tools. This is infrastructure:
+Fabra is infrastructure for inference-time evidence (Context Records) and serving (features/context).
 
-| Capability | What It Does |
-|:-----------|:-------------|
-| **Feature Store** | `@feature` decorators, online/offline stores, point-in-time joins |
-| **Context Store** | `@context` decorators, token budgeting, lineage tracking |
-| **Vector Search** | Built-in pgvector, automatic chunking, freshness tracking |
-| **Context Replay** | `fabra context show <id>` returns exact historical state |
-| **Context Diff** | `fabra context diff <id1> <id2>` shows what changed |
-| **Freshness SLAs** | `freshness_sla="5m"` fails if data is stale |
-| **Diagnostics** | `fabra doctor` validates your setup |
+Fabra is not:
+- an agent framework
+- a monitoring dashboard
+- a no-code builder
 
-### CLI
-
-```bash
-fabra serve features.py      # Start the server
-fabra demo                   # Interactive demo (no setup)
-fabra doctor                 # Diagnose configuration issues
-fabra context show <id>      # Replay historical context
-fabra context diff <a> <b>   # Compare two contexts
-fabra context list           # List recent contexts
-fabra context export <id>    # Export for audit
-fabra deploy fly|railway     # Generate deployment config
-fabra ui features.py         # Launch the dashboard (requires Node.js)
-```
-
-> **Note:** `fabra ui` requires Node.js. Run `npm install` in `src/fabra/ui-next/` if dependencies aren't installed.
-
----
-
-## How Fabra Fits in Your Stack
-
-Fabra is **not** a replacement for:
-
-| Tool | Purpose | Relationship to Fabra |
-|:-----|:--------|:---------------------|
-| **Airflow / Dagster** | Batch workflow orchestration | Use for pipelines that *feed* Fabra |
-| **MLflow / W&B** | Model training & experiment tracking | Use for training; Fabra handles inference-time context |
-| **LangChain / LlamaIndex** | LLM orchestration & chains | Use for orchestration; Fabra provides the data layer |
-
-Fabra **replaces or complements**:
-
-| Tool | Fabra Advantage |
-|:-----|:----------------|
-| **Feast** | Simpler setup, built-in context assembly |
-| **Custom feature serving** | Production-ready out of the box |
-| **Ad-hoc RAG pipelines** | Lineage, freshness SLAs, token budgets |
-
-> **See [full comparison guide](docs/comparisons.md)** for detailed breakdowns vs Feast, Tecton, LangChain, and Pinecone.
-
----
-
-## Honest Comparison
-
-### vs Feast
-
-| | Feast | Fabra |
-|:---|:---|:---|
-| Can you prove what happened? | Partial (features only) | Full Context Record |
-| Can you replay a decision? | No | Yes, built-in |
-| Setup time | Days/Weeks | 30 seconds |
-| Infrastructure | Kubernetes | None required |
-
-**Choose Feast if:** You have a platform team and existing K8s infrastructure.
-
-### vs LangChain
-
-| | LangChain | Fabra |
-|:---|:---|:---|
-| Can you prove what happened? | No | Full Context Record |
-| Can you explain why it missed something? | No | Yes, dropped items logged |
-| Can you replay a decision? | Manual | Built-in |
-| Data ownership | Queries external stores | Owns the write path |
-
-**Choose LangChain if:** You need agent chains and don't need compliance.
-
-> **Note:** You can use Fabra + LangChain together — Fabra for storage/serving, LangChain for orchestration.
-
----
-
-## Production Checklist
-
-- [x] **Observability:** Prometheus metrics at `/metrics`, structured logging
-- [x] **Reliability:** Circuit breakers, fallback chains, health checks
-- [x] **Security:** Self-hosted, your data stays in your infrastructure
-- [x] **Deployment:** One-command deploy to Fly.io, Railway, Cloud Run, Render
-
----
-
-## Quick Start (Detailed)
-
-### Feature Store
-
-```bash
-pip install fabra-ai
-fabra serve examples/demo_features.py
-```
-
-Test it:
-```bash
-curl localhost:8000/features/user_engagement?entity_id=user_123
-```
-
-Response:
-```json
-{"value": 87.5, "freshness_ms": 0, "served_from": "online"}
-```
-
-### Context Store
-
-```bash
-pip install fabra-ai
-fabra serve examples/demo_context.py
-```
-
-Test it:
-```bash
-curl -X POST localhost:8000/v1/context/chat_context \
-  -H "Content-Type: application/json" \
-  -d '{"user_id":"user_123","query":"how do features work?"}'
-```
-
-Response:
-```json
-{
-  "id": "ctx_018f3a2b-...",
-  "content": "You are a helpful AI assistant...",
-  "meta": {
-    "freshness_status": "guaranteed",
-    "token_usage": 150
-  },
-  "lineage": {
-    "features_used": ["user_tier", "user_engagement_score"],
-    "retrievers_used": ["demo_docs"]
-  }
-}
-```
-
-Replay it later:
-```bash
-fabra context show ctx_018f3a2b-...
-```
-
----
-
-## What Fabra Does Not Do
-
-- **Agent orchestration** - Use LangChain
-- **Workflow scheduling** - Use Airflow/Dagster
-- **High-QPS streaming inference** - Use Tecton
-- **No-code builders** - This is Python infrastructure
-
-Fabra focuses on one thing: **turning "the AI was wrong" into a fixable ticket.**
+See `docs/quickstart.md`, `docs/context-record-spec.md`, and `docs/comparisons.md` for details.
 
 ---
 
@@ -389,10 +214,3 @@ Fabra focuses on one thing: **turning "the AI was wrong" into a fixable ticket.*
   <a href="https://davidahmann.github.io/fabra/docs/quickstart"><strong>Quickstart</strong></a> ·
   <a href="https://davidahmann.github.io/fabra/docs/"><strong>Docs</strong></a>
 </p>
-
----
-
-<div align="center">
-  <p><strong>Fabra</strong> · Apache 2.0 · 2025</p>
-  <p><em>Stop bleeding time and credibility when AI misbehaves.</em></p>
-</div>

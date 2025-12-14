@@ -96,10 +96,10 @@ Export context history for compliance review:
 fabra context export 01912345-6789-7abc-def0-123456789abc --format json
 
 # Export time range
-fabra context list --start 2024-01-01 --end 2024-01-31 --format json > audit.json
+curl -fsS "http://127.0.0.1:8000/v1/contexts?start=2024-01-01T00:00:00Z&end=2024-01-31T23:59:59Z&limit=10000" > audit.json
 
-# Export with lineage
-fabra context export 01912345-... --include-lineage --format yaml
+# Export as YAML
+fabra context export 01912345-... --format yaml
 ```
 
 ## Compliance Framework Mapping
