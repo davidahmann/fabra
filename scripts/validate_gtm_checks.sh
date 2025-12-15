@@ -199,10 +199,10 @@ with zipfile.ZipFile(bundle, "r") as zf:
         assert manifest.get("stored_record_hash") == manifest.get("computed_record_hash")
 PY
 
-# Deploy requirements sanity: no hardcoded fabra>=2.2.0 and includes fabra-ai
+# Deploy requirements sanity: includes fabra-ai and does not reference legacy fabra package name
 DEPLOY_OUT="$("$FABRA" deploy fly --dry-run 2>&1 || true)"
 echo "$DEPLOY_OUT" | grep -q "fabra-ai>=" || (echo "ERROR: deploy did not output fabra-ai requirement" >&2; exit 1)
-echo "$DEPLOY_OUT" | grep -q "fabra>=2.2.0" && (echo "ERROR: deploy still outputs hardcoded fabra>=2.2.0" >&2; exit 1) || true
+echo "$DEPLOY_OUT" | grep -q "fabra>=" && (echo "ERROR: deploy output referenced legacy fabra package name" >&2; exit 1) || true
 
 if [[ "$VALIDATE_UI" == "1" ]]; then
   echo "ui: starting briefly (may install deps)"
