@@ -228,7 +228,6 @@ class TestContextWithLineage:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         @context(store=store, name="lineage_test")
@@ -251,7 +250,6 @@ class TestContextLogging:
         from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
-        store._ensure_context_table()
 
         context_id = "test-ctx-001"
         timestamp = datetime.now(timezone.utc)
@@ -287,7 +285,6 @@ class TestContextLogging:
         from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
-        store._ensure_context_table()
 
         now = datetime.now(timezone.utc)
 
@@ -321,7 +318,6 @@ class TestContextLogging:
         from fabra.store.offline import DuckDBOfflineStore
 
         store = DuckDBOfflineStore(":memory:")
-        store._ensure_context_table()
 
         result = await store.get_context("nonexistent-id")
         assert result is None
@@ -338,7 +334,6 @@ class TestFeatureStoreReplayAPI:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         # Log a context
@@ -367,7 +362,6 @@ class TestFeatureStoreReplayAPI:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         result = await store.get_context_at("does-not-exist")
@@ -381,7 +375,6 @@ class TestFeatureStoreReplayAPI:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         now = datetime.now(timezone.utc)
@@ -414,7 +407,6 @@ class TestServerEndpoints:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         now = datetime.now(timezone.utc)
@@ -448,7 +440,6 @@ class TestServerEndpoints:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         now = datetime.now(timezone.utc)
@@ -481,7 +472,6 @@ class TestServerEndpoints:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         app = create_app(store)
@@ -501,7 +491,6 @@ class TestServerEndpoints:
 
         store = FeatureStore()
         offline = DuckDBOfflineStore(":memory:")
-        offline._ensure_context_table()
         store.offline_store = offline
 
         now = datetime.now(timezone.utc)

@@ -8,19 +8,19 @@ from fabra.store.online import InMemoryOnlineStore
 @pytest.mark.asyncio
 async def test_pit_correctness_duckdb() -> None:
     # 1. Setup Store
-    offline_store = DuckDBOfflineStore()
+    offline_store = DuckDBOfflineStore(":memory:")
 
     # Create feature table with history
     # User u1:
     # - T1 (2024-01-01 10:00): value = 10
     # - T3 (2024-01-01 12:00): value = 20
-    offline_store.conn.execute(
+    await offline_store.execute_sql(
         "CREATE TABLE txn_count (entity_id VARCHAR, timestamp TIMESTAMP, txn_count INTEGER)"
     )
-    offline_store.conn.execute(
+    await offline_store.execute_sql(
         "INSERT INTO txn_count VALUES ('u1', '2024-01-01 10:00:00', 10)"
     )
-    offline_store.conn.execute(
+    await offline_store.execute_sql(
         "INSERT INTO txn_count VALUES ('u1', '2024-01-01 12:00:00', 20)"
     )
 

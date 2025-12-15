@@ -71,17 +71,17 @@ async def test_feature_store_time_travel_routing() -> None:
 async def test_duckdb_historical_query() -> None:
     # Basic smoke test for query construction (using in-memory DuckDB)
     # We need to setup tables first
-    store = DuckDBOfflineStore()
+    store = DuckDBOfflineStore(":memory:")
 
     # Create feature table 'f1'
-    store.conn.execute(
+    await store.execute_sql(
         "CREATE TABLE f1 (entity_id VARCHAR, timestamp TIMESTAMP, f1 INTEGER)"
     )
     # Insert history
     # u1 at T1=10: value 10
     # u1 at T2=20: value 20
-    store.conn.execute("INSERT INTO f1 VALUES ('u1', '2023-01-01 10:00:00', 10)")
-    store.conn.execute("INSERT INTO f1 VALUES ('u1', '2023-01-01 12:00:00', 20)")
+    await store.execute_sql("INSERT INTO f1 VALUES ('u1', '2023-01-01 10:00:00', 10)")
+    await store.execute_sql("INSERT INTO f1 VALUES ('u1', '2023-01-01 12:00:00', 20)")
 
     # Query at 11:00:00 -> Should get 10
     ts_query = datetime(2023, 1, 1, 11, 0, 0)

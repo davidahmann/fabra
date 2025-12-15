@@ -9,11 +9,13 @@ from fabra.store.online import InMemoryOnlineStore
 async def test_hybrid_offline_retrieval() -> None:
     # 1. Setup Stores
     # Create a DuckDB store with some data
-    offline_store = DuckDBOfflineStore()
-    offline_store.conn.execute(
+    offline_store = DuckDBOfflineStore(":memory:")
+    await offline_store.execute_sql(
         "CREATE TABLE user_stats (entity_id VARCHAR, total_spend INTEGER)"
     )
-    offline_store.conn.execute("INSERT INTO user_stats VALUES ('u1', 100), ('u2', 200)")
+    await offline_store.execute_sql(
+        "INSERT INTO user_stats VALUES ('u1', 100), ('u2', 200)"
+    )
 
     store = FeatureStore(
         offline_store=offline_store, online_store=InMemoryOnlineStore()
@@ -36,9 +38,9 @@ async def test_hybrid_offline_retrieval() -> None:
     # So we need a table named 'total_spend' if the feature is named 'total_spend'.
     # Let's rename the table to match the feature.
     # Let's rename the table to match the feature.
-    offline_store.conn.execute("ALTER TABLE user_stats RENAME TO total_spend")
+    await offline_store.execute_sql("ALTER TABLE user_stats RENAME TO total_spend")
     # Add timestamp column for PIT correctness
-    offline_store.conn.execute(
+    await offline_store.execute_sql(
         "ALTER TABLE total_spend ADD COLUMN timestamp TIMESTAMP DEFAULT '2024-01-01 00:00:00'"
     )
 
@@ -74,11 +76,11 @@ async def test_hybrid_offline_retrieval() -> None:
 @pytest.mark.asyncio
 async def test_materialization_flow() -> None:
     # 1. Setup Stores
-    offline_store = DuckDBOfflineStore()
-    offline_store.conn.execute(
+    offline_store = DuckDBOfflineStore(":memory:")
+    await offline_store.execute_sql(
         "CREATE TABLE high_value_users (entity_id VARCHAR, is_high_value BOOLEAN)"
     )
-    offline_store.conn.execute(
+    await offline_store.execute_sql(
         "INSERT INTO high_value_users VALUES ('u1', TRUE), ('u2', FALSE)"
     )
 

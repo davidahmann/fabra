@@ -307,7 +307,12 @@ class DuckDBOfflineStore(OfflineStore):
 
     async def execute_sql(self, query: str) -> pd.DataFrame:
         def _run() -> pd.DataFrame:
-            return self._get_conn().execute(query).df()
+            conn = self._get_conn()
+            result = conn.execute(query)
+            try:
+                return result.df()
+            except Exception:
+                return pd.DataFrame()
 
         return await self._run_db(_run)
 
