@@ -71,6 +71,12 @@ class RedisOnlineStore(OnlineStore):
         # Backwards-compatible accessor used in tests and in some internal call sites.
         return self._get_client()
 
+    @client.setter
+    def client(self, value: Any) -> None:
+        # Allows tests to inject a client (e.g., a testcontainers Redis client) and
+        # avoids creating extra connections.
+        self._client = value
+
     def get_sync_client(self) -> Any:
         """Returns a synchronous Redis client for the scheduler."""
         import redis as sync_redis
