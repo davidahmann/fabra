@@ -14,10 +14,14 @@ class RedisOnlineStore(OnlineStore):
         password: Optional[str] = None,
         redis_url: Optional[str] = None,
     ) -> None:
+        # IMPORTANT: Do not create the asyncio Redis client in __init__.
+        # Creating it eagerly can call asyncio.get_event_loop() on import/construct
+        # (notably on Python 3.9), which raises when no loop is set yet.
+        #
+        # We lazily create the async client on first use inside an async method.
         self.connection_kwargs: Dict[str, Any]
+        self._client: Optional[Any] = None
         if redis_url:
-            self.client = redis.Redis.from_url(redis_url, decode_responses=True)
-            # Parse URL for sync client recreation if needed, or store URL
             self.connection_kwargs = {"url": redis_url}
         else:
             self.connection_kwargs = {
@@ -27,9 +31,31 @@ class RedisOnlineStore(OnlineStore):
                 "password": password,
                 "decode_responses": True,
             }
-            self.client = redis.Redis(
-                host=host, port=port, db=db, password=password, decode_responses=True
+
+    def _get_client(self) -> Any:
+        if self._client is not None:
+            return self._client
+
+        # Ensure we're in an async context for Python versions where the redis client
+        # constructor touches the event loop policy.
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError as e:
+            raise RuntimeError(
+                "RedisOnlineStore client must be created inside an async context; "
+                "call RedisOnlineStore methods from an event loop."
+            ) from e
+
+        if "url" in self.connection_kwargs:
+            self._client = redis.Redis.from_url(
+                self.connection_kwargs["url"], decode_responses=True
             )
+        else:
+            self._client = redis.Redis(**self.connection_kwargs)
+
+        return self._client
 
     def get_sync_client(self) -> Any:
         """Returns a synchronous Redis client for the scheduler."""
@@ -55,7 +81,7 @@ class RedisOnlineStore(OnlineStore):
         key = f"{entity_name}:{entity_id}"
 
         # Use HMGET to fetch specific fields
-        values = await self.client.hmget(key, feature_names)
+        values = await self._get_client().hmget(key, feature_names)
 
         result: Dict[str, Any] = {}
         for name, value in zip(feature_names, values):
@@ -79,7 +105,7 @@ class RedisOnlineStore(OnlineStore):
         self, entity_name: str, entity_id: str, feature_names: List[str]
     ) -> Dict[str, Dict[str, Any]]:
         key = f"{entity_name}:{entity_id}"
-        values = await self.client.hmget(key, feature_names)
+        values = await self._get_client().hmget(key, feature_names)
         result: Dict[str, Dict[str, Any]] = {}
         for name, value in zip(feature_names, values):
             if value is None:
@@ -112,11 +138,10 @@ class RedisOnlineStore(OnlineStore):
             wrapped = _wrap_feature_value(v, as_of=datetime.now(timezone.utc))
             serialized_features[k] = json.dumps(wrapped)
 
-        # Cast to Any to satisfy mypy's strict check on hset mapping
-        await self.client.hset(key, mapping=serialized_features)  # type: ignore
+        await self._get_client().hset(key, mapping=serialized_features)
 
         if ttl:
-            await self.client.expire(key, ttl)
+            await self._get_client().expire(key, ttl)
 
     async def set_online_features_bulk(
         self,
@@ -128,7 +153,7 @@ class RedisOnlineStore(OnlineStore):
     ) -> None:
         # Use a pipeline for bulk writes with batching
         BATCH_SIZE = 1000
-        async with self.client.pipeline() as pipe:
+        async with self._get_client().pipeline() as pipe:
             for i, (_, row) in enumerate(features_df.iterrows()):
                 entity_id = str(row[entity_id_col])
                 value = row[feature_name]
@@ -152,16 +177,16 @@ class RedisOnlineStore(OnlineStore):
 
     # --- Cache Primitives for Context API ---
     async def get(self, key: str) -> Any:
-        return await self.client.get(key)
+        return await self._get_client().get(key)
 
     async def set(self, key: str, value: Any, ex: Optional[int] = None) -> Any:
-        return await self.client.set(key, value, ex=ex)
+        return await self._get_client().set(key, value, ex=ex)
 
     async def delete(self, *keys: str) -> Any:
-        return await self.client.delete(*keys)
+        return await self._get_client().delete(*keys)
 
     async def smembers(self, key: str) -> Any:
-        return await self.client.smembers(key)
+        return await self._get_client().smembers(key)
 
     def pipeline(self) -> Any:
-        return self.client.pipeline()
+        return self._get_client().pipeline()
