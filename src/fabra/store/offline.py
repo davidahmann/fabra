@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, TYPE_CHECKING
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional, TYPE_CHECKING, TypeVar, cast
 import duckdb
 import pandas as pd
 import asyncio
@@ -15,6 +17,8 @@ if TYPE_CHECKING:
     from fabra.models import ContextRecord
 
 logger = structlog.get_logger()
+
+T = TypeVar("T")
 
 
 class OfflineStore(ABC):
@@ -167,7 +171,86 @@ class DuckDBOfflineStore(OfflineStore):
             db_path.parent.mkdir(parents=True, exist_ok=True)
             database = str(db_path)
 
-        self.conn = duckdb.connect(database=database)
+        self._database = database
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="fabra-duckdb"
+        )
+        self._conn: Optional[duckdb.DuckDBPyConnection] = None
+
+    def _get_conn(self) -> duckdb.DuckDBPyConnection:
+        if self._conn is None:
+            self._conn = duckdb.connect(database=self._database)
+        return self._conn
+
+    async def _run_db(self, fn: Callable[[], T]) -> T:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, fn)
+
+    def _ensure_context_table_sync(self) -> None:
+        """Create context_log table if it doesn't exist.
+
+        DuckDB connections are not thread-safe; this must only be called on the
+        store's single DB thread (via `_run_db`).
+        """
+        conn = self._get_conn()
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS context_log (
+                context_id VARCHAR PRIMARY KEY,
+                timestamp TIMESTAMP NOT NULL,
+                content TEXT NOT NULL,
+                lineage JSON NOT NULL,
+                meta JSON NOT NULL,
+                version VARCHAR DEFAULT 'v1'
+            )
+        """
+        )
+        try:
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_context_log_timestamp ON context_log(timestamp)"
+            )
+        except Exception:  # nosec B110 - Index may already exist, safe to ignore
+            pass
+
+    def _ensure_records_table_sync(self) -> None:
+        """Create context_records table if it doesn't exist.
+
+        DuckDB connections are not thread-safe; this must only be called on the
+        store's single DB thread (via `_run_db`).
+        """
+        conn = self._get_conn()
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS context_records (
+                context_id VARCHAR PRIMARY KEY,
+                created_at TIMESTAMP NOT NULL,
+                environment VARCHAR NOT NULL,
+                schema_version VARCHAR NOT NULL,
+                context_function VARCHAR,
+                inputs JSON,
+                content TEXT,
+                token_count INTEGER,
+                features JSON,
+                retrieved_items JSON,
+                assembly JSON,
+                lineage JSON,
+                integrity JSON,
+                record_hash VARCHAR UNIQUE
+            )
+        """
+        )
+        try:
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_records_created ON context_records(created_at)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_records_function ON context_records(context_function)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_records_env ON context_records(environment)"
+            )
+        except Exception:  # nosec B110 - Index may already exist, safe to ignore
+            pass
 
     async def get_training_data(
         self,
@@ -176,9 +259,6 @@ class DuckDBOfflineStore(OfflineStore):
         entity_id_col: str,
         timestamp_col: str = "timestamp",
     ) -> pd.DataFrame:
-        # Register entity_df so it can be queried
-        self.conn.register("entity_df", entity_df)
-
         # Construct query using ASOF JOIN for Point-in-Time Correctness
         # SELECT e.*, f1.value as f1
         # FROM entity_df e
@@ -213,20 +293,23 @@ class DuckDBOfflineStore(OfflineStore):
         query += f" FROM entity_df {joins}"
 
         try:
-            # Offload synchronous DuckDB execution to a thread
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(
-                None, lambda: self.conn.execute(query).df()
-            )
+
+            def _run() -> pd.DataFrame:
+                conn = self._get_conn()
+                conn.register("entity_df", entity_df)
+                return conn.execute(query).df()
+
+            return await self._run_db(_run)
         except Exception as e:
             # Fallback for when tables don't exist (e.g. unit tests without setup)
             logger.warning("offline_retrieval_failed", error=str(e))
             return entity_df
 
     async def execute_sql(self, query: str) -> pd.DataFrame:
-        # Truly async using thread pool executor
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, lambda: self.conn.execute(query).df())
+        def _run() -> pd.DataFrame:
+            return self._get_conn().execute(query).df()
+
+        return await self._run_db(_run)
 
     async def get_historical_features(
         self, entity_name: str, entity_id: str, features: List[str], timestamp: datetime
@@ -243,8 +326,6 @@ class DuckDBOfflineStore(OfflineStore):
         # assuming internal entity_ids.
 
         setup_query = f"CREATE OR REPLACE TEMP VIEW request_ctx AS SELECT '{entity_id}' as entity_id, CAST('{ts_str}' AS TIMESTAMP) as timestamp"
-
-        self.conn.execute(setup_query)
 
         # 2. Build Query
         # We select the feature values.
@@ -274,39 +355,21 @@ class DuckDBOfflineStore(OfflineStore):
         query += joins
 
         try:
-            loop = asyncio.get_running_loop()
-            # result returns df
-            df = await loop.run_in_executor(None, lambda: self.conn.execute(query).df())
+
+            def _run() -> pd.DataFrame:
+                conn = self._get_conn()
+                conn.execute(setup_query)
+                return conn.execute(query).df()
+
+            df = await self._run_db(_run)
             if not df.empty:
                 # Convert first row to dict
-                return df.iloc[0].to_dict()
+                return cast(Dict[str, Any], df.iloc[0].to_dict())
             return {}
         except Exception as e:
             # Table missing likely
             logger.warning("historical_retrieval_failed", error=str(e))
             return {}
-
-    def _ensure_context_table(self) -> None:
-        """Create context_log table if it doesn't exist."""
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS context_log (
-                context_id VARCHAR PRIMARY KEY,
-                timestamp TIMESTAMP NOT NULL,
-                content TEXT NOT NULL,
-                lineage JSON NOT NULL,
-                meta JSON NOT NULL,
-                version VARCHAR DEFAULT 'v1'
-            )
-        """
-        )
-        # Create index for timestamp-based queries
-        try:
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_context_log_timestamp ON context_log(timestamp)"
-            )
-        except Exception:  # nosec B110 - Index may already exist, safe to ignore
-            pass
 
     async def log_context(
         self,
@@ -319,8 +382,6 @@ class DuckDBOfflineStore(OfflineStore):
     ) -> None:
         """Persist context to DuckDB for replay."""
         import json
-
-        self._ensure_context_table()
 
         def json_serializer(obj: Any) -> str:
             """Handle datetime and other non-serializable types."""
@@ -335,19 +396,20 @@ class DuckDBOfflineStore(OfflineStore):
         ts_str = timestamp.isoformat()
 
         # Use parameterized query to prevent injection
-        loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(
-                None,
-                lambda: self.conn.execute(
+
+            def _run() -> None:
+                self._ensure_context_table_sync()
+                self._get_conn().execute(
                     """
                     INSERT OR REPLACE INTO context_log
                     (context_id, timestamp, content, lineage, meta, version)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     [context_id, ts_str, content, lineage_json, meta_json, version],
-                ),
-            )
+                )
+
+            await self._run_db(_run)
             logger.info("context_logged", context_id=context_id)
         except Exception as e:
             logger.error("context_log_failed", context_id=context_id, error=str(e))
@@ -357,16 +419,19 @@ class DuckDBOfflineStore(OfflineStore):
         """Retrieve a context by ID."""
         import json
 
-        self._ensure_context_table()
-
-        loop = asyncio.get_running_loop()
         try:
-            df = await loop.run_in_executor(
-                None,
-                lambda: self.conn.execute(
-                    "SELECT * FROM context_log WHERE context_id = ?", [context_id]
-                ).df(),
-            )
+
+            def _run() -> pd.DataFrame:
+                self._ensure_context_table_sync()
+                return (
+                    self._get_conn()
+                    .execute(
+                        "SELECT * FROM context_log WHERE context_id = ?", [context_id]
+                    )
+                    .df()
+                )
+
+            df = await self._run_db(_run)
             if df.empty:
                 return None
 
@@ -408,8 +473,6 @@ class DuckDBOfflineStore(OfflineStore):
         """
         import json
 
-        self._ensure_context_table()
-
         # Build query with optional time filters
         conditions = []
         params: List[Any] = []
@@ -442,11 +505,13 @@ class DuckDBOfflineStore(OfflineStore):
             LIMIT ?
         """  # nosec B608 - where_clause built from validated internal conditions
 
-        loop = asyncio.get_running_loop()
         try:
-            df = await loop.run_in_executor(
-                None, lambda: self.conn.execute(query, params).df()
-            )
+
+            def _run() -> pd.DataFrame:
+                self._ensure_context_table_sync()
+                return self._get_conn().execute(query, params).df()
+
+            df = await self._run_db(_run)
             results = []
             for _, row in df.iterrows():
                 meta = (
@@ -469,47 +534,9 @@ class DuckDBOfflineStore(OfflineStore):
             logger.error("context_list_failed", error=str(e))
             return []
 
-    def _ensure_records_table(self) -> None:
-        """Create context_records table if it doesn't exist."""
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS context_records (
-                context_id VARCHAR PRIMARY KEY,
-                created_at TIMESTAMP NOT NULL,
-                environment VARCHAR NOT NULL,
-                schema_version VARCHAR NOT NULL,
-                context_function VARCHAR,
-                inputs JSON,
-                content TEXT,
-                token_count INTEGER,
-                features JSON,
-                retrieved_items JSON,
-                assembly JSON,
-                lineage JSON,
-                integrity JSON,
-                record_hash VARCHAR UNIQUE
-            )
-        """
-        )
-        # Create indexes for common queries
-        try:
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_records_created ON context_records(created_at)"
-            )
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_records_function ON context_records(context_function)"
-            )
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_records_env ON context_records(environment)"
-            )
-        except Exception:  # nosec B110 - Index may already exist, safe to ignore
-            pass
-
     async def log_record(self, record: "ContextRecord") -> str:
         """Persist a ContextRecord to DuckDB."""
         import json
-
-        self._ensure_records_table()
 
         def json_serializer(obj: Any) -> str:
             """Handle datetime and other non-serializable types."""
@@ -539,11 +566,11 @@ class DuckDBOfflineStore(OfflineStore):
             record.integrity.model_dump(mode="json"), default=json_serializer
         )
 
-        loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(
-                None,
-                lambda: self.conn.execute(
+
+            def _run() -> None:
+                self._ensure_records_table_sync()
+                self._get_conn().execute(
                     """
                     INSERT INTO context_records
                     (context_id, created_at, environment, schema_version,
@@ -581,8 +608,9 @@ class DuckDBOfflineStore(OfflineStore):
                         integrity_json,
                         record.integrity.record_hash,
                     ],
-                ),
-            )
+                )
+
+            await self._run_db(_run)
             logger.info("record_logged", context_id=record.context_id)
             return record.context_id
         except Exception as e:
@@ -603,16 +631,20 @@ class DuckDBOfflineStore(OfflineStore):
             IntegrityMetadata,
         )
 
-        self._ensure_records_table()
-
-        loop = asyncio.get_running_loop()
         try:
-            df = await loop.run_in_executor(
-                None,
-                lambda: self.conn.execute(
-                    "SELECT * FROM context_records WHERE context_id = ?", [context_id]
-                ).df(),
-            )
+
+            def _run() -> pd.DataFrame:
+                self._ensure_records_table_sync()
+                return (
+                    self._get_conn()
+                    .execute(
+                        "SELECT * FROM context_records WHERE context_id = ?",
+                        [context_id],
+                    )
+                    .df()
+                )
+
+            df = await self._run_db(_run)
             if df.empty:
                 return None
 
@@ -689,8 +721,6 @@ class DuckDBOfflineStore(OfflineStore):
         environment: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """List context records in time range with optional filters."""
-        self._ensure_records_table()
-
         conditions = []
         params: List[Any] = []
 
@@ -719,11 +749,13 @@ class DuckDBOfflineStore(OfflineStore):
             LIMIT ?
         """  # nosec B608 - where_clause built from validated internal conditions
 
-        loop = asyncio.get_running_loop()
         try:
-            df = await loop.run_in_executor(
-                None, lambda: self.conn.execute(query, params).df()
-            )
+
+            def _run() -> pd.DataFrame:
+                self._ensure_records_table_sync()
+                return self._get_conn().execute(query, params).df()
+
+            df = await self._run_db(_run)
             results = []
             for _, row in df.iterrows():
                 results.append(
