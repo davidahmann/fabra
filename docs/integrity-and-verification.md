@@ -44,6 +44,12 @@ Fabra can enforce that it never returns a `context_id` unless the CRS-001 record
 ## Incident workflow
 
 - Use `verify` when a ticket involves compliance, chargebacks, audits, or disputes.
+- Use `pack` for a copy/paste-friendly ticket attachment:
+
+```bash
+fabra context pack <context_id> -o incident.zip
+```
+
 - Use `export --bundle` to attach a verifiable artifact outside the running service:
 
 ```bash

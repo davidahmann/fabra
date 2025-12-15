@@ -28,7 +28,7 @@ def test_context_help_lists_subcommands() -> None:
     result = runner.invoke(app, ["context", "--help"])
     assert result.exit_code == 0
     stdout = _strip_ansi(result.stdout)
-    for subcommand in ("show", "list", "export", "diff", "verify"):
+    for subcommand in ("show", "list", "export", "pack", "diff", "verify"):
         assert subcommand in stdout
 
 

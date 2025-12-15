@@ -52,6 +52,22 @@ This is the fastest way to settle arguments:
 
 ## Step 4 — Export a ticket attachment
 
+For most incidents, you want a single file you can attach to a ticket or PR:
+
+```bash
+fabra context pack <context_id> --output incident.zip
+```
+
+If you have a baseline request (before/after a deploy), include a content diff:
+
+```bash
+fabra context pack <context_id_B> --baseline <context_id_A> -o incident.zip
+```
+
+`incident.zip` contains `context.json`, `summary.md`, and (when `--baseline` is provided) `diff.patch`.
+
+For audit-grade, self-verifiable export bundles, use:
+
 ```bash
 fabra context export <context_id> --bundle
 ```

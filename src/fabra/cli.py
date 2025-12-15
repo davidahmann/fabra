@@ -1637,6 +1637,314 @@ def explain_cmd(
         raise typer.Exit(1)
 
 
+@context_app.command(name="pack")
+def context_pack_cmd(
+    context_id: str = typer.Argument(..., help="The Context ID to package"),
+    baseline: Optional[str] = typer.Option(
+        None,
+        "--baseline",
+        "-b",
+        help="Optional baseline Context ID to include a unified content diff (diff.patch).",
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output zip file (default: <context_id>.pack.zip)",
+    ),
+    host: str = typer.Option("127.0.0.1", help="Fabra server host"),
+    port: int = typer.Option(8000, help="Fabra server port"),
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Package CRS-001 records from the local DuckDB store (no server required).",
+    ),
+    duckdb_path: Optional[str] = typer.Option(
+        None,
+        "--duckdb-path",
+        envvar="FABRA_DUCKDB_PATH",
+        help="DuckDB path for --local (defaults to ~/.fabra/fabra.duckdb).",
+    ),
+) -> None:
+    """
+    Create a single zip artifact for incident tickets and PRs.
+
+    Outputs a zip containing:
+    - context.json  (CRS-001 record if available; otherwise legacy context JSON)
+    - summary.md    (human-readable, copy/paste-friendly summary)
+    - diff.patch    (optional; only when --baseline is provided; unified diff of the `content` field)
+
+    Examples:
+      fabra context pack <context_id> -o incident.zip
+      fabra context pack <context_id> --baseline <older_id> -o incident.zip
+      fabra context pack <context_id> --baseline <older_id> --local --duckdb-path ~/.fabra/fabra.duckdb
+    """
+    import json
+    import urllib.error
+    import urllib.request
+    import zipfile
+    from datetime import datetime, timezone
+    from difflib import unified_diff
+
+    api_key = os.getenv("FABRA_API_KEY")
+
+    def _normalize_record_id(value: str) -> str:
+        return value if value.startswith("ctx_") else f"ctx_{value}"
+
+    def _fetch(url: str) -> dict[str, Any]:
+        if not url.lower().startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL scheme: {url}")
+        req = urllib.request.Request(url)
+        if api_key:
+            req.add_header("X-API-Key", api_key)
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status != 200:
+                raise Exception(f"Server returned {response.status}")
+            payload = json.loads(response.read().decode())
+            if not isinstance(payload, dict):
+                raise Exception("Invalid JSON response (expected object)")
+            return payload
+
+    def _write_zip(
+        *,
+        zip_path: str,
+        context_json: str,
+        summary_md: str,
+        diff_patch: Optional[str],
+    ) -> None:
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("context.json", context_json)
+            zf.writestr("summary.md", summary_md)
+            if diff_patch is not None:
+                zf.writestr("diff.patch", diff_patch)
+
+    try:
+        from fabra.models import ContextRecord
+        from fabra.utils.integrity import compute_content_hash, compute_record_hash
+
+        record_id = _normalize_record_id(context_id)
+        zip_output = output or f"{record_id}.pack.zip"
+
+        exported_kind = "record"
+        record_obj: Optional[ContextRecord] = None
+        record_data: dict[str, Any]
+
+        baseline_obj: Optional[ContextRecord] = None
+        baseline_data: Optional[dict[str, Any]] = None
+
+        # --- Local CRS-001 pack (DuckDB) ---
+        if local:
+            import asyncio
+            from fabra.config import get_duckdb_path
+            from fabra.store.offline import DuckDBOfflineStore
+
+            path = duckdb_path or get_duckdb_path()
+            offline = DuckDBOfflineStore(database=path)
+
+            async def _load_one(cid: str) -> Optional[ContextRecord]:
+                return await offline.get_record(_normalize_record_id(cid))
+
+            record_obj = asyncio.run(_load_one(context_id))
+            if record_obj is None:
+                console.print(
+                    f"[bold red]Not Found:[/bold red] Missing record in local store: {record_id}"
+                )
+                raise typer.Exit(1)
+            record_data = record_obj.model_dump(mode="json")
+
+            if baseline:
+                baseline_obj = asyncio.run(_load_one(baseline))
+                if baseline_obj is None:
+                    console.print(
+                        f"[bold red]Not Found:[/bold red] Missing baseline record in local store: {_normalize_record_id(baseline)}"
+                    )
+                    raise typer.Exit(1)
+                baseline_data = baseline_obj.model_dump(mode="json")
+
+        # --- Server record-first pack ---
+        else:
+            record_url = f"http://{host}:{port}/v1/record/{record_id}"
+            legacy_url = f"http://{host}:{port}/v1/context/{context_id}"
+
+            try:
+                record_data = _fetch(record_url)
+                record_obj = ContextRecord.model_validate(record_data)
+            except urllib.error.HTTPError as e:
+                if e.code in (404, 501):
+                    console.print(
+                        f"[yellow]Note:[/yellow] CRS-001 record not available, packaging legacy context instead.\n"
+                        f"[dim]{legacy_url}[/dim]"
+                    )
+                    record_data = _fetch(legacy_url)
+                    exported_kind = "context"
+                else:
+                    raise
+
+            if baseline:
+                base_record_id = _normalize_record_id(baseline)
+                base_record_url = f"http://{host}:{port}/v1/record/{base_record_id}"
+                base_legacy_url = f"http://{host}:{port}/v1/context/{baseline}"
+
+                if exported_kind == "record":
+                    try:
+                        baseline_data = _fetch(base_record_url)
+                        baseline_obj = ContextRecord.model_validate(baseline_data)
+                    except urllib.error.HTTPError as e:
+                        if e.code in (404, 501):
+                            console.print(
+                                "[yellow]Note:[/yellow] CRS-001 baseline record not available; falling back to legacy baseline context.\n"
+                                f"[dim]{base_legacy_url}[/dim]"
+                            )
+                            baseline_data = _fetch(base_legacy_url)
+                            baseline_obj = None
+                        else:
+                            raise
+                else:
+                    baseline_data = _fetch(base_legacy_url)
+
+        # --- Build summary + optional diff.patch ---
+        now = datetime.now(timezone.utc).isoformat()
+        summary_lines: list[str] = []
+        summary_lines.append("# Fabra Context Pack")
+        summary_lines.append("")
+        summary_lines.append(f"- Pack created: `{now}`")
+        summary_lines.append(f"- Kind: `{exported_kind}`")
+        summary_lines.append(
+            f"- Context ID: `{record_id if exported_kind == 'record' else context_id}`"
+        )
+        if baseline:
+            summary_lines.append(
+                f"- Baseline: `{_normalize_record_id(baseline) if exported_kind == 'record' else baseline}`"
+            )
+        summary_lines.append("")
+        summary_lines.append("## What This Zip Contains")
+        summary_lines.append("- `context.json`: exported context artifact")
+        summary_lines.append("- `summary.md`: this summary")
+        if baseline:
+            summary_lines.append(
+                "- `diff.patch`: unified diff of the `content` field vs the baseline"
+            )
+        summary_lines.append("")
+
+        diff_patch_text: Optional[str] = None
+
+        if exported_kind == "record" and record_obj is not None:
+            stored_content_hash = record_obj.integrity.content_hash
+            stored_record_hash = record_obj.integrity.record_hash
+            computed_content_hash = compute_content_hash(record_obj.content)
+            computed_record_hash = compute_record_hash(record_obj)
+
+            summary_lines.append("## Record Summary (CRS-001)")
+            summary_lines.append(
+                f"- `context_function`: `{record_obj.context_function}`"
+            )
+            summary_lines.append(
+                f"- `created_at`: `{record_obj.created_at.isoformat()}`"
+            )
+            summary_lines.append(f"- `environment`: `{record_obj.environment}`")
+            summary_lines.append(f"- `schema_version`: `{record_obj.schema_version}`")
+            summary_lines.append(f"- `token_count`: `{record_obj.token_count}`")
+            summary_lines.append(f"- `features`: `{len(record_obj.features)}`")
+            summary_lines.append(
+                f"- `retrieved_items`: `{len(record_obj.retrieved_items)}`"
+            )
+            summary_lines.append("")
+            summary_lines.append("## Integrity")
+            summary_lines.append(
+                f"- `content_hash`: stored=`{stored_content_hash}` computed=`{computed_content_hash}`"
+            )
+            summary_lines.append(
+                f"- `record_hash`: stored=`{stored_record_hash}` computed=`{computed_record_hash}`"
+            )
+            summary_lines.append("")
+            summary_lines.append("## Next Commands")
+            summary_lines.append(f"```bash\nfabra context verify {record_id}\n```")
+
+            if baseline and baseline_obj is not None:
+                base_id = _normalize_record_id(baseline)
+                summary_lines.append(
+                    f"```bash\nfabra context diff {base_id} {record_id} --json\n```"
+                )
+
+                diff_patch_text = "".join(
+                    unified_diff(
+                        (baseline_obj.content or "").splitlines(keepends=True),
+                        (record_obj.content or "").splitlines(keepends=True),
+                        fromfile=f"a/{base_id}.txt",
+                        tofile=f"b/{record_id}.txt",
+                    )
+                )
+            elif baseline and baseline_data is not None:
+                base_content = str(baseline_data.get("content", ""))
+                diff_patch_text = "".join(
+                    unified_diff(
+                        base_content.splitlines(keepends=True),
+                        (record_obj.content or "").splitlines(keepends=True),
+                        fromfile=f"a/{_normalize_record_id(baseline)}.txt",
+                        tofile=f"b/{record_id}.txt",
+                    )
+                )
+
+        else:
+            # Legacy context (v1) fallback: we still package the JSON and a content diff if possible.
+            content = str(record_data.get("content", ""))
+            meta = (
+                record_data.get("meta", {})
+                if isinstance(record_data.get("meta"), dict)
+                else {}
+            )
+            summary_lines.append("## Context Summary (Legacy)")
+            summary_lines.append(f"- `meta.name`: `{meta.get('name', '')}`")
+            summary_lines.append(
+                f"- `meta.freshness_status`: `{meta.get('freshness_status', '')}`"
+            )
+            summary_lines.append(
+                f"- `meta.token_usage`: `{meta.get('token_usage', '')}`"
+            )
+            summary_lines.append("")
+            summary_lines.append("## Next Commands")
+            summary_lines.append(f"```bash\nfabra context show {context_id}\n```")
+
+            if baseline and baseline_data is not None:
+                base_content = str(baseline_data.get("content", ""))
+                diff_patch_text = "".join(
+                    unified_diff(
+                        base_content.splitlines(keepends=True),
+                        content.splitlines(keepends=True),
+                        fromfile=f"a/{baseline}.txt",
+                        tofile=f"b/{context_id}.txt",
+                    )
+                )
+
+        if baseline and diff_patch_text is None:
+            diff_patch_text = (
+                "# No diff.patch could be generated (missing baseline content).\n"
+            )
+
+        summary_md = "\n".join(summary_lines).rstrip() + "\n"
+        context_json = json.dumps(record_data, indent=2, default=str) + "\n"
+
+        _write_zip(
+            zip_path=zip_output,
+            context_json=context_json,
+            summary_md=summary_md,
+            diff_patch=diff_patch_text if baseline else None,
+        )
+
+        console.print(f"[green]Wrote pack to {zip_output}[/green]")
+
+    except urllib.error.URLError as e:
+        console.print(
+            f"[bold red]Connection Failed:[/bold red] {e}. Run [bold]fabra doctor[/bold] to check connectivity."
+        )
+        raise typer.Exit(1)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
 @context_app.command(name="diff")
 def context_diff_cmd(
     base_id: str = typer.Argument(..., help="Base (older) context ID"),

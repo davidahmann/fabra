@@ -202,6 +202,8 @@ fabra context show <id>             # inspect a record (or best-effort legacy vi
 fabra context verify <id>           # verify CRS-001 hashes (fails if unavailable)
 fabra context diff <a> <b>          # compare two contexts
 fabra context diff <a> <b> --local  # diff two CRS-001 receipts from DuckDB (no server required)
+fabra context pack <id> -o incident.zip                # zip: context.json + summary.md
+fabra context pack <id> --baseline <id0> -o incident.zip  # adds diff.patch (content unified diff)
 fabra context export <id>           # export json/yaml
 fabra context export <id> --bundle  # zip bundle for incident/audit
 fabra doctor                        # local diagnostics
