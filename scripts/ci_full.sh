@@ -215,7 +215,7 @@ if [ "$RUN_TESTS" = "true" ]; then
     # Playwright UI Tests (slow - skip with --quick)
     if [ "$SKIP_SLOW" = "false" ]; then
         print_section "Playwright UI Tests"
-        if uv run pytest tests/ui -m e2e -v --tb=short; then
+        if uv run pytest tests/ui -v --tb=short; then
             RESULT_PLAYWRIGHT="${GREEN}✓ PASS${NC}"
             echo -e "${GREEN}✓ Playwright UI Tests passed${NC}"
         else

@@ -139,11 +139,11 @@ serve_and_assert_context() {
 }
 
 # Example validations
-serve_and_assert_feature "examples/demo_features.py" 50101 "http://127.0.0.1:50101/features/user_engagement?entity_id=user_123"
+serve_and_assert_feature "examples/demo_features.py" 50101 "http://127.0.0.1:50101/v1/features/user_engagement?entity_id=user_123"
 serve_and_assert_context "examples/demo_context.py" 50102
-serve_and_assert_feature "examples/basic_features.py" 50103 "http://127.0.0.1:50103/features/user_click_count?entity_id=u1"
+serve_and_assert_feature "examples/basic_features.py" 50103 "http://127.0.0.1:50103/v1/features/user_click_count?entity_id=u1"
 serve_and_assert_context "examples/rag_chatbot.py" 50104
-serve_and_assert_feature "examples/basic_features_no_keys.py" 50105 "http://127.0.0.1:50105/features/user_click_count?entity_id=u1"
+serve_and_assert_feature "examples/basic_features_no_keys.py" 50105 "http://127.0.0.1:50105/v1/features/user_click_count?entity_id=u1"
 serve_and_assert_context "examples/rag_chatbot_no_keys.py" 50106
 
 # CLI validations against a running demo server
