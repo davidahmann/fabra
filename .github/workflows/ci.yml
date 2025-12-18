@@ -50,8 +50,7 @@ jobs:
     - name: Check Coverage Threshold
       run: |
         source .venv/bin/activate
-        coverage run -m pytest tests/unit tests/e2e tests/integration --ignore=tests/ui/
-        coverage report --fail-under=85
+        pytest tests/unit tests/e2e tests/integration --ignore=tests/ui/ --cov=src/fabra --cov-report=term --cov-fail-under=85
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
