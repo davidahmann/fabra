@@ -262,6 +262,22 @@ def retriever(
                                 raw_meta = item.get("metadata")
                                 if isinstance(raw_meta, dict):
                                     meta = raw_meta
+
+                                # Logic to ensure content_hash is present
+                                content = (
+                                    item.get("content") or meta.get("content") or ""
+                                )
+                                c_hash = meta.get("content_hash") or item.get(
+                                    "content_hash"
+                                )
+
+                                if not c_hash and content:
+                                    import hashlib
+
+                                    c_hash = hashlib.sha256(
+                                        str(content).encode()
+                                    ).hexdigest()[:16]
+
                                 chunks.append(
                                     {
                                         "chunk_id": item.get("chunk_id")
@@ -272,11 +288,8 @@ def retriever(
                                         or meta.get("source_id")
                                         or item.get("id")
                                         or "unknown",
-                                        "content": item.get("content")
-                                        or meta.get("content")
-                                        or "",
-                                        "content_hash": meta.get("content_hash")
-                                        or item.get("content_hash"),
+                                        "content": content,
+                                        "content_hash": c_hash,
                                         "indexed_at": meta.get("ingestion_timestamp")
                                         or meta.get("indexed_at")
                                         or meta.get("created_at"),

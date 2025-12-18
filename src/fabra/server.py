@@ -183,7 +183,7 @@ def create_app(store: FeatureStore) -> FastAPI:
             logger.error("Error retrieving features", error=str(e))
             raise HTTPException(status_code=500, detail=str(e))
 
-    @app.get("/features/{feature_name}")
+    @v1_router.get("/features/{feature_name}")
     async def get_single_feature(
         feature_name: str,
         entity_id: str,

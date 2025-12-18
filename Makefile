@@ -71,13 +71,16 @@ test-perf:
 	uv run pytest tests/perf -v
 
 test-e2e:
-	uv run pytest tests/e2e -m e2e -v
+	uv run pytest tests/e2e -v
 
 test-ui:
-	uv run pytest tests/ui -m e2e -v
+	uv run pytest tests/ui -v
+
+test-edge:
+	uv run pytest tests/integration/test_edge_cases.py tests/integration/test_store_errors.py -v
 
 test-all:
-	uv run pytest tests/ -m "" -v
+	uv run pytest tests/ -v
 
 quickstart-smoke:
 	uv run python scripts/ci/quickstart_smoke.py

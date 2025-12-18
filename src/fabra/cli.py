@@ -682,7 +682,7 @@ def serve(
             # Find a feature to demo with simpler GET endpoint
             if num_features > 0:
                 demo_feature = next(iter(store.registry.features.keys()))
-                simple_curl = f"curl http://{host}:{port}/features/{demo_feature}?entity_id=user_123"
+                simple_curl = f"curl http://{host}:{port}/v1/features/{demo_feature}?entity_id=user_123"
                 table.add_row("", f"[cyan]{simple_curl}[/cyan]")
                 table.add_row(
                     "[dim]Expected:[/dim]",

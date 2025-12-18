@@ -5,9 +5,9 @@ Run:
     fabra demo --mode features
 
 Test (while demo is running):
-    curl localhost:8000/features/user_engagement?entity_id=user_123
-    curl localhost:8000/features/user_tier?entity_id=user_123
-    curl localhost:8000/features/purchase_count?entity_id=user_123
+    curl localhost:8000/v1/features/user_engagement?entity_id=user_123
+    curl localhost:8000/v1/features/user_tier?entity_id=user_123
+    curl localhost:8000/v1/features/purchase_count?entity_id=user_123
 
 Expected Response:
     {"value": 87.5, "freshness_ms": 0, "served_from": "online"}

@@ -847,6 +847,39 @@ def context(
 
                     final_content = "\n".join(i.content for i in items)
 
+                elif isinstance(result, ContextItem):
+                    final_content = result.content
+                    if result.source_id:
+                        source_ids.append(result.source_id)
+
+                    if max_tokens and counter:
+                        current_tokens = counter.count(final_content)
+                        if current_tokens > max_tokens:
+                            if result.required:
+                                logger.warning(
+                                    "context_budget_overflow",
+                                    total=current_tokens,
+                                    limit=max_tokens,
+                                    msg="Single required ContextItem exceeds budget.",
+                                )
+                            else:
+                                # Start dropping... but it's single item.
+                                # If optional and exceeds budget, drop it?
+                                # That means empty context.
+                                logger.info(
+                                    "context_budget_drop_single",
+                                    item_tokens=current_tokens,
+                                )
+                                final_content = ""
+                                dropped_items = 1
+                                tracker.record_dropped_item(
+                                    source_id=result.source_id or "result",
+                                    priority=result.priority,
+                                    token_count=current_tokens,
+                                    reason="budget_exceeded",
+                                )
+                        token_usage = current_tokens
+
                 else:
                     final_content = str(result)
                     if max_tokens and counter:
