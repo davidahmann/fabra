@@ -491,12 +491,12 @@ class DuckDBOfflineStore(OfflineStore):
 
         # Filter by name (stored in meta JSON)
         if name:
-            conditions.append("json_extract(meta, '$.name') = ?")
+            conditions.append("json_extract_string(meta, '$.name') = ?")
             params.append(name)
 
         # Filter by freshness_status (stored in meta JSON)
         if freshness_status:
-            conditions.append("json_extract(meta, '$.freshness_status') = ?")
+            conditions.append("json_extract_string(meta, '$.freshness_status') = ?")
             params.append(freshness_status)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""

@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/davidahmann/Projects/meridian_oss
+configfile: pytest.ini
+plugins: asyncio-1.2.0, anyio-4.12.0, cov-7.0.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+____________ ERROR collecting tests/integration/test_server_app.py _____________
+ImportError while importing test module '/Users/davidahmann/Projects/meridian_oss/tests/integration/test_server_app.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration/test_server_app.py:7: in <module>
+    from fabra.models import Context, AssembledContext, IntegrityMetadata
+E   ImportError: cannot import name 'Context' from 'fabra.models' (/Users/davidahmann/Projects/meridian_oss/src/fabra/models.py)
+=============================== warnings summary ===============================
+.venv/lib/python3.9/site-packages/urllib3/__init__.py:35
+  /Users/davidahmann/Projects/meridian_oss/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+    warnings.warn(
+
+.venv/lib/python3.9/site-packages/testcontainers/core/waiting_utils.py:215
+  /Users/davidahmann/Projects/meridian_oss/.venv/lib/python3.9/site-packages/testcontainers/core/waiting_utils.py:215: DeprecationWarning: The @wait_container_is_ready decorator is deprecated and will be removed in a future version. Use structured wait strategies instead: container.waiting_for(HttpWaitStrategy(8080).for_status_code(200)) or container.waiting_for(LogMessageWaitStrategy('ready'))
+    @wait_container_is_ready()
+
+.venv/lib/python3.9/site-packages/testcontainers/redis/__init__.py:46
+  /Users/davidahmann/Projects/meridian_oss/.venv/lib/python3.9/site-packages/testcontainers/redis/__init__.py:46: DeprecationWarning: The @wait_container_is_ready decorator is deprecated and will be removed in a future version. Use structured wait strategies instead: container.waiting_for(HttpWaitStrategy(8080).for_status_code(200)) or container.waiting_for(LogMessageWaitStrategy('ready'))
+    @wait_container_is_ready(redis.exceptions.ConnectionError)
+
+.venv/lib/python3.9/site-packages/testcontainers/postgres/__init__.py:90
+  /Users/davidahmann/Projects/meridian_oss/.venv/lib/python3.9/site-packages/testcontainers/postgres/__init__.py:90: DeprecationWarning: The @wait_container_is_ready decorator is deprecated and will be removed in a future version. Use structured wait strategies instead: container.waiting_for(HttpWaitStrategy(8080).for_status_code(200)) or container.waiting_for(LogMessageWaitStrategy('ready'))
+    @wait_container_is_ready()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/integration/test_server_app.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+========================= 4 warnings, 1 error in 1.44s =========================

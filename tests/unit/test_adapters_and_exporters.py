@@ -100,7 +100,7 @@ async def test_openai_wrapper_records_receipt(tmp_path: Path) -> None:
 
 
 def test_logging_exporters_emit_json_and_structured(
-    caplog: pytest.LogCaptureFixture
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     with caplog.at_level(logging.INFO, logger="fabra"):
         text = emit_context_id_json("ctx_test", source="unit")

@@ -322,9 +322,11 @@ async def test_worker_init_variations():
 
     # 4. Fallback to config (no store, no url provided)
     # Patch the SOURCE of the import because usage is a local import
-    with patch("fabra.config.get_store_factory") as mock_get_factory, patch(
-        "fabra.config.get_redis_url"
-    ), patch("redis.asyncio.Redis.from_url") as mock_from_url:
+    with (
+        patch("fabra.config.get_store_factory") as mock_get_factory,
+        patch("fabra.config.get_redis_url"),
+        patch("redis.asyncio.Redis.from_url") as mock_from_url,
+    ):
         # Case 4a: get_store_factory returns something with client
         mock_online = MagicMock()
         mock_online.client = "redis_client_factory"

@@ -522,5 +522,115 @@ def user_name(user_id: str) -> str:
             assert response.status_code == 200
 
 
+# =============================================================================
+# Phase 9: Context Assembly Tests
+# =============================================================================
+
+
+class TestContextAssembly:
+    """Tests for context assembly endpoints."""
+
+    @pytest.fixture
+    def client(self, tmp_path: Path) -> TestClient:
+        """Create test client with mocked context."""
+        from fabra.ui_server import _state
+        from unittest.mock import MagicMock
+
+        # Save original state
+        orig_ctx = _state["contexts"]
+        orig_recs = _state["context_records"]
+
+        # Mock context result object
+        class MockResult:
+            def __init__(self):
+                self.id = "ctx_123"
+                self.items = [MagicMock(content="content1", priority=1, source="s1")]
+                self.meta = {
+                    "token_usage": 100,
+                    "cost_usd": 0.002,
+                    "latency_ms": 50,
+                    "freshness_status": "guaranteed",
+                }
+                self.lineage = MagicMock()
+                self.lineage.context_id = "ctx_123"
+                self.lineage.timestamp = "2023-01-01T00:00:00Z"
+                self.lineage.features_used = []
+                self.lineage.retrievers_used = []
+                self.lineage.items_provided = 1
+                self.lineage.items_included = 1
+                self.lineage.items_dropped = 0
+                self.lineage.freshness_status = "guaranteed"
+                self.lineage.stalest_feature_ms = 0
+                self.lineage.token_usage = 100
+                self.lineage.max_tokens = 1000
+                self.lineage.estimated_cost_usd = 0.002
+
+        returned_result = MockResult()
+        mock_ctx_func = MagicMock(return_value=returned_result)
+        _state["contexts"] = {"test_ctx": mock_ctx_func}
+
+        # Populate records
+        _state["context_records"] = {}
+
+        yield TestClient(app)
+
+        # Restore
+        _state["contexts"] = orig_ctx
+        _state["context_records"] = orig_recs
+
+    def test_assemble_context_success(self, client: TestClient) -> None:
+        """POST /api/context/{name} assembles context."""
+        from unittest.mock import patch
+
+        with patch("fabra.ui_server._store_context_record") as mock_save:
+            response = client.post("/api/context/test_ctx", json={"p1": "v1"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == "ctx_123"
+            assert len(data["items"]) == 1
+            assert mock_save.called
+
+    def test_assemble_context_not_found(self, client: TestClient) -> None:
+        """POST /api/context/{name} 404s if unknown."""
+        response = client.post("/api/context/unknown_ctx", json={})
+        assert response.status_code == 404
+
+    def test_get_context_record_success(self, client: TestClient) -> None:
+        """GET /api/context/{id}/record returns record."""
+        from fabra.ui_server import _state
+        from unittest.mock import patch
+
+        with patch("fabra.ui_server._convert_to_record_response") as mock_conv:
+            mock_conv.return_value = {
+                "context_id": "ctx_123",
+                "schema_version": "1.0.0",
+                "created_at": "2023-01-01T00:00:00Z",
+                "environment": "dev",
+                "context_function": "test",
+                "inputs": {},
+                "content": "c",
+                "token_count": 10,
+                "assembly": {
+                    "tokens_used": 10,
+                    "max_tokens": 100,
+                    "items_provided": 1,
+                    "items_included": 1,
+                    "dropped_items": [],
+                    "freshness_status": "guaranteed",
+                },
+                "integrity": {"record_hash": "h", "content_hash": "h"},
+            }
+            _state["context_records"]["ctx_123"] = "dummy_record"
+
+            response = client.get("/api/context/ctx_123/record")
+            assert response.status_code == 200
+            assert response.json()["context_id"] == "ctx_123"
+
+    def test_get_context_record_not_found(self, client: TestClient) -> None:
+        """GET /api/context/{id}/record 404s if missing."""
+        response = client.get("/api/context/unknown_id/record")
+        assert response.status_code == 404
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

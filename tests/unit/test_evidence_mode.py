@@ -23,7 +23,7 @@ class _StubStore:
 
 @pytest.mark.asyncio
 async def test_evidence_required_fails_without_record_persistence(
-    monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("FABRA_ENV", "production")
     monkeypatch.setenv("FABRA_EVIDENCE_MODE", "required")
@@ -40,7 +40,7 @@ async def test_evidence_required_fails_without_record_persistence(
 
 @pytest.mark.asyncio
 async def test_evidence_best_effort_surfaces_failure_in_meta(
-    monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("FABRA_ENV", "development")
     monkeypatch.setenv("FABRA_EVIDENCE_MODE", "best_effort")
