@@ -97,7 +97,7 @@ async def build_prompt(user_id: str, query: str):
 2. **Priority sorting** — items sorted by priority (0 = most important)
 3. **Greedy assembly** — adds items until budget exhausted
 4. **Required enforcement** — `required=True` items always included
-5. **Budget error** — raises `ContextBudgetError` if required items exceed budget
+5. **Budget overflow** — returns the context and sets `meta["budget_exceeded"]=true` if required items exceed budget
 
 ### The Result
 
@@ -111,9 +111,9 @@ print(ctx.meta)
 # {
 #   "token_usage": 3847,
 #   "max_tokens": 4000,
-#   "items_included": 4,
-#   "items_dropped": 1,
-#   "freshness_status": "guaranteed"
+#   "dropped_items": 1,
+#   "budget_exceeded": false,
+#   "freshness_status": "guaranteed",
 # }
 ```
 

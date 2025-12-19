@@ -171,7 +171,7 @@ EOF
 fabra serve features.py
 
 # Test it
-curl localhost:8000/features/login_count?entity_id=test123
+curl localhost:8000/v1/features/login_count?entity_id=test123
 ```
 
 No Docker. No Kubernetes. No YAML. Just Python.

@@ -6,7 +6,7 @@ keywords: retriever, semantic search, vector search, pgvector, embedding, rag re
 
 # Retrievers
 
-> **TL;DR:** Use `@retriever` to define semantic search functions. Fabra handles embedding, vector search, and caching automatically.
+> **TL;DR:** Use `@retriever` to define semantic search functions, then register them on your `FeatureStore` to enable magic wiring and (optional) Redis caching.
 
 ## At a Glance
 
@@ -16,20 +16,25 @@ keywords: retriever, semantic search, vector search, pgvector, embedding, rag re
 | **Vector DB** | pgvector (Postgres extension) |
 | **Embedding** | OpenAI, Cohere, Anthropic |
 | **Caching** | `cache_ttl=timedelta(seconds=300)` stores in Redis |
-| **Magic Wiring** | Empty function body auto-searches the index |
-| **DAG Integration** | Use `{retriever_name}` in feature templates |
+| **Magic Wiring** | Empty function body auto-searches the index (after `store.register_retriever(...)`) |
+| **Template Wiring** | Use `{feature}` templates in retriever kwargs (pass `entity_id`) |
 
 ## What is a Retriever?
 
 A **Retriever** is a function that searches an index and returns relevant documents. The `@retriever` decorator transforms a simple function into a full vector search pipeline.
 
 ```python
+from fabra.core import FeatureStore
 from fabra.retrieval import retriever
+
+store = FeatureStore()
 
 @retriever(index="knowledge_base", top_k=5)
 async def search_docs(query: str):
     # Magic Wiring: Automatically searches `knowledge_base` index.
     pass
+
+store.register_retriever(search_docs)
 ```
 
 ## Basic Usage
@@ -46,6 +51,8 @@ store = FeatureStore()
 async def search_knowledge(query: str):
     # Pass 'query' argument automatically to vector search
     pass
+
+store.register_retriever(search_knowledge)
 ```
 
 ### Call the Retriever
@@ -53,7 +60,7 @@ async def search_knowledge(query: str):
 ```python
 # In async context
 results = await search_knowledge("How do I configure Redis?")
-# Returns: ["Redis is configured via FABRA_REDIS_URL...", ...]
+# Returns: [{"content": "...", "metadata": {...}, "score": 0.87}, ...]
 ```
 
 ## Parameters
@@ -64,16 +71,24 @@ results = await search_knowledge("How do I configure Redis?")
 | `index` | `str` | Name of vector index to search (activates Magic Wiring) | Optional |
 | `top_k` | `int` | Number of results to return (used with `index`) | `5` |
 | `backend` | `str` | Backend type ("custom" or "postgres") | "custom" |
-| `cache_ttl` | `int` | Seconds to cache results in Redis | `0` (no cache) |
+| `cache_ttl` | `timedelta` | Cache TTL for results (requires Redis) | Optional |
 
 ## Caching
 
 Enable caching to reduce vector search latency for repeated queries:
 
 ```python
+from datetime import timedelta
+from fabra.core import FeatureStore
+from fabra.retrieval import retriever
+
+store = FeatureStore()
+
 @retriever(index="docs", top_k=5, cache_ttl=timedelta(seconds=300))
-async def cached_search(query: str) -> list[str]:
+async def cached_search(query: str):
     pass
+
+store.register_retriever(cached_search)
 ```
 
 **How it works:**
@@ -81,33 +96,36 @@ async def cached_search(query: str) -> list[str]:
 2. If cached, return immediately from Redis.
 3. If not cached, perform vector search and cache results.
 
-**Cache key format:** `retriever:{index}:{query_hash}`
+**Cache key format:** `fabra:retriever:{name}:{args_hash}`
 
 ## Similarity Threshold
 
 Filter out low-relevance results:
 
-```python
-@retriever(index="docs", top_k=10)
-async def high_quality_search(query: str) -> list[str]:
-    # Returns top 10 most relevant documents
-    pass
-```
-
-## DAG Wiring
-
-Retrievers can be wired into feature DAGs using template syntax:
+Filter out low-confidence results in your application code:
 
 ```python
-@feature(entity=User)
-def user_context(user_id: str) -> str:
-    return "Query: {search_docs}"  # Will call search_docs retriever
+results = await search_docs("How do I configure Redis?")
+high_confidence = [r for r in results if r.get("score", 0.0) >= 0.7]
 ```
 
-The `DependencyResolver` automatically:
-1. Parses `{retriever_name}` templates.
-2. Resolves retriever dependencies.
-3. Injects results into the feature computation.
+## Template Wiring
+
+Retriever kwargs can reference feature values via template strings. Pass `entity_id` so Fabra can resolve templates before calling your retriever.
+
+```python
+@retriever(name="doc_search")
+async def doc_search(query: str, tier: str):
+    ...
+
+store.register_retriever(doc_search)
+
+results = await doc_search(
+    query="How do I configure Redis?",
+    tier="{user_tier}",
+    entity_id="user_123",
+)
+```
 
 ## Custom Embedding
 
@@ -119,6 +137,8 @@ async def cohere_search(query: str) -> list[str]:
     # Embedding provider is configured globally via FABRA_EMBEDDING_PROVIDER
     # or COHERE_API_KEY environment variable
     pass
+
+store.register_retriever(cohere_search)
 ```
 
 ## Multiple Indexes
@@ -133,6 +153,9 @@ async def search_products(query: str) -> list[str]:
 @retriever(index="support_tickets", top_k=3)
 async def search_tickets(query: str) -> list[str]:
     pass
+
+store.register_retriever(search_products)
+store.register_retriever(search_tickets)
 
 # Combine in context assembly
 @context(store, max_tokens=4000)
@@ -150,13 +173,15 @@ async def support_context(query: str) -> list[ContextItem]:
 Filter results by document metadata:
 
 ```python
-@retriever(index="docs", top_k=5)
-async def search_docs(query: str, version: str = None) -> list[str]:
-    # Metadata filter applied automatically if version provided
+@retriever(index="docs", top_k=20)
+async def search_docs(query: str) -> list[dict]:
     pass
 
-# Usage
-results = await search_docs("How to configure?", version="1.2.0")
+store.register_retriever(search_docs)
+
+# Usage (filter on the returned metadata)
+results = await search_docs("How to configure?")
+filtered = [r for r in results if r.get("metadata", {}).get("version") == "1.2.0"]
 ```
 
 ## Error Handling
@@ -166,7 +191,7 @@ Retrievers handle errors gracefully:
 ```python
 @retriever(index="docs", top_k=5)
 async def safe_search(query: str) -> list[str]:
-    pass
+    return []  # Optional fallback if magic wiring isn't configured
 
 # If index doesn't exist or search fails:
 # - Returns empty list []
@@ -176,8 +201,8 @@ async def safe_search(query: str) -> list[str]:
 
 ## Performance Tips
 
-1. **Use caching** for repeated queries: `cache_ttl=300`
-2. **Set threshold** to filter low-quality results: `threshold=0.7`
+1. **Use caching** for repeated queries: `cache_ttl=timedelta(seconds=300)`
+2. **Filter low-quality results** by `score` in your app code
 3. **Limit top_k** to what you need: smaller is faster
 4. **Pre-warm cache** for common queries at startup
 

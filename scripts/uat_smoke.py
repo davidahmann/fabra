@@ -96,7 +96,9 @@ def run_test() -> None:
 
         # NOTE: `fabra serve` usually expects API key or dev mode.
         # server.py says if FABRA_API_KEY is unset, it returns "dev-mode" and allows usage.
-        resp = requests.post("http://localhost:8008/features", json=payload, timeout=2)
+        resp = requests.post(
+            "http://localhost:8008/v1/features", json=payload, timeout=2
+        )
 
         if resp.status_code != 200:
             print(f"❌ Request failed with status {resp.status_code}")

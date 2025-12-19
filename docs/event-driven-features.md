@@ -152,6 +152,8 @@ async def balance(user_id: str, event: AxiomEvent) -> float:
 
 Re-index documents when they change:
 
+*Note:* This requires a Postgres offline store with `pgvector` enabled plus an embeddings provider (e.g. `OPENAI_API_KEY`).
+
 ```python
 @feature(entity=Document, trigger="document_updated")
 async def doc_content(doc_id: str, event: AxiomEvent) -> str:

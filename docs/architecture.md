@@ -179,10 +179,10 @@ async def chat_context(...):
 ```
 
 When budget is exceeded:
-1. Sort items by priority (lowest = most important)
-2. Drop highest-priority items first
-3. Record every dropped item with reason
-4. Raise `ContextBudgetError` if required items can't fit
+1. Consider only optional items (`required=False`)
+2. Drop lowest-importance items first (higher `priority` values)
+3. Record every dropped item with a reason
+4. If required items still exceed budget, return the context and set `meta["budget_exceeded"]=true`
 
 The Context Record captures **what was dropped and why** — critical for debugging "why didn't the AI know about X?"
 

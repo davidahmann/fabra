@@ -84,18 +84,20 @@ class User:
 def user_tier(user_id: str) -> str:
     return "premium" if hash(user_id) % 2 == 0 else "free"
 
-@retriever(index="docs", top_k=3)
-async def find_docs(query: str):
-    pass  # Automatic vector search via pgvector
+	@retriever(index="docs", top_k=3)
+	async def find_docs(query: str):
+	    pass  # Automatic vector search via pgvector
+
+	store.register_retriever(find_docs)  # Enables magic wiring + caching
 
 @context(store, max_tokens=4000)
-async def build_prompt(user_id: str, query: str):
-    tier = await store.get_feature("user_tier", user_id)
-    docs = await find_docs(query)
-    return [
-        ContextItem(content=f"User is {tier}.", priority=0),
-        ContextItem(content=str(docs), priority=1),
-    ]
+	async def build_prompt(user_id: str, query: str):
+	    tier = await store.get_feature("user_tier", user_id)
+	    docs = await find_docs(query)
+	    return [
+	        ContextItem(content=f"User is {tier}.", priority=0),
+	        ContextItem(content=str(docs), priority=1),
+	    ]
 ```
 
 ```bash

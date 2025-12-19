@@ -2689,9 +2689,7 @@ def demo_cmd(
 
         # Make a test request based on mode (optional).
         if mode == "features":
-            test_url = (
-                f"http://127.0.0.1:{port}/features/user_engagement?entity_id=user_123"
-            )
+            test_url = f"http://127.0.0.1:{port}/v1/features/user_engagement?entity_id=user_123"
             curl_cmd = f"curl {test_url}"
         else:  # context
             test_url = f"http://127.0.0.1:{port}/v1/context/chat_context"

@@ -11,7 +11,7 @@ Fabra supports an event-driven path for keeping **triggered features** up to dat
 1. Your app sends an event to Fabra over HTTP.
 2. Fabra writes the event to **Redis Streams**.
 3. A Fabra worker process consumes the stream and computes triggered features.
-4. Results are written to the **online store** (Redis), so `GET /features/...` is fast.
+4. Results are written to the **online store** (Redis), so `GET /v1/features/...` is fast.
 
 This is intentionally simple. There’s no “proxy SDK” requirement.
 

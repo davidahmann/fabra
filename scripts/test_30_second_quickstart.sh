@@ -38,12 +38,9 @@ MODE=${1:-all}  # all, features, or context
 INSTALL_MODE=${FABRA_INSTALL_MODE:-pypi} # pypi|source
 PYTHON_BIN=${PYTHON_BIN:-python3}
 
-# Feature API path changed from /features to /v1/features.
-# Source mode uses new path, PyPI uses old path until next release.
+# Feature API prefix may vary across versions.
+# Prefer `/v1/features` and fall back to legacy `/features` if needed.
 FEATURE_PREFIX="/v1"
-if [ "$INSTALL_MODE" = "pypi" ]; then
-    FEATURE_PREFIX=""
-fi
 
 echo -e "${BLUE}=== Fabra 30-Second Quickstart Validation ===${NC}"
 echo -e "Mode: ${MODE}"
@@ -127,7 +124,17 @@ test_features() {
 
     # Test feature endpoint
     echo -e "${YELLOW}Testing feature endpoint...${NC}"
-    RESPONSE=$(curl -fsS "http://127.0.0.1:$PORT_FEATURE${FEATURE_PREFIX}/features/user_engagement?entity_id=user_123")
+    # Prefer /v1/features; fall back to legacy /features.
+    RESPONSE=""
+    if RESPONSE=$(curl -fsS "http://127.0.0.1:$PORT_FEATURE/v1/features/user_engagement?entity_id=user_123" 2>/dev/null); then
+        FEATURE_PREFIX="/v1"
+    elif RESPONSE=$(curl -fsS "http://127.0.0.1:$PORT_FEATURE/features/user_engagement?entity_id=user_123" 2>/dev/null); then
+        FEATURE_PREFIX=""
+    else
+        echo -e "${RED}FAILURE: Feature endpoint returned an error${NC}"
+        tail -n 80 "${LOG}" || true
+        return 1
+    fi
     echo -e "Response: ${RESPONSE}"
 
     # Validate response has value

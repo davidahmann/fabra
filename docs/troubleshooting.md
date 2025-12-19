@@ -79,12 +79,14 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ```
 *Note: `fabra index create` attempts to do this automatically, but requires superuser permissions.*
 
-### "ContextBudgetError: Required content exceeds budget"
-**Cause:** Your `@context(max_tokens=N)` limit is too small for the implementation of your retrieved documents or system prompt.
+### "budget_exceeded: Required content exceeds budget"
+**Cause:** Your `@context(max_tokens=N)` limit is too small for the required content (system prompt, docs, etc).
+In the current MVP, Fabra does not raise a `ContextBudgetError` by default — it returns the context and sets `meta["budget_exceeded"]=true`.
 **Fix:**
 1. Increase `max_tokens`.
 2. Reduce `top_k` in your `@retriever`.
 3. Use `priority` to allow non-critical items to be dropped.
+4. Mark non-critical items with `required=False`.
 
 <script type="application/ld+json">
 {

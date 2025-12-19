@@ -54,11 +54,11 @@ def user_tier(user_id: str) -> str:
 ```
 
 ```bash
-fabra serve features.py
-# Server running on http://localhost:8000
+	fabra serve features.py
+	# Server running on http://localhost:8000
 
-curl localhost:8000/features/purchase_count?entity_id=user123
-# {"value": 42, "freshness_ms": 0, "served_from": "online"}
+	curl localhost:8000/v1/features/purchase_count?entity_id=user123
+	# {"value": 42, "freshness_ms": 0, "served_from": "online"}
 ```
 
 **That's it.** No containers. No orchestration. Just Python.
@@ -216,9 +216,9 @@ EOF
 # Serve
 fabra serve features.py
 
-# Test
-curl localhost:8000/features/login_count?entity_id=test123
-# {"value": 42, "freshness_ms": 0, "served_from": "online"}
+	# Test
+	curl localhost:8000/v1/features/login_count?entity_id=test123
+	# {"value": 42, "freshness_ms": 0, "served_from": "online"}
 ```
 
 ## FAQ

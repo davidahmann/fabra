@@ -419,9 +419,9 @@ async def test_dropped_items_sorting():
 
     ctx = await run()
 
-    assert "C C C" not in ctx.content  # Dropped (lowest priority)
+    assert "B B B" not in ctx.content  # Dropped (lowest priority)
     assert "A A A" in ctx.content  # Kept
-    assert "B B B" in ctx.content  # Kept
+    assert "C C C" in ctx.content  # Kept
     assert ctx.meta["dropped_items"] == 1
 
 

@@ -28,13 +28,18 @@ from fabra.context import context, Context, ContextItem
 from fabra.retrieval import retriever
 
 store = FeatureStore()
+# For vector search/indexing, configure a Postgres offline store (pgvector):
+# export FABRA_ENV=production
+# export FABRA_POSTGRES_URL=postgresql+asyncpg://...
 
-# 1. Define a retriever for semantic search
-@retriever(index="knowledge_base", top_k=5)
-async def search_docs(query: str):
-    # Magic: Automatically searches "knowledge_base" index using
-    # the configured offline store (Postgres + pgvector).
-    pass
+	# 1. Define a retriever for semantic search
+	@retriever(index="knowledge_base", top_k=5)
+	async def search_docs(query: str):
+	    # Magic: Automatically searches "knowledge_base" index using
+	    # the configured offline store (Postgres + pgvector).
+	    pass
+
+	store.register_retriever(search_docs)  # Enables magic wiring + caching
 
 # 2. Define context assembly with token budget
 @context(store, max_tokens=4000)
@@ -66,17 +71,7 @@ await store.index(
 )
 ```
 
-Or via HTTP:
-```bash
-curl -X POST http://localhost:8000/ingest/document \
-  -H "Content-Type: application/json" \
-  -d '{
-    "index_name": "knowledge_base",
-    "entity_id": "doc_123",
-    "text": "Fabra is a feature store...",
-    "metadata": {"source": "docs"}
-  }'
-```
+*Note:* Vector indexing requires a Postgres offline store with `pgvector` enabled (production mode) plus an embeddings provider (e.g. `OPENAI_API_KEY`). The current MVP does not expose a dedicated HTTP “index documents” endpoint; call `store.index(...)` from your application code.
 
 **Automatic Features:**
 - **Chunking:** Documents are split using tiktoken (default: 512 tokens per chunk).
@@ -99,8 +94,9 @@ A **Retriever** performs vector search and returns relevant documents.
 
 ```python
 from fabra.retrieval import retriever
+from datetime import timedelta
 
-@retriever(index="knowledge_base", cache_ttl=300)
+@retriever(index="knowledge_base", cache_ttl=timedelta(seconds=300))
 async def search_docs(query: str):
     # "Magic Wiring": Setting `index` connects this function directly
     # to the vector store. No body implementation needed!
@@ -108,7 +104,7 @@ async def search_docs(query: str):
 ```
 
 **Parameters:**
-- `cache_ttl`: Seconds to cache results (default: 0, no caching).
+- `cache_ttl`: Optional `timedelta` to cache results (omit to disable caching).
 
 [Learn more about Retrievers →](retrievers.md)
 
@@ -159,7 +155,7 @@ async def support_context(query: str) -> list[ContextItem]:
 **Priority-Based Truncation:**
 - Items sorted by priority (0 = highest priority, kept first).
 - Lower-priority items truncated when budget exceeded.
-- `required=True` items raise `ContextBudgetError` (or return partial context with warning) if they can't fit.
+- `required=True` items are never dropped. If required items exceed the budget, the context is returned and `meta["budget_exceeded"]` is set.
 
 [Learn more about Context Assembly →](context-assembly.md)
 

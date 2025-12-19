@@ -382,8 +382,9 @@ class ContextBudgetError(Exception):
 
 class ContextItem(BaseModel):
     content: str
-    required: bool = True
-    priority: int = 0  # 0 is lowest (dropped first)
+    required: bool = False
+    # Lower numbers are higher priority (kept first). Higher numbers are dropped first.
+    priority: int = 0
     source_id: Optional[str] = None  # Feature ID or source identifier
     last_updated: Optional[datetime] = None  # When this specific item was last updated
 
@@ -800,16 +801,16 @@ def context(
                                 limit=max_tokens,
                             )
 
-                            # Strategy: Collect optional items, sort by priority (lowest 0 -> drop first), then drop.
+                            # Strategy: Collect optional items, drop lowest-importance first.
                             # We keep indices to remove them from the original list order.
                             candidates = []
                             for idx, item in enumerate(items):
                                 if not item.required:
                                     candidates.append((idx, item))
 
-                            # Sort by priority ascending (0..1..2). Low priority dropped first.
-                            # Secondary sort by index descending (drop from bottom if priorities equal)
-                            candidates.sort(key=lambda x: (x[1].priority, -x[0]))
+                            # Higher numbers are lower priority (dropped first).
+                            # For ties, drop later items first.
+                            candidates.sort(key=lambda x: (-x[1].priority, -x[0]))
 
                             indices_to_drop = set()
                             for idx, item in candidates:

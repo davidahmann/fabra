@@ -232,12 +232,9 @@ Same query within 5 minutes? Return cached context.
 ### Fallback on Budget Error
 
 ```python
-from fabra.context import ContextBudgetError
-
-try:
-    ctx = await build_prompt(query)
-except ContextBudgetError:
-    # Required items exceeded budget
+ctx = await build_prompt(query)
+if ctx.meta.get("budget_exceeded"):
+    # Required items exceeded budget; fall back to a smaller context
     ctx = await build_minimal_prompt(query)
 ```
 
@@ -254,8 +251,9 @@ Fabra exposes Prometheus metrics:
 
 ```python
 # fabra_context_tokens_total
-# fabra_context_items_dropped_total
-# fabra_context_budget_exceeded_total
+# fabra_context_assembly_total{status="success|failure"}
+# fabra_context_latency_seconds
+# fabra_context_cache_hit_total
 ```
 
 ### A/B Testing Budgets

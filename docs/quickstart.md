@@ -121,40 +121,41 @@ pip install fabra-ai
 ```
 
 ```python
-# chatbot.py
-from fabra.core import FeatureStore
+# chatbot.py (no API keys required)
+from datetime import timedelta
+
+from fabra.core import FeatureStore, entity, feature
 from fabra.retrieval import retriever
 from fabra.context import context, ContextItem
 
 store = FeatureStore()
 
-# Index documents
-await store.index("docs", "doc_1", "Fabra is context infrastructure...")
+@entity(store)
+class User:
+    user_id: str
 
-# Define retriever (auto-wired to pgvector)
-@retriever(index="docs", top_k=3)
-async def search_docs(query: str) -> list[str]:
-    pass  # Magic wiring
+@feature(entity=User, refresh=timedelta(hours=1))
+def user_tier(user_id: str) -> str:
+    return "premium" if hash(user_id) % 2 == 0 else "free"
+
+@retriever(name="knowledge_base", cache_ttl=timedelta(minutes=5))
+async def search_docs(query: str, top_k: int = 3) -> list[str]:
+    return [
+        "Fabra creates verifiable Context Records.",
+        "Use @context for prompt assembly with token budgets.",
+        "Use @retriever for retrieval without YAML.",
+    ][:top_k]
 
 # Assemble context with token budget
 @context(store, max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> list[ContextItem]:
-    docs = await search_docs(query)
     tier = await store.get_feature("user_tier", user_id)
+    docs = await search_docs(query)
     return [
         ContextItem(content="You are helpful.", priority=0, required=True),
-        ContextItem(content=f"User tier: {tier}", priority=1),
-        ContextItem(content=str(docs), priority=2),
+        ContextItem(content=f"User tier: {tier}", priority=1, required=True),
+        ContextItem(content="Docs:\n" + "\n".join(docs), priority=2),
     ]
-
-# Every call creates an immutable Context Record
-ctx = await chat_context("user123", "how do I reset my password?")
-print(f"Context ID: {ctx.id}")      # ctx_018f3a2b-... (immutable record)
-print(f"Lineage: {ctx.lineage}")    # Full data provenance
-
-# Replay this exact context anytime
-# fabra context show ctx_018f3a2b-...
-# fabra context verify ctx_018f3a2b-...
 ```
 
 ```bash

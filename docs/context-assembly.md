@@ -15,8 +15,8 @@ keywords: context assembly, token budget, llm context, priority truncation, cont
 | **Decorator** | `@context(store, max_tokens=4000)` |
 | **Token Counting** | tiktoken (GPT-4, Claude-3 supported) |
 | **Priority** | 0 = highest (kept first), 3+ = lowest (dropped first) |
-| **Required Flag** | `required=True` raises error if can't fit |
-| **Debug** | `store.explain_context()` or `GET /context/{id}/explain` |
+| **Required Flag** | `required=True` is never dropped (no exception in MVP; overflow is flagged) |
+| **Debug** | `fabra context show <id>` or `GET /v1/context/{id}/explain` |
 | **Freshness** | `freshness_sla="5m"` ensures data age (v1.5+) |
 
 ## What is Context Assembly?
@@ -54,8 +54,8 @@ Each piece of context is wrapped in a `ContextItem`:
 ContextItem(
     content="The actual text content",
     priority=1,          # Lower = higher priority (kept first)
-    required=False,      # If True, raises error when can't fit
-    metadata={"source": "docs"}  # Optional tracking info
+    required=False,      # If True, this item is never dropped
+    source_id="docs:kb:v1"  # Optional identifier for caching/lineage
 )
 ```
 
@@ -76,8 +76,8 @@ Items are sorted by priority. When over budget, highest-numbered (lowest priorit
 ContextItem(content=docs, priority=1, required=True)
 ```
 
-- `required=True`: Raises `ContextBudgetError` if item can't fit.
-- `required=False` (default): Item is silently dropped if over budget.
+- `required=True`: Item is never dropped.
+- `required=False` (default): Item is eligible to be dropped if over budget.
 
 ## Token Counting
 
@@ -128,32 +128,12 @@ Strategies:
 - `"start"`: Remove text from start (for history)
 - `"middle"`: Keep start and end, remove middle
 
+*Note:* Partial truncation strategies are not implemented in the current MVP; items are dropped as whole units.
+
 ## Explainability
 
 Debug context assembly with the explain API:
 
-```python
-# Get detailed trace
-trace = await store.explain_context("chat_context", user_id="u1", query="test")
-print(trace)
-```
-
-Output:
-```json
-{
-  "context_id": "ctx_abc123",
-  "max_tokens": 4000,
-  "used_tokens": 3847,
-  "items": [
-    {"priority": 0, "tokens": 50, "status": "included", "source": "system"},
-    {"priority": 1, "tokens": 2800, "status": "included", "source": "docs"},
-    {"priority": 2, "tokens": 997, "status": "included", "source": "history"},
-    {"priority": 3, "tokens": 500, "status": "truncated", "source": "suggestions"}
-  ]
-}
-```
-
-Or via HTTP:
 ```bash
 curl http://localhost:8000/v1/context/ctx_abc123/explain
 ```
@@ -185,47 +165,19 @@ async def rich_context(user_id: str, query: str) -> Context:
 Adjust budget based on context:
 
 ```python
-@context(store, max_tokens=4000)
-async def adaptive_context(user_id: str, query: str) -> Context:
-    tier = await store.get_feature("user_tier", user_id)
-
-    # Premium users get more context
-    budget = 8000 if tier == "premium" else 4000
-
-    docs = await search_docs(query, top_k=10 if tier == "premium" else 5)
-
-    return Context(
-        items=[...],
-        max_tokens=budget  # Override decorator budget
-    )
-```
+Dynamic per-request budgets are not supported in the current MVP. If you need tier-based budgets, define two separate context functions (or pass different `max_tokens` values via decorator in different deployments).
 
 ## Error Handling
 
-### ContextBudgetError
+### Budget overflow
 
-Raised when required items can't fit:
-
-```python
-from fabra.context import ContextBudgetError
-
-try:
-    ctx = await chat_context(user_id, query)
-except ContextBudgetError as e:
-    print(f"Required content exceeds budget: {e.required_tokens} > {e.budget}")
-    # Fallback: use shorter system prompt
-```
-
-### Empty Context
-
-If all items are truncated:
+Fabra drops optional items first. If required items still exceed the budget, the context is returned and `meta["budget_exceeded"]` is set to `True`:
 
 ```python
-ctx = await minimal_context(user_id, query)
-if ctx.is_empty:
-    # Handle gracefully
-    # Note: In practice, you'd handle this in your app logic
-    # by returning a default response directly
+ctx = await chat_context(user_id, query)
+if ctx.meta.get("budget_exceeded"):
+    # e.g. shorten the system prompt, reduce retrieval top_k, etc.
+    pass
 ```
 
 ## Best Practices
@@ -294,7 +246,7 @@ See [Freshness SLAs](freshness-sla.md) for the full guide.
 A: Use the `@context` decorator with `max_tokens` parameter: `@context(store, max_tokens=4000)`. Fabra automatically truncates lower-priority items when the budget is exceeded.
 
 **Q: What happens when context exceeds token limit?**
-A: Items are dropped by priority (highest number first). Items with `required=True` raise `ContextBudgetError` if they can't fit. Items without `required` are silently dropped.
+A: Optional items (`required=False`) are dropped first (highest `priority` numbers first). Required items are never dropped. If required items still exceed the budget, the context is returned and `meta["budget_exceeded"]=true` is set.
 
 **Q: How do I prioritize content in LLM context?**
 A: Set `priority` on `ContextItem`: `priority=0` (critical, kept first), `priority=1` (high), `priority=2+` (lower, dropped first). System prompts should always be priority 0.
@@ -303,10 +255,10 @@ A: Set `priority` on `ContextItem`: `priority=0` (critical, kept first), `priori
 A: Yes. Fabra uses tiktoken for accurate counting. Specify model: `@context(store, max_tokens=4000, model="gpt-4")`. Claude-3 uses approximation.
 
 **Q: How do I debug context assembly?**
-A: Use the explain API: `await store.explain_context("context_name", ...)` or HTTP endpoint `GET /context/{id}/explain`. Returns which items were included, truncated, or dropped.
+A: Use `GET /v1/context/{id}/explain` (metadata-only trace) and `fabra context show <id>` (full CRS-001 record). For a visual view, use `GET /v1/context/{id}/visualize`.
 
 **Q: Can I dynamically change the token budget?**
-A: Yes. Return a `Context` object with `max_tokens` set: `return Context(items=[...], max_tokens=budget)` to override the decorator's default.
+A: Not in the current MVP. Use separate context functions (or deployments) with different `max_tokens`.
 
 ---
 

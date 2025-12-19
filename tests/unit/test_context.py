@@ -238,9 +238,10 @@ async def test_context_budget_priority_execution() -> None:
     @context(name="priority_ctx_exec", max_tokens=15, token_counter=mock_counter)
     async def assemble_priority_exec() -> list[ContextItem]:
         return [
-            ContextItem(content="Keep1", priority=10, required=False),  # 5
-            ContextItem(content="Drop1", priority=1, required=False),  # 5
-            ContextItem(content="Drop2", priority=5, required=False),  # 5
+            # Lower numbers = higher priority (kept). Higher numbers dropped first.
+            ContextItem(content="Keep1", priority=0, required=False),  # 5
+            ContextItem(content="Drop1", priority=2, required=False),  # 5
+            ContextItem(content="Drop2", priority=1, required=False),  # 5
             ContextItem(content="ReqItem", priority=0, required=True),  # 7
         ]
 

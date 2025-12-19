@@ -178,6 +178,10 @@ class FeatureStore:
         # Count entities and features
         n_entities = len(self.registry.entities)
         n_features = len(self.registry.features)
+        try:
+            from fabra import __version__ as fabra_version
+        except Exception:
+            fabra_version = "unknown"
 
         # Build Entity Table
         entity_rows = ""
@@ -194,13 +198,13 @@ class FeatureStore:
 
         return f"""
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; max-width: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                <div style="font-size: 24px; margin-right: 10px;">🧭</div>
-                <div>
-                    <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">Fabra Feature Store</h2>
-                    <div style="color: #666; font-size: 13px;">Version: 1.2.5</div>
-                </div>
-            </div>
+	            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+	                <div style="font-size: 24px; margin-right: 10px;">🧭</div>
+	                <div>
+	                    <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">Fabra Feature Store</h2>
+	                    <div style="color: #666; font-size: 13px;">Version: {fabra_version}</div>
+	                </div>
+	            </div>
 
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
                 <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center;">
@@ -687,7 +691,9 @@ class FeatureStore:
         """
         idx = self.index_registry.get(index_name)
         if not idx:
-            raise ValueError(f"Index '{index_name}' not found.")
+            # MVP default: allow indexing without explicit index registration.
+            # Use standard chunking defaults (see fabra.index.Index).
+            idx = Index(name=index_name)
 
         # 1. Chunk
         chunks = idx.chunk_text(text)
@@ -707,28 +713,38 @@ class FeatureStore:
         if not self.offline_store:
             raise ValueError("Offline store not configured. Cannot save index.")
 
-        # Check capability
         if not hasattr(self.offline_store, "add_documents"):
             raise ValueError(
-                "Configured offline store does not support vector indexing."
+                "Configured offline store does not support vector indexing. "
+                "Use PostgresOfflineStore (pgvector) for Context Store indexing."
             )
 
-            # We assume dimension matches embedding model. OpenAI small is 1536.
-            await self.offline_store.create_index_table(index_name, dimension=1536)
+        # Ensure the index table exists (idempotent). Infer vector dimension from embeddings.
+        if hasattr(self.offline_store, "create_index_table") and embeddings:
+            dimension = len(embeddings[0])
+            try:
+                offline_store_any = cast(Any, self.offline_store)
+                await offline_store_any.create_index_table(
+                    index_name, dimension=dimension
+                )
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to create or validate index table for '{index_name}'. "
+                    "Ensure pgvector is enabled and the database user has permissions "
+                    "(or create the index table via `fabra index create`)."
+                ) from e
 
-        if hasattr(self.offline_store, "add_documents"):
-            await self.offline_store.add_documents(
-                index_name=index_name,
-                entity_id=entity_id,
-                chunks=chunks,
-                embeddings=embeddings,
-                metadatas=[metadata or {}]
-                * len(
-                    chunks
-                ),  # Original line, assuming chunk_metadatas was a typo in the instruction
-            )
-        else:
-            logger.warning("Offline store does not support vector indexing.")
+        # One metadata dict per chunk (avoid shared references).
+        chunk_metadatas = [dict(metadata or {}) for _ in chunks]
+
+        offline_store_any = cast(Any, self.offline_store)
+        await offline_store_any.add_documents(
+            index_name=index_name,
+            entity_id=entity_id,
+            chunks=chunks,
+            embeddings=embeddings,
+            metadatas=chunk_metadatas,
+        )
 
     async def search(
         self,

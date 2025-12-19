@@ -94,11 +94,12 @@ if __name__ == "__main__":
 ```python
 # chatbot.py (continued)
 from fabra.retrieval import retriever
+from datetime import timedelta
 
-@retriever(name="knowledge_base", cache_ttl=300)
+@retriever(name="knowledge_base", cache_ttl=timedelta(seconds=300))
 async def search_docs(query: str) -> list[str]:
     # Logic to search pgvector
-    # return await store.vector_search("knowledge_base", query)
+    # Example: return [r["content"] for r in await store.search("knowledge_base", query, top_k=5)]
     return ["Fabra.simplifies RAG.", "Context Store manages tokens."]
 ```
 
@@ -108,7 +109,7 @@ async def search_docs(query: str) -> list[str]:
 # chatbot.py (continued)
 from fabra.context import context, Context, ContextItem
 
-@context(max_tokens=4000)
+@context(store, max_tokens=4000)
 async def chat_context(user_id: str, query: str) -> Context:
     # Fetch all components
     docs = await search_docs(query)
@@ -218,8 +219,8 @@ async def on_doc_save(doc_id: str, content: str, metadata: dict):
 ## Step 7: Run It
 
 ```bash
-# Terminal 1: Start server
-fabra serve chatbot.py
+# Terminal 1: Start your API
+uvicorn chatbot:app --reload --host 127.0.0.1 --port 8000
 
 # Terminal 2: Start worker (for event processing)
 fabra worker chatbot.py
@@ -235,20 +236,45 @@ curl -X POST http://localhost:8000/chat \
 ### Token Budget by Tier
 
 ```python
-@context(store, max_tokens=4000)
-async def chat_context(user_id: str, query: str) -> Context:
+@context(store, name="chat_context_free", max_tokens=4000)
+async def chat_context_free(user_id: str, query: str) -> Context:
     tier = await store.get_feature("user_tier", user_id)
 
-    # Premium gets more context
-    budget = 8000 if tier == "premium" else 4000
-    top_k = 5 if tier == "premium" else 3
+    top_k = 3
+    docs = await store.search("knowledge_base", query, top_k=top_k)
 
-    docs = await search_docs(query)  # Uses top_k from retriever
+    return [
+        ContextItem(content="You are a helpful assistant.", priority=0, required=True),
+        ContextItem(content=f"User tier: {tier}", priority=1, required=True),
+        ContextItem(
+            content="Docs:\n" + "\n".join(d["content"] for d in docs),
+            priority=2,
+            required=True,
+        ),
+    ]
 
-    return Context(
-        items=[...],
-        max_tokens=budget
-    )
+@context(store, name="chat_context_premium", max_tokens=8000)
+async def chat_context_premium(user_id: str, query: str) -> Context:
+    tier = await store.get_feature("user_tier", user_id)
+
+    top_k = 5
+    docs = await store.search("knowledge_base", query, top_k=top_k)
+
+    return [
+        ContextItem(content="You are a helpful assistant.", priority=0, required=True),
+        ContextItem(content=f"User tier: {tier}", priority=1, required=True),
+        ContextItem(
+            content="Docs:\n" + "\n".join(d["content"] for d in docs),
+            priority=2,
+            required=True,
+        ),
+        ContextItem(content="(Premium) Add more history/tools here.", priority=3),
+    ]
+
+async def chat_context(user_id: str, query: str) -> Context:
+    tier = await store.get_feature("user_tier", user_id)
+    ctx_func = chat_context_premium if tier == "premium" else chat_context_free
+    return await ctx_func(user_id=user_id, query=query)
 ```
 
 ### Rate Limiting
@@ -272,8 +298,18 @@ async def chat(request: ChatRequest):
 # Debug context assembly
 @app.get("/debug/context/{user_id}")
 async def debug_context(user_id: str, query: str):
-    trace = await store.explain_context("chat_context", user_id=user_id, query=query)
-    return trace
+    import json
+
+    ctx = await chat_context(user_id, query)
+
+    raw_trace = await store.online_store.get(f"trace:{ctx.id}")
+    if not raw_trace:
+        return {"context_id": ctx.id, "trace": None}
+
+    if isinstance(raw_trace, bytes):
+        raw_trace = raw_trace.decode()
+
+    return json.loads(raw_trace) if isinstance(raw_trace, str) else raw_trace
 ```
 
 ## Full Code
