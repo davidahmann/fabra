@@ -1,0 +1,60 @@
+name: Security Audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    name: pip-audit (Python deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Create venv + install runtime deps
+        run: |
+          uv venv
+          uv pip install -e "."
+          uv pip install pip-audit
+
+      - name: Run pip-audit
+        run: |
+          source .venv/bin/activate
+          pip-audit -l --skip-editable --progress-spinner off
+
+  osv-scanner:
+    name: osv-scanner (JS lockfiles)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan UI lockfile (ui-next)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
+            scan source -L src/fabra/ui-next/package-lock.json --format table --verbosity error
+
+      - name: Scan lockfile (playground)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
+            scan source -L playground/package-lock.json --format table --verbosity error
+
+      - name: Scan lockfile (docs-site)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
+            scan source -L docs-site/package-lock.json --format table --verbosity error

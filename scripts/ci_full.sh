@@ -170,7 +170,7 @@ if [ "$RUN_TESTS" = "true" ]; then
 
     # Unit Tests (override default marker filter from pytest.ini)
     print_section "Unit Tests"
-    if uv run pytest tests/unit -v --tb=short -m ""; then
+    if uv run --extra dev pytest tests/unit -v --tb=short -m ""; then
         RESULT_UNIT="${GREEN}✓ PASS${NC}"
         echo -e "${GREEN}✓ Unit Tests passed${NC}"
     else
@@ -181,7 +181,7 @@ if [ "$RUN_TESTS" = "true" ]; then
 
     # Performance Tests (in tests/perf, not marked with e2e)
     print_section "Performance Tests"
-    if uv run pytest tests/perf -v --tb=short -m ""; then
+    if uv run --extra dev pytest tests/perf -v --tb=short -m ""; then
         RESULT_PERF="${GREEN}✓ PASS${NC}"
         echo -e "${GREEN}✓ Performance Tests passed${NC}"
     else
@@ -192,7 +192,7 @@ if [ "$RUN_TESTS" = "true" ]; then
 
     # Integration Tests (override default marker filter)
     print_section "Integration Tests"
-    if uv run pytest tests/integration -v --tb=short -m ""; then
+    if uv run --extra dev pytest tests/integration -v --tb=short -m ""; then
         RESULT_INTEGRATION="${GREEN}✓ PASS${NC}"
         echo -e "${GREEN}✓ Integration Tests passed${NC}"
     else
@@ -203,7 +203,7 @@ if [ "$RUN_TESTS" = "true" ]; then
 
     # E2E Tests (run all e2e folder tests, not filtered by marker)
     print_section "E2E Tests"
-    if uv run pytest tests/e2e -v --tb=short -m ""; then
+    if uv run --extra dev pytest tests/e2e -v --tb=short -m ""; then
         RESULT_E2E="${GREEN}✓ PASS${NC}"
         echo -e "${GREEN}✓ E2E Tests passed${NC}"
     else
@@ -215,7 +215,7 @@ if [ "$RUN_TESTS" = "true" ]; then
     # Playwright UI Tests (slow - skip with --quick)
     if [ "$SKIP_SLOW" = "false" ]; then
         print_section "Playwright UI Tests"
-        if uv run pytest tests/ui -v --tb=short; then
+        if uv run --extra dev pytest tests/ui -v --tb=short; then
             RESULT_PLAYWRIGHT="${GREEN}✓ PASS${NC}"
             echo -e "${GREEN}✓ Playwright UI Tests passed${NC}"
         else
@@ -230,7 +230,7 @@ if [ "$RUN_TESTS" = "true" ]; then
 
     # Pre-commit hooks
     print_section "Pre-commit Hooks"
-    if uv run pre-commit run --all-files; then
+    if uv run --extra dev pre-commit run --all-files; then
         RESULT_PRECOMMIT="${GREEN}✓ PASS${NC}"
         echo -e "${GREEN}✓ Pre-commit Hooks passed${NC}"
     else
