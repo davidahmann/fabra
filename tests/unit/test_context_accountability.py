@@ -1,6 +1,7 @@
 """Tests for v1.4 Context Accountability features."""
 
 from __future__ import annotations
+from typing import Any
 import pytest
 from datetime import datetime, timezone, timedelta
 
@@ -243,6 +244,40 @@ class TestContextWithLineage:
 
 class TestContextLogging:
     """Test context logging to offline store."""
+
+    @pytest.mark.asyncio
+    async def test_record_content_omitted_when_disabled(self, monkeypatch: Any) -> None:
+        """
+        Privacy mode: persisted CRS-001 record and legacy context_log omit raw content.
+
+        The Context object returned to the caller still contains the in-memory content.
+        """
+
+        from fabra.core import FeatureStore
+        from fabra.store.offline import DuckDBOfflineStore
+        from fabra.utils.integrity import compute_content_hash
+
+        monkeypatch.setenv("FABRA_RECORD_INCLUDE_CONTENT", "0")
+
+        store = FeatureStore()
+        offline = DuckDBOfflineStore(":memory:")
+        store.offline_store = offline
+
+        @context(store=store, name="privacy_mode_test")
+        async def assemble() -> str:
+            return "Secret: sk-live-123"
+
+        ctx = await assemble()
+        assert ctx.content == "Secret: sk-live-123"  # in-memory
+
+        rec = await offline.get_record(ctx.id)
+        assert rec is not None
+        assert rec.content == ""
+        assert rec.integrity.content_hash == compute_content_hash("")
+
+        row = await offline.get_context(ctx.id)
+        assert row is not None
+        assert row["content"] == ""
 
     @pytest.mark.asyncio
     async def test_duckdb_log_context(self) -> None:

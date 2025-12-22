@@ -90,6 +90,18 @@ Events/workers (optional): `docs/events-and-workers.md`
 
 A Context Record is a durable artifact for an AI request: assembled content plus lineage (features, retrieval, freshness decisions), and optional integrity metadata.
 
+### Privacy & Sensitive Data
+
+By default, Fabra persists **raw context content** (the assembled prompt/context string) inside CRS-001 records and the legacy `context_log` table. Treat Context Records like production logs: **do not include secrets** (API keys, tokens, passwords) and be intentional about PII.
+
+If you need lineage/metadata **without** storing raw text, set:
+
+```bash
+export FABRA_RECORD_INCLUDE_CONTENT=0
+```
+
+This “privacy mode” stores an empty string for `content` in persisted records (and therefore in `GET /v1/context/{context_id}`), while still capturing lineage and integrity hashes for tamper-evidence on the remaining fields.
+
 Create a `context_id` locally using the shipped example:
 
 ```bash

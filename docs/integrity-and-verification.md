@@ -13,6 +13,8 @@ Fabra Context Records are designed to be **tamper-evident**.
 ### `content_hash`
 SHA256 of the `content` field (the assembled context string).
 
+If `FABRA_RECORD_INCLUDE_CONTENT=0` (privacy mode), `content` is stored as an empty string and `content_hash` reflects that persisted value.
+
 ### `record_hash`
 SHA256 of the canonical JSON of the full CRS-001 Context Record.
 
@@ -48,6 +50,10 @@ Fabra can enforce that it never returns a `context_id` unless the CRS-001 record
 ## Optional signing (attestation)
 
 Fabra can optionally sign `record_hash` at write-time, to support offline verification.
+
+- Signing in Fabra is a **shared-secret HMAC attestation**: it proves “someone with access to `FABRA_SIGNING_KEY` attested to this `record_hash`”.
+- It is **not** public-key cryptography and is **not** “publicly verifiable provenance” (anyone who has the shared key can create valid signatures).
+- Treat `FABRA_SIGNING_KEY` like a production secret (rotate, scope, and store it securely). If an attacker obtains the key, they can forge signatures.
 
 - Enable signing by setting `FABRA_SIGNING_KEY`.
   - Supported formats: `hex:<hex>` or `base64:<b64>` (or raw string bytes).

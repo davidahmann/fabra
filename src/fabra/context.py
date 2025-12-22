@@ -82,6 +82,30 @@ def get_evidence_mode() -> EvidenceMode:
     return "required" if env == "production" else "best_effort"
 
 
+def _parse_bool_env(var: str, *, default: bool) -> bool:
+    raw = os.environ.get(var)
+    if raw is None:
+        return default
+    v = raw.strip().lower()
+    if v in ("1", "true", "t", "yes", "y", "on"):
+        return True
+    if v in ("0", "false", "f", "no", "n", "off"):
+        return False
+    logger.warning("invalid_bool_env", var=var, value=raw)
+    return default
+
+
+def get_record_include_content() -> bool:
+    """
+    Controls whether persisted Context Records include raw text content.
+
+    When disabled, Fabra persists lineage/metadata and hashes, but stores an empty
+    string for `content` (privacy mode).
+    """
+
+    return _parse_bool_env("FABRA_RECORD_INCLUDE_CONTENT", default=True)
+
+
 class EvidencePersistenceError(RuntimeError):
     def __init__(self, *, context_id: str, message: str) -> None:
         super().__init__(message)
@@ -592,7 +616,9 @@ class Context(BaseModel):
         )
 
         # Compute integrity hashes
-        content_hash = compute_content_hash(self.content)
+        # If content is omitted for privacy, hashes should reflect the persisted value.
+        content_to_persist = self.content if include_content else ""
+        content_hash = compute_content_hash(content_to_persist)
 
         # Create temporary record to compute hash
         temp_integrity = IntegrityMetadata(
@@ -614,7 +640,7 @@ class Context(BaseModel):
             context_function=self.lineage.context_name
             if self.lineage
             else self.meta.get("name", "unknown"),
-            content=self.content if include_content else "",
+            content=content_to_persist,
             token_count=self.meta.get("token_usage", 0),
             features=features,
             retrieved_items=retrieved_items,
@@ -647,7 +673,7 @@ class Context(BaseModel):
             context_function=self.lineage.context_name
             if self.lineage
             else self.meta.get("name", "unknown"),
-            content=self.content if include_content else "",
+            content=content_to_persist,
             token_count=self.meta.get("token_usage", 0),
             features=features,
             retrieved_items=retrieved_items,
@@ -1118,6 +1144,7 @@ def context(
                 record_persisted = False
                 context_log_persisted = False
                 evidence_error: Optional[str] = None
+                include_content = get_record_include_content()
 
                 if offline_store:
                     # CRS-001 record is the "receipt". In required mode, we never return a context_id without it.
@@ -1126,7 +1153,7 @@ def context(
                             raise RuntimeError(
                                 "Offline store does not support CRS-001 records (log_record missing)"
                             )
-                        record = ctx.to_record(include_content=True)
+                        record = ctx.to_record(include_content=include_content)
                         await offline_store.log_record(record)
                         record_persisted = True
                         if EVIDENCE_PERSIST_SUCCESSES is not None:
@@ -1153,7 +1180,7 @@ def context(
                             await offline_store.log_context(
                                 context_id=ctx_id,
                                 timestamp=datetime.fromisoformat(ctx.meta["timestamp"]),
-                                content=final_content,
+                                content=final_content if include_content else "",
                                 lineage=lineage_data.model_dump(),
                                 meta=ctx.meta,
                                 version=version,
