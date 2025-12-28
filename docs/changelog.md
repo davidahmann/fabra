@@ -28,6 +28,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v2.3.1] - 2025-12-28
+
+### ✅ Context Ticket Handles
+
+*   **Context API returns hashes:** `record_hash` / `content_hash` returned alongside `context_id` for durable ticket references.
+*   **Logging helpers:** exporters can emit `context_id` plus hashes for incident/audit logs.
+
+---
+
 ## [v2.0.0] - 2025-12-09
 
 ### 🎉 Major Release: Rebrand to Fabra
