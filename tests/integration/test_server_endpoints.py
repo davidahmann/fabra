@@ -410,3 +410,36 @@ def test_assemble_context_includes_record_hash_and_content_hash(monkeypatch):
     assert data["content_hash"].startswith("sha256:")
     assert data["meta"]["record_hash"] == data["record_hash"]
     assert data["meta"]["content_hash"] == data["content_hash"]
+
+
+def test_assemble_context_includes_interaction_ref(monkeypatch):
+    """
+    POST /v1/context/{context_name} should surface interaction_ref when inputs include call/turn ids.
+    """
+
+    from fabra.context import context
+    from fabra.core import FeatureStore
+    from fabra.store.offline import DuckDBOfflineStore
+
+    monkeypatch.delenv("FABRA_API_KEY", raising=False)
+
+    store = FeatureStore()
+    store.offline_store = DuckDBOfflineStore(":memory:")
+
+    @context(store=store, name="voice_ctx")
+    async def voice_ctx(call_id: str, turn_id: str, turn_index: int) -> str:
+        return "hello"
+
+    app = create_app(store)
+    client = TestClient(app)
+
+    resp = client.post(
+        "/v1/context/voice_ctx",
+        json={"call_id": "call_1", "turn_id": "turn_1", "turn_index": 3},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["interaction_ref"]["call_id"] == "call_1"
+    assert data["interaction_ref"]["turn_id"] == "turn_1"
+    assert data["interaction_ref"]["turn_index"] == 3
+    assert data["meta"]["interaction_ref"]["call_id"] == "call_1"

@@ -106,6 +106,51 @@ def get_record_include_content() -> bool:
     return _parse_bool_env("FABRA_RECORD_INCLUDE_CONTENT", default=True)
 
 
+def _build_interaction_ref(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Best-effort normalization of voice/chat interaction identifiers.
+
+    Stored in `inputs["interaction_ref"]` and `Context.meta["interaction_ref"]` to
+    support timeline replay without changing CRS-001 schema.
+    """
+
+    # Accept common keys; callers can also supply a pre-built object.
+    direct = payload.get("interaction_ref")
+    if isinstance(direct, dict) and direct:
+        return direct
+
+    call_id = payload.get("call_id")
+    session_id = payload.get("session_id")
+    turn_id = payload.get("turn_id")
+    turn_index = payload.get("turn_index")
+
+    if call_id is None and session_id is None and turn_id is None:
+        return None
+
+    ref: Dict[str, Any] = {}
+    mode = payload.get("interaction_mode") or payload.get("mode")
+    if isinstance(mode, str) and mode:
+        ref["mode"] = mode
+    if call_id is not None:
+        ref["call_id"] = str(call_id)
+    if session_id is not None:
+        ref["session_id"] = str(session_id)
+    if turn_id is not None:
+        ref["turn_id"] = str(turn_id)
+    if isinstance(turn_index, int):
+        ref["turn_index"] = turn_index
+
+    # Optional compliance metadata (pass-through only)
+    jurisdiction = payload.get("jurisdiction")
+    if isinstance(jurisdiction, str) and jurisdiction:
+        ref["jurisdiction"] = jurisdiction
+    consent_state = payload.get("consent_state")
+    if isinstance(consent_state, str) and consent_state:
+        ref["consent_state"] = consent_state
+
+    return ref or None
+
+
 class EvidencePersistenceError(RuntimeError):
     def __init__(self, *, context_id: str, message: str) -> None:
         super().__init__(message)
@@ -1108,6 +1153,12 @@ def context(
                         replay_args[k] = v
                     except (TypeError, ValueError):
                         pass  # Skip non-serializable args
+
+                # Voice/chat timeline support (pass-through).
+                interaction_ref = _build_interaction_ref(replay_args)
+                if interaction_ref is not None:
+                    replay_args["interaction_ref"] = interaction_ref
+                    ctx.meta["interaction_ref"] = interaction_ref
 
                 # Build full lineage using tracker data (always attach; persistence may be disabled/missing)
                 lineage_data = ContextLineage(

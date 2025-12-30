@@ -53,16 +53,21 @@ class ReceiptRecorder:
         context_function: str,
         content: str,
         inputs: Optional[dict[str, Any]] = None,
+        interaction_ref: Optional[dict[str, Any]] = None,
         created_at: Optional[datetime] = None,
         schema_version: str = "1.0.0",
     ) -> RecordedReceipt:
         if not hasattr(self._offline_store, "log_record"):
             raise RuntimeError("offline_store does not support log_record()")
 
+        merged_inputs: dict[str, Any] = dict(inputs or {})
+        if interaction_ref is not None:
+            merged_inputs.setdefault("interaction_ref", interaction_ref)
+
         record = _build_record(
             context_function=context_function,
             content=content,
-            inputs=inputs,
+            inputs=merged_inputs,
             created_at=created_at,
             schema_version=schema_version,
             environment=self._environment,
@@ -77,16 +82,21 @@ class ReceiptRecorder:
         context_function: str,
         content: str,
         inputs: Optional[dict[str, Any]] = None,
+        interaction_ref: Optional[dict[str, Any]] = None,
         created_at: Optional[datetime] = None,
         schema_version: str = "1.0.0",
     ) -> RecordedReceipt:
         if not hasattr(self._offline_store, "log_record"):
             raise RuntimeError("offline_store does not support log_record()")
 
+        merged_inputs: dict[str, Any] = dict(inputs or {})
+        if interaction_ref is not None:
+            merged_inputs.setdefault("interaction_ref", interaction_ref)
+
         record = _build_record(
             context_function=context_function,
             content=content,
-            inputs=inputs,
+            inputs=merged_inputs,
             created_at=created_at,
             schema_version=schema_version,
             environment=self._environment,

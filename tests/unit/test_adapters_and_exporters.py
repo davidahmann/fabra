@@ -103,6 +103,26 @@ async def test_openai_wrapper_records_receipt(tmp_path: Path) -> None:
     assert "model" in json.dumps(record.inputs)
 
 
+@pytest.mark.asyncio
+async def test_receipt_recorder_allows_interaction_ref(tmp_path: Path) -> None:
+    db_path = tmp_path / "voice_receipts.duckdb"
+    store = DuckDBOfflineStore(database=str(db_path))
+    recorder = ReceiptRecorder(offline_store=store, environment="test")
+
+    receipt = await recorder.record(
+        context_function="voice.turn",
+        content="",
+        interaction_ref={"mode": "voice", "call_id": "call_1", "turn_id": "t1"},
+        inputs={"note": "ok"},
+    )
+
+    record = await _wait_for_record(store, receipt.context_id)
+    assert record is not None
+    assert record.inputs["interaction_ref"]["mode"] == "voice"
+    assert record.inputs["interaction_ref"]["call_id"] == "call_1"
+    assert record.inputs["note"] == "ok"
+
+
 def test_logging_exporters_emit_json_and_structured(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
