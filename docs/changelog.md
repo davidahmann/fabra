@@ -37,6 +37,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v2.3.2] - 2025-12-30
+
+### ✅ Interaction Timeline (Pass-Through)
+
+*   **Interaction references:** contexts can include `interaction_ref` (e.g. `call_id` / `turn_id` / `turn_index`) in `inputs` and API responses for voice timeline replay.
+*   **Docs:** exporters guide uses `emit_context_ref_json` for durable ticket references.
+
+---
+
 ## [v2.0.0] - 2025-12-09
 
 ### 🎉 Major Release: Rebrand to Fabra
